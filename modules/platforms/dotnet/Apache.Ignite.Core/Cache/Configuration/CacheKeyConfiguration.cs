@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Affinity;
     using Apache.Ignite.Core.Impl.Binary;
@@ -51,22 +50,20 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the name of the key type.
         /// </summary>
-        public string TypeName { get; set; }
+        public string? TypeName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the affinity key field.
         /// See also <see cref="AffinityKeyMappedAttribute"/>, 
         /// <see cref="BinaryTypeConfiguration.AffinityKeyFieldName"/>.
         /// </summary>
-        public string AffinityKeyFieldName { get; set; }
+        public string? AffinityKeyFieldName { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CacheKeyConfiguration"/> class.
         /// </summary>
         internal CacheKeyConfiguration(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             TypeName = reader.ReadString();
             AffinityKeyFieldName = reader.ReadString();
         }

@@ -131,7 +131,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** <inheritDoc /> */
         public IQueryCursor<ICacheEntry<TK, TV>> Query(ScanQuery<TK, TV> scanQuery)
         {
-            return _cache.Query(scanQuery);
+            return _cache.QueryAsync(scanQuery).GetResult();
+        }
+
+        /** <inheritDoc /> */
+        public Task<IQueryCursor<ICacheEntry<TK, TV>>> QueryAsync(ScanQuery<TK, TV> scanQuery)
+        {
+            return _cache.QueryAsync(scanQuery);
         }
 
         /** <inheritDoc /> */
@@ -145,7 +151,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** <inheritDoc /> */
         public IFieldsQueryCursor Query(SqlFieldsQuery sqlFieldsQuery)
         {
-            return _cache.Query(sqlFieldsQuery);
+            return _cache.QueryAsync(sqlFieldsQuery).GetResult();
+        }
+
+        /** <inheritDoc /> */
+        public Task<IFieldsQueryCursor> QueryAsync(SqlFieldsQuery sqlFieldsQuery)
+        {
+            return _cache.QueryAsync(sqlFieldsQuery);
         }
 
         /** <inheritDoc /> */
@@ -343,7 +355,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** <inheritDoc /> */
         public CacheClientConfiguration GetConfiguration()
         {
-            return _cache.GetConfiguration();
+            return _cache.GetConfigurationAsync().GetResult();
+        }
+
+        /** <inheritDoc /> */
+        public Task<CacheClientConfiguration> GetConfigurationAsync()
+        {
+            return _cache.GetConfigurationAsync();
         }
 
         /** <inheritDoc /> */
@@ -361,7 +379,13 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
         /** <inheritDoc /> */
         public IContinuousQueryHandleClient QueryContinuous(ContinuousQueryClient<TK, TV> continuousQuery)
         {
-            throw new System.NotImplementedException();
+            return _cache.QueryContinuousAsync(continuousQuery).GetResult();
+        }
+
+        /** <inheritDoc /> */
+        public Task<IContinuousQueryHandleClient> QueryContinuousAsync(ContinuousQueryClient<TK, TV> continuousQuery)
+        {
+            return _cache.QueryContinuousAsync(continuousQuery);
         }
     }
 }

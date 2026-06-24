@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
 {
     using System;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.DataStructures;
@@ -38,6 +39,50 @@ namespace Apache.Ignite.Core.Tests.Client.DataStructures
 
             Assert.AreEqual(42, atomicLongClient.Read());
             Assert.AreEqual(42, atomicLongServer.Read());
+        }
+
+        [Test]
+        public async Task TestAsyncOperationsMatchSyncBehavior()
+        {
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, 42, true);
+
+            Assert.IsNotNull(atomicLong);
+            Assert.AreEqual(42, await atomicLong.ReadAsync());
+            Assert.AreEqual(43, await atomicLong.IncrementAsync());
+            Assert.AreEqual(53, await atomicLong.AddAsync(10));
+            Assert.AreEqual(52, await atomicLong.DecrementAsync());
+            Assert.AreEqual(52, await atomicLong.ExchangeAsync(100));
+            Assert.AreEqual(100, await atomicLong.CompareExchangeAsync(7, 100));
+            Assert.AreEqual(7, await atomicLong.ReadAsync());
+
+            Assert.IsFalse(await atomicLong.IsClosedAsync());
+            await atomicLong.CloseAsync();
+            Assert.IsTrue(await atomicLong.IsClosedAsync());
+        }
+
+        [Test]
+        public async Task TestGetAtomicLongAsyncReturnsNullWhenDoesNotExistAndCreateIsFalse()
+        {
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, 0, false);
+
+            Assert.IsNull(atomicLong);
+        }
+
+        [Test]
+        public async Task TestGetAtomicLongAsyncWithConfiguration()
+        {
+            var cfg = new AtomicClientConfiguration
+            {
+                AtomicSequenceReserveSize = 32,
+                Backups = 2,
+                CacheMode = CacheMode.Partitioned,
+                GroupName = "atomics-partitioned-async"
+            };
+
+            var atomicLong = await Client.GetAtomicLongAsync(TestUtils.TestName, cfg, 42, true);
+
+            Assert.IsNotNull(atomicLong);
+            Assert.AreEqual(42, await atomicLong.ReadAsync());
         }
 
         [Test]

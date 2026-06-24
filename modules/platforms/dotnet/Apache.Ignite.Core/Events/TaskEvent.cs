@@ -47,8 +47,8 @@ namespace Apache.Ignite.Core.Events
         /// <param name="r">The reader to read data from.</param>
         internal TaskEvent(IBinaryRawReader r) : base(r)
         {
-            _taskName = r.ReadString();
-            _taskClassName = r.ReadString();
+            _taskName = r.ReadString()!;
+            _taskClassName = r.ReadString()!;
             _taskSessionId = r.ReadObject<IgniteGuid?>();
             _internal = r.ReadBoolean();
             _subjectId = r.ReadGuid();

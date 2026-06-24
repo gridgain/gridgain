@@ -37,6 +37,6 @@ namespace Apache.Ignite.Core.Cache.Affinity.Rendezvous
         /// Only one predefined implementation is supported for now:
         /// <see cref="ClusterNodeAttributeAffinityBackupFilter"/>.
         /// </summary>
-        public IAffinityBackupFilter AffinityBackupFilter { get; set; }
+        public IAffinityBackupFilter? AffinityBackupFilter { get; set; }
     }
 }

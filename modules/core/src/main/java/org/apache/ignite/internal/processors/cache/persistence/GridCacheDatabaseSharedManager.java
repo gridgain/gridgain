@@ -1313,7 +1313,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             this,
             memMetrics,
             resolveThrottlingPolicy(),
-            () -> getCheckpointer().currentProgress()
+            () -> getCheckpointer().currentProgress(),
+            maxDirtyPagesRatio
         );
 
         memMetrics.pageMemory(pageMem);

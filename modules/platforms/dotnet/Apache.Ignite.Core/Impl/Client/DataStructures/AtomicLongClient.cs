@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Impl.Client.DataStructures
 {
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client.DataStructures;
     using Apache.Ignite.Core.Impl.Binary;
 
@@ -37,7 +38,7 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         private readonly int _cacheId;
 
         /** */
-        private readonly string _groupName;
+        private readonly string? _groupName;
 
         /// <summary>
         /// Initializes a new instance of <see cref="AtomicLongClient"/> class.
@@ -45,7 +46,7 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         /// <param name="socket">Socket.</param>
         /// <param name="name">Name.</param>
         /// <param name="groupName">Group name.</param>
-        public AtomicLongClient(ClientFailoverSocket socket, string name, string groupName)
+        public AtomicLongClient(ClientFailoverSocket socket, string name, string? groupName)
         {
             _socket = socket;
             Name = name;
@@ -70,9 +71,26 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         }
 
         /** <inheritDoc /> */
+        public Task<long> ReadAsync()
+        {
+            return _socket.DoOutInOpAffinityAsync(
+                ClientOp.AtomicLongValueGet,
+                ctx => WriteName(ctx),
+                r => r.Reader.ReadLong(),
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
         public long Increment()
         {
             return Add(1);
+        }
+
+        /** <inheritDoc /> */
+        public Task<long> IncrementAsync()
+        {
+            return AddAsync(1);
         }
 
         /** <inheritDoc /> */
@@ -91,15 +109,51 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         }
 
         /** <inheritDoc /> */
+        public Task<long> AddAsync(long value)
+        {
+            return _socket.DoOutInOpAffinityAsync(
+                ClientOp.AtomicLongValueAddAndGet,
+                ctx =>
+                {
+                    WriteName(ctx);
+                    ctx.Writer.WriteLong(value);
+                },
+                r => r.Reader.ReadLong(),
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
         public long Decrement()
         {
             return Add(-1);
         }
 
         /** <inheritDoc /> */
+        public Task<long> DecrementAsync()
+        {
+            return AddAsync(-1);
+        }
+
+        /** <inheritDoc /> */
         public long Exchange(long value)
         {
             return _socket.DoOutInOpAffinity(
+                ClientOp.AtomicLongValueGetAndSet,
+                ctx =>
+                {
+                    WriteName(ctx);
+                    ctx.Writer.WriteLong(value);
+                },
+                r => r.Reader.ReadLong(),
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
+        public Task<long> ExchangeAsync(long value)
+        {
+            return _socket.DoOutInOpAffinityAsync(
                 ClientOp.AtomicLongValueGetAndSet,
                 ctx =>
                 {
@@ -128,6 +182,22 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         }
 
         /** <inheritDoc /> */
+        public Task<long> CompareExchangeAsync(long value, long comparand)
+        {
+            return _socket.DoOutInOpAffinityAsync(
+                ClientOp.AtomicLongValueCompareAndSetAndGet,
+                ctx =>
+                {
+                    WriteName(ctx);
+                    ctx.Writer.WriteLong(comparand);
+                    ctx.Writer.WriteLong(value);
+                },
+                r => r.Reader.ReadLong(),
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
         public bool IsClosed()
         {
             return _socket.DoOutInOpAffinity(
@@ -139,9 +209,31 @@ namespace Apache.Ignite.Core.Impl.Client.DataStructures
         }
 
         /** <inheritDoc /> */
+        public Task<bool> IsClosedAsync()
+        {
+            return _socket.DoOutInOpAffinityAsync(
+                ClientOp.AtomicLongExists,
+                ctx => WriteName(ctx),
+                r => !r.Reader.ReadBoolean(),
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
         public void Close()
         {
             _socket.DoOutInOpAffinity<object, string>(
+                ClientOp.AtomicLongRemove,
+                ctx => WriteName(ctx),
+                null,
+                _cacheId,
+                AffinityKey);
+        }
+
+        /** <inheritDoc /> */
+        public Task CloseAsync()
+        {
+            return _socket.DoOutInOpAffinityAsync<object, string>(
                 ClientOp.AtomicLongRemove,
                 ctx => WriteName(ctx),
                 null,

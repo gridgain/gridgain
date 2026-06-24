@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Log
         /// <summary>
         /// Gets or sets DateTime provider.
         /// </summary>
-        public IDateTimeProvider DateTimeProvider { get; set; }
+        public IDateTimeProvider? DateTimeProvider { get; set; }
 
         /// <summary>
         /// Logs the specified message.
@@ -58,8 +58,8 @@ namespace Apache.Ignite.Core.Log
         /// <param name="category">The logging category name.</param>
         /// <param name="nativeErrorInfo">The native error information.</param>
         /// <param name="ex">The exception. Can be null.</param>
-        public void Log(LogLevel level, string message, object[] args, IFormatProvider formatProvider, string category,
-            string nativeErrorInfo, Exception ex)
+        public void Log(LogLevel level, string message, object?[]? args, IFormatProvider? formatProvider, string? category,
+            string? nativeErrorInfo, Exception? ex)
         {
             if (!IsEnabled(level))
             {

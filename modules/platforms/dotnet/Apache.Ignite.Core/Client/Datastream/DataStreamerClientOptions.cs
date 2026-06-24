@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Initializes a new instance of <see cref="DataStreamerClientOptions"/>.
         /// </summary>
         /// <param name="options">Options to copy from.</param>
-        public DataStreamerClientOptions(DataStreamerClientOptions options) : this()
+        public DataStreamerClientOptions(DataStreamerClientOptions? options) : this()
         {
             if (options == null)
             {
@@ -163,7 +163,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// <summary>
         /// Gets or sets the receiver object.
         /// </summary>
-        internal object ReceiverInternal { get; set; }
+        internal object? ReceiverInternal { get; set; }
     }
 
     /// <summary>
@@ -172,6 +172,7 @@ namespace Apache.Ignite.Core.Client.Datastream
     /// See also <see cref="IDataStreamerClient{TK,TV}"/>, <see cref="IIgniteClient.GetDataStreamer{TK,TV}(string)"/>.
     /// </summary>
     public class DataStreamerClientOptions<TK, TV> : DataStreamerClientOptions
+        where TK : notnull
     {
         /// <summary>
         /// Initializes a new instance of <see cref="DataStreamerClientOptions{TK,TV}"/>.
@@ -185,7 +186,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Initializes a new instance of <see cref="DataStreamerClientOptions{TK,TV}"/>.
         /// </summary>
         /// <param name="options">Options to copy from.</param>
-        public DataStreamerClientOptions(DataStreamerClientOptions options) : base(options)
+        public DataStreamerClientOptions(DataStreamerClientOptions? options) : base(options)
         {
             // No-op.
         }
@@ -194,7 +195,7 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Initializes a new instance of <see cref="DataStreamerClientOptions{TK,TV}"/>.
         /// </summary>
         /// <param name="options">Options to copy from.</param>
-        public DataStreamerClientOptions(DataStreamerClientOptions<TK, TV> options) : base(options)
+        public DataStreamerClientOptions(DataStreamerClientOptions<TK, TV>? options) : base(options)
         {
             // No-op.
         }
@@ -203,9 +204,9 @@ namespace Apache.Ignite.Core.Client.Datastream
         /// Gets or sets a custom stream receiver.
         /// Stream receiver is invoked for every cache entry on the primary server node for that entry.
         /// </summary>
-        public IStreamReceiver<TK, TV> Receiver
+        public IStreamReceiver<TK, TV>? Receiver
         {
-            get { return (IStreamReceiver<TK, TV>) ReceiverInternal; }
+            get { return (IStreamReceiver<TK, TV>?) ReceiverInternal; }
             set { ReceiverInternal = value; }
         }
     }

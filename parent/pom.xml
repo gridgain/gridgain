@@ -34,7 +34,7 @@
 
     <groupId>org.gridgain</groupId>
     <artifactId>ignite-parent</artifactId>
-    <version>8.9.127-SNAPSHOT</version>
+    <version>8.10.127-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>http://www.gridgain.com</url>
 
@@ -120,7 +120,7 @@
         <mockito.version>3.4.6</mockito.version>
         <mysql.connector.version>8.0.13</mysql.connector.version>
         <netlibjava.version>1.1.2</netlibjava.version>
-        <netty.version>4.1.133.Final</netty.version>
+        <netty.version>4.1.135.Final</netty.version>
         <opencensus.version>0.31.1</opencensus.version>
         <opentelemetry.version>1.63.0</opentelemetry.version>
         <org.testcontainers.testcontainers>1.12.3</org.testcontainers.testcontainers>
@@ -166,6 +166,11 @@
         <osgi.export.package>{local-packages}</osgi.export.package>
         <osgi.embed.transitive>false</osgi.embed.transitive>
         <osgi.fail.ok>false</osgi.fail.ok>
+
+        <!-- SAST (SpotBugs + FindSecurityBugs), opt-in via the "sast" profile. -->
+        <spotbugs.maven.plugin.version>4.8.6.6</spotbugs.maven.plugin.version>
+        <spotbugs.core.version>4.8.6</spotbugs.core.version>
+        <findsecbugs.plugin.version>1.14.0</findsecbugs.plugin.version>
 
     </properties>
 
@@ -230,6 +235,42 @@
     <build>
         <pluginManagement>
             <plugins>
+                <!--
+                    SpotBugs + FindSecurityBugs SAST visibility for CWE detection.
+                    Opt-in: activated only by the "sast" profile (see modules/h2/pom.xml), so default
+                    builds are unaffected. Scans the whole module's bytecode with the full FindSecBugs
+                    detector set. failOnError is false initially (report-only); tighten later.
+                -->
+                <plugin>
+                    <groupId>com.github.spotbugs</groupId>
+                    <artifactId>spotbugs-maven-plugin</artifactId>
+                    <version>${spotbugs.maven.plugin.version}</version>
+                    <dependencies>
+                        <dependency>
+                            <groupId>com.github.spotbugs</groupId>
+                            <artifactId>spotbugs</artifactId>
+                            <version>${spotbugs.core.version}</version>
+                        </dependency>
+                    </dependencies>
+                    <configuration>
+                        <effort>Max</effort>
+                        <threshold>Low</threshold>
+                        <failOnError>false</failOnError>
+                        <sarifOutput>true</sarifOutput>
+                        <xmlOutput>true</xmlOutput>
+                        <htmlOutput>true</htmlOutput>
+                        <outputDirectory>${project.build.directory}</outputDirectory>
+                        <includeFilterFile>${project.basedir}/../../checkrules/findsec-include.xml</includeFilterFile>
+                        <plugins>
+                            <plugin>
+                                <groupId>com.h3xstream.findsecbugs</groupId>
+                                <artifactId>findsecbugs-plugin</artifactId>
+                                <version>${findsecbugs.plugin.version}</version>
+                            </plugin>
+                        </plugins>
+                    </configuration>
+                </plugin>
+
                 <plugin>
                     <groupId>net.alchim31.maven</groupId>
                     <artifactId>scala-maven-plugin</artifactId>
@@ -278,7 +319,7 @@
                         <dependency>
                             <groupId>org.gridgain</groupId>
                             <artifactId>ignite-tools</artifactId>
-                            <version>8.9.127-SNAPSHOT</version>
+                            <version>8.10.127-SNAPSHOT</version>
                         </dependency>
                     </dependencies>
                 </plugin>

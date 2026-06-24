@@ -53,6 +53,7 @@ import org.apache.ignite.cache.store.jdbc.dialect.BasicJdbcDialect;
 import org.apache.ignite.cache.store.jdbc.dialect.DB2Dialect;
 import org.apache.ignite.cache.store.jdbc.dialect.H2Dialect;
 import org.apache.ignite.cache.store.jdbc.dialect.JdbcDialect;
+import org.apache.ignite.cache.store.jdbc.dialect.MariaDBDialect;
 import org.apache.ignite.cache.store.jdbc.dialect.MySQLDialect;
 import org.apache.ignite.cache.store.jdbc.dialect.OracleDialect;
 import org.apache.ignite.cache.store.jdbc.dialect.SQLServerDialect;
@@ -289,6 +290,9 @@ public abstract class CacheAbstractJdbcStore<K, V> implements CacheStore<K, V>, 
 
         if (dbProductName.startsWith("DB2/"))
             return new DB2Dialect();
+
+        if ("MariaDB".equals(dbProductName))
+            return new MariaDBDialect();
 
         U.warn(log, "Failed to resolve dialect (BasicJdbcDialect will be used): " + dbProductName);
 

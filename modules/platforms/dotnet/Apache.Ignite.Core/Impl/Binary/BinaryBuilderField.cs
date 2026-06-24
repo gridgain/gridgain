@@ -27,13 +27,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         public static readonly BinaryBuilderField RmvMarker = new BinaryBuilderField(null, null, 0);
 
         /** Type. */
-        private readonly Type _type;
+        private readonly Type? _type;
 
         /** Value. */
-        private readonly object _value;
+        private readonly object? _value;
         
         /** Write action. */
-        private readonly Action<BinaryWriter, object> _writeAction;
+        private readonly Action<BinaryWriter, object>? _writeAction;
         
         /** Type id. */
         private readonly byte _typeId;
@@ -45,7 +45,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="value">Value.</param>
         /// <param name="typeId">The type identifier.</param>
         /// <param name="writeAction">Optional write action.</param>
-        public BinaryBuilderField(Type type, object value, byte typeId, Action<BinaryWriter, object> writeAction = null)
+        public BinaryBuilderField(Type? type, object? value, byte typeId, Action<BinaryWriter, object>? writeAction = null)
         {
             _type = type;
             _value = value;
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Type.
         /// </summary>
-        public Type Type
+        public Type? Type
         {
             get { return _type; }
         }
@@ -64,7 +64,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Value.
         /// </summary>
-        public object Value
+        public object? Value
         {
             get { return _value; }
         }
@@ -72,7 +72,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Gets the write action.
         /// </summary>
-        public Action<BinaryWriter, object> WriteAction
+        public Action<BinaryWriter, object>? WriteAction
         {
             get { return _writeAction; }
         }

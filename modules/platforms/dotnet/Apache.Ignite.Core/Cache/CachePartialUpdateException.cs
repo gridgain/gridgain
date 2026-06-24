@@ -32,10 +32,10 @@ namespace Apache.Ignite.Core.Cache
         private const string KeyFailedKeys = "FailedKeys";
 
         /** Failed keys. */
-        private readonly IList<object> _failedKeys;
+        private readonly IList<object>? _failedKeys;
 
         /** Failed keys exception. */
-        private readonly Exception _failedKeysException;
+        private readonly Exception? _failedKeysException;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CachePartialUpdateException"/> class.
@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Cache
         /// Initializes a new instance of the <see cref="CachePartialUpdateException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public CachePartialUpdateException(string message) : base(message)
+        public CachePartialUpdateException(string? message) : base(message)
         {
             // No-op.
         }
@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Cache
         protected CachePartialUpdateException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _failedKeys = (IList<object>) info.GetValue(KeyFailedKeys, typeof (IList<object>));
+            _failedKeys = (IList<object>?) info.GetValue(KeyFailedKeys, typeof (IList<object>));
         }
 
         /// <summary>
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Cache
         /// </summary>
         /// <param name="msg">Exception message.</param>
         /// <param name="failedKeysException">Exception occurred during failed keys read/write.</param>
-        public CachePartialUpdateException(string msg, Exception failedKeysException) 
+        public CachePartialUpdateException(string? msg, Exception? failedKeysException)
             : this(msg, null, failedKeysException)
         {
             // No-op.
@@ -81,7 +81,8 @@ namespace Apache.Ignite.Core.Cache
         /// </summary>
         /// <param name="msg">Exception message.</param>
         /// <param name="failedKeys">Failed keys.</param>
-        public CachePartialUpdateException(string msg, IList<object> failedKeys) : this(msg, failedKeys, null)
+        public CachePartialUpdateException(string? msg, IList<object>? failedKeys)
+            : this(msg, failedKeys, null)
         {
             // No-op.
         }
@@ -92,7 +93,7 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="msg">Exception message.</param>
         /// <param name="failedKeys">Failed keys.</param>
         /// <param name="failedKeysException">Exception occurred during failed keys read/write.</param>
-        private CachePartialUpdateException(string msg, IList<object> failedKeys, Exception failedKeysException) 
+        private CachePartialUpdateException(string? msg, IList<object>? failedKeys, Exception? failedKeysException)
             : base(msg, failedKeysException)
         {
             _failedKeys = failedKeys;
@@ -102,12 +103,12 @@ namespace Apache.Ignite.Core.Cache
         /// <summary>
         /// Gets the failed keys.
         /// </summary>
-        public IEnumerable<T> GetFailedKeys<T>()
+        public IEnumerable<T>? GetFailedKeys<T>()
         {
             if (_failedKeysException != null)
                 throw _failedKeysException;
             
-            return _failedKeys == null ? null : _failedKeys.Cast<T>();
+            return _failedKeys?.Cast<T>();
         }
 
         /// <summary>
@@ -119,6 +120,9 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
+#if NET6_0_OR_GREATER
+        [Obsolete("Formatter-based serialization is obsolete and should not be used.")]
+#endif
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue(KeyFailedKeys, _failedKeys);

@@ -34,14 +34,15 @@ import org.jetbrains.annotations.NotNull;
  */
 class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
-     * Maximum fraction of dirty pages in a region.
-     */
-    private static final double MAX_DIRTY_PAGES = 0.75;
-
-    /**
      * Percent of dirty pages which will not cause throttling.
      */
     private static final double MIN_RATIO_NO_THROTTLE = 0.03;
+
+    /**
+     * Maximum fraction of dirty pages in a region (configurable via
+     * {@link org.apache.ignite.IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}).
+     */
+    private final double maxDirtyPagesRatio;
 
     /**
      * Page memory.
@@ -104,9 +105,11 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
     private final IntervalBasedMeasurement markSpeedAndAvgParkTime;
 
     /***/
-    SpeedBasedMemoryConsumptionThrottlingStrategy(PageMemoryImpl pageMemory,
+    SpeedBasedMemoryConsumptionThrottlingStrategy(double maxDirtyPagesRatio,
+                                                  PageMemoryImpl pageMemory,
                                                   IgniteOutClosure<CheckpointProgress> cpProgress,
                                                   IntervalBasedMeasurement markSpeedAndAvgParkTime) {
+        this.maxDirtyPagesRatio = maxDirtyPagesRatio;
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
         this.markSpeedAndAvgParkTime = markSpeedAndAvgParkTime;
@@ -214,7 +217,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
 
         detectCpPagesWriteStart(cpWrittenPages, dirtyPagesRatio);
 
-        if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
+        if (dirtyPagesRatio >= maxDirtyPagesRatio)
             return 0; // too late to throttle, will wait on safe to update instead.
         else {
             return getParkTime(dirtyPagesRatio,
@@ -291,7 +294,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
      * @return {@code true} iff clean space left is too low
      */
     private boolean lowCleanSpaceLeft(double dirtyPagesRatio, double targetDirtyRatio) {
-        return dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > MAX_DIRTY_PAGES);
+        return dirtyPagesRatio > targetDirtyRatio && (dirtyPagesRatio + 0.05 > maxDirtyPagesRatio);
     }
 
     /***/
@@ -303,7 +306,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
     /**
      * Calculates speed needed to mark dirty all currently clean pages before the current checkpoint ends.
      * May return 0 if the provided parameters do not give enough information to calculate the speed, OR
-     * if the current dirty pages ratio is too high (higher than {@link #MAX_DIRTY_PAGES}), in which case
+     * if the current dirty pages ratio is too high (higher than {@link #maxDirtyPagesRatio}), in which case
      * we're not going to throttle anyway.
      *
      * @param dirtyPagesRatio     current percent of dirty pages.
@@ -321,7 +324,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         if (cpTotalPages <= 0)
             return 0;
 
-        if (dirtyPagesRatio >= MAX_DIRTY_PAGES)
+        if (dirtyPagesRatio >= maxDirtyPagesRatio)
             return 0;
 
         // IDEA: here, when calculating the count of clean pages, it includes the pages under checkpoint. It is kinda
@@ -329,7 +332,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
         // checkpointed), but the CP Buffer is usually not too big, and if it gets nearly filled, writes become
         // throttled really hard by exponential throttler. Maybe we should subtract the number of not-yet-written-by-CP
         // pages from the count of clean pages? In such a case, we would lessen the risk of CP Buffer-caused throttling.
-        double remainedCleanPages = (MAX_DIRTY_PAGES - dirtyPagesRatio) * pageMemTotalPages();
+        double remainedCleanPages = (maxDirtyPagesRatio - dirtyPagesRatio) * pageMemTotalPages();
 
         double secondsTillCPEnd = 1.0 * (cpTotalPages - donePages) / avgCpWriteSpeed;
 
@@ -363,7 +366,7 @@ class SpeedBasedMemoryConsumptionThrottlingStrategy {
 
         double fractionToVaryDirtyRatio = 1.0 - constStart;
 
-        return (cpProgress * fractionToVaryDirtyRatio + constStart) * MAX_DIRTY_PAGES;
+        return (cpProgress * fractionToVaryDirtyRatio + constStart) * maxDirtyPagesRatio;
     }
 
     /**

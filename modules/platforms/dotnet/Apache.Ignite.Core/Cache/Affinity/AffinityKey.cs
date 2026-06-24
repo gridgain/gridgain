@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         private readonly object _key;
 
         /** Affinity key. */
-        private readonly object _affinity;
+        private readonly object? _affinity;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AffinityKey"/> struct.
@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// <returns>
         ///   <c>true</c> if the specified <see cref="object" /> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             return obj is AffinityKey && Equals((AffinityKey) obj);

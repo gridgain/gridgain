@@ -101,17 +101,40 @@ function Exec([string]$command) {
     }
 }
 
-function Build-Solution([string]$targetSolution, [string]$targetDir) {
+function Get-Frameworks([string]$csproj) {
+    [xml]$xml = Get-Content $csproj
+    foreach ($pg in $xml.Project.PropertyGroup) {
+        if ($pg.TargetFrameworks) { return $pg.TargetFrameworks.Split(';') }
+        if ($pg.TargetFramework)  { return @($pg.TargetFramework) }
+    }
+    return @()
+}
+
+function Publish-Project([string]$csproj, [string]$framework) {
+    $targetDir = "bin\$framework"
     if ($clean) {
-        $cleanCommand = "dotnet clean $targetSolution -c $configuration"
+        $cleanCommand = "dotnet clean $csproj -c $configuration -f $framework"
         echo "Starting dotnet clean: '$cleanCommand'"
         Exec $cleanCommand
     }
 
-    $buildCommand = "dotnet publish $targetSolution -c $configuration -o $targetDir"
-    echo "Starting dotnet build: '$buildCommand'"
+    $buildCommand = "dotnet publish $csproj -c $configuration -f $framework -o $targetDir"
+    echo "Starting dotnet publish: '$buildCommand'"
     Exec $buildCommand
 }
+
+# Production projects (no benchmarks or tests). Each is published once per TFM declared in its csproj.
+$productionProjects = @(
+    ".\Apache.Ignite.Core\Apache.Ignite.Core.csproj",
+    ".\Apache.Ignite.Linq\Apache.Ignite.Linq.csproj",
+    ".\Apache.Ignite.Log4Net\Apache.Ignite.Log4Net.csproj",
+    ".\Apache.Ignite.NLog\Apache.Ignite.NLog.csproj",
+    ".\Apache.Ignite.Schema\Apache.Ignite.Schema.csproj",
+    ".\Apache.Ignite.AspNet\Apache.Ignite.AspNet.csproj",
+    ".\Apache.Ignite.EntityFramework\Apache.Ignite.EntityFramework.csproj",
+    ".\Apache.Ignite\Apache.Ignite.csproj",
+    ".\Apache.Ignite\Apache.Ignite.DotNetCore.csproj"
+)
 
 # 1) Build Java (Maven)
 # Detect Ignite root directory
@@ -171,21 +194,15 @@ $files | % { Copy-Item -Force $_ $libsDir }
 cd $PSScriptRoot
 
 
-# 2) Build .NET
-if (!$skipDotNet) {
-    Build-Solution ".\Apache.Ignite.sln" "bin\net461"
+# 2) Build .NET — publish every production project once per declared TFM into bin\<tfm>.
+foreach ($csproj in $productionProjects) {
+    foreach ($tfm in Get-Frameworks $csproj) {
+        $isNetFramework = $tfm.StartsWith("net4")
+        if ($isNetFramework -and $skipDotNet)      { continue }
+        if (!$isNetFramework -and $skipDotNetCore) { continue }
 
-    # Overwrite dlls to ensure that net461 versions are used instead of netstandard2.
-    Copy-Item -Force -Recurse ".\Apache.Ignite\bin\$configuration\net461\*" "bin\net461"
-}
-
-if(!$skipDotNetCore) {
-    Build-Solution ".\Apache.Ignite.DotNetCore.sln" "bin\net8.0"
-
-    # Build executable for .NET 10 too. Copy all libraries, then build the binaries.
-    Make-Dir("bin\net10.0")
-    Copy-Item -Force -Recurse "bin\net8.0\*" "bin\net10.0"
-    dotnet publish .\Apache.Ignite\Apache.Ignite.DotNetCore.csproj -c $configuration -f net10.0 -o bin\net10.0
+        Publish-Project $csproj $tfm
+    }
 }
 
 
@@ -215,7 +232,8 @@ if (!$skipNuGet) {
     Exec "dotnet pack Apache.Ignite.Examples.csproj --output $nupkgDir -p:PackageVersion=$ver"
 
     Remove-Item Apache.Ignite.Examples.csproj
-    Remove-Item bin\Debug -Force -Recurse
+    Remove-Item bin\Debug -Force -Recurse -ErrorAction SilentlyContinue
+    Remove-Item bin\Release -Force -Recurse -ErrorAction SilentlyContinue
 
     echo "Examples template NuGet package created in '$pwd\$nupkgDir'."
 }

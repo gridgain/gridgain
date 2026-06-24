@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Compute
         /// Initializes a new instance of the <see cref="ComputeExecutionRejectedException" /> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ComputeExecutionRejectedException(string message)
+        public ComputeExecutionRejectedException(string? message)
             : base(message)
         {
             // No-op.
@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Compute
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ComputeExecutionRejectedException(string message, Exception cause) : base(message, cause)
+        public ComputeExecutionRejectedException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

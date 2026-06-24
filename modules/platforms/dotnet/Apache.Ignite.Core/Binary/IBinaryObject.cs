@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Binary
         /// <returns>
         /// Field value.
         /// </returns>
-        TF GetField<TF>(string fieldName);
+        TF? GetField<TF>(string fieldName);
 
         /// <summary>
         /// Determines whether the field with specified name exists in this instance.
@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Binary
         /// <value>
         /// The name of the enum value.
         /// </value>
-        string EnumName { get; }
+        string? EnumName { get; }
 
         /// <summary>
         /// Creates a new <see cref="IBinaryObjectBuilder"/> based on this object.

@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
@@ -203,10 +202,10 @@ namespace Apache.Ignite.Core
         private bool? _authenticationEnabled;
 
         /** Local event listeners. Stored as array to ensure index access. */
-        private LocalEventListener[] _localEventListenersInternal;
+        private LocalEventListener[]? _localEventListenersInternal;
 
         /** Map from user-defined listener to it's id. */
-        private Dictionary<object, int> _localEventListenerIds;
+        private Dictionary<object, int>? _localEventListenerIds;
 
         /** MVCC vacuum frequency. */
         private long? _mvccVacuumFreq;
@@ -305,9 +304,6 @@ namespace Apache.Ignite.Core
         /// <param name="baseConfig">The base configuration.</param>
         internal IgniteConfiguration(BinaryReader binaryReader, IgniteConfiguration baseConfig)
         {
-            Debug.Assert(binaryReader != null);
-            Debug.Assert(baseConfig != null);
-
             Read(binaryReader);
             CopyLocalProperties(baseConfig);
         }
@@ -318,8 +314,6 @@ namespace Apache.Ignite.Core
         /// <param name="writer">The writer.</param>
         internal void Write(BinaryWriter writer)
         {
-            Debug.Assert(writer != null);
-
             // Simple properties
             writer.ConfigWriteBooleanNullable(_clientMode);
             writer.WriteIntArray(IncludedEventTypes == null ? null : IncludedEventTypes.ToArray());
@@ -674,7 +668,7 @@ namespace Apache.Ignite.Core
                 {
                     ValidateLocalEventListener(listener);
 
-                    writer.WriteIntArray(listener.EventTypes.ToArray());
+                    writer.WriteIntArray(listener.EventTypes!.ToArray());
                 }
             }
             else
@@ -711,8 +705,6 @@ namespace Apache.Ignite.Core
         /// </summary>
         internal void Validate(ILogger log)
         {
-            Debug.Assert(log != null);
-
             var ccfg = CacheConfiguration;
             if (ccfg != null)
             {
@@ -983,9 +975,7 @@ namespace Apache.Ignite.Core
 
                 foreach (var cache in CacheConfiguration)
                 {
-                    CacheConfiguration src;
-
-                    if (cache != null && caches.TryGetValue("_" + cache.Name, out src))
+                    if (cache != null && caches.TryGetValue("_" + cache.Name, out var src))
                     {
                         cache.CopyLocalProperties(src);
                     }
@@ -1000,7 +990,7 @@ namespace Apache.Ignite.Core
         /// <para />
         /// This property is used to when there are multiple Ignite nodes in one process to distinguish them.
         /// </summary>
-        public string IgniteInstanceName { get; set; }
+        public string? IgniteInstanceName { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether unique <see cref="IgniteInstanceName"/> should be generated.
@@ -1023,7 +1013,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         [Obsolete("Use IgniteInstanceName instead.")]
         [XmlIgnore]
-        public string GridName
+        public string? GridName
         {
             get { return IgniteInstanceName; }
             set { IgniteInstanceName = value; }
@@ -1035,7 +1025,7 @@ namespace Apache.Ignite.Core
         /// <value>
         /// The binary configuration.
         /// </value>
-        public BinaryConfiguration BinaryConfiguration { get; set; }
+        public BinaryConfiguration? BinaryConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the cache configuration.
@@ -1044,7 +1034,7 @@ namespace Apache.Ignite.Core
         /// The cache configuration.
         /// </value>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<CacheConfiguration> CacheConfiguration { get; set; }
+        public ICollection<CacheConfiguration>? CacheConfiguration { get; set; }
 
         /// <summary>
         /// URL to Spring configuration file.
@@ -1057,30 +1047,30 @@ namespace Apache.Ignite.Core
         /// and in .NET, .NET caches will overwrite Spring caches.
         /// </summary>
         [SuppressMessage("Microsoft.Design", "CA1056:UriPropertiesShouldNotBeStrings")]
-        public string SpringConfigUrl { get; set; }
+        public string? SpringConfigUrl { get; set; }
 
         /// <summary>
         /// Path to jvm.dll (libjvm.so on Linux, libjvm.dylib on Mac) file.
         /// If not set, it's location will be determined using JAVA_HOME environment variable.
         /// If path is neither set nor determined automatically, an exception will be thrown.
         /// </summary>
-        public string JvmDllPath { get; set; }
+        public string? JvmDllPath { get; set; }
 
         /// <summary>
         /// Path to Ignite home. If not set environment variable IGNITE_HOME will be used.
         /// </summary>
-        public string IgniteHome { get; set; }
+        public string? IgniteHome { get; set; }
 
         /// <summary>
         /// Classpath used by JVM on Ignite start.
         /// </summary>
-        public string JvmClasspath { get; set; }
+        public string? JvmClasspath { get; set; }
 
         /// <summary>
         /// Collection of options passed to JVM on Ignite start.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> JvmOptions { get; set; }
+        public ICollection<string>? JvmOptions { get; set; }
 
         /// <summary>
         /// List of additional .NET assemblies to load on Ignite start. Each item can be either
@@ -1088,7 +1078,7 @@ namespace Apache.Ignite.Core
         /// assemblies reside.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> Assemblies { get; set; }
+        public ICollection<string>? Assemblies { get; set; }
 
         /// <summary>
         /// Whether to suppress warnings.
@@ -1099,7 +1089,7 @@ namespace Apache.Ignite.Core
         /// Lifecycle handlers.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<ILifecycleHandler> LifecycleHandlers { get; set; }
+        public ICollection<ILifecycleHandler>? LifecycleHandlers { get; set; }
 
         /// <summary>
         /// Initial amount of memory in megabytes given to JVM. Maps to -Xms Java option.
@@ -1121,19 +1111,19 @@ namespace Apache.Ignite.Core
         /// Gets or sets the discovery service provider.
         /// Null for default discovery.
         /// </summary>
-        public IDiscoverySpi DiscoverySpi { get; set; }
+        public IDiscoverySpi? DiscoverySpi { get; set; }
 
         /// <summary>
         /// Gets or sets the communication service provider.
         /// Null for default communication.
         /// </summary>
-        public ICommunicationSpi CommunicationSpi { get; set; }
+        public ICommunicationSpi? CommunicationSpi { get; set; }
 
         /// <summary>
         /// Gets or sets the encryption service provider.
         /// Null for disabled encryption.
         /// </summary>
-        public IEncryptionSpi EncryptionSpi { get; set; }
+        public IEncryptionSpi? EncryptionSpi { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether node should start in client mode.
@@ -1149,7 +1139,7 @@ namespace Apache.Ignite.Core
         /// Gets or sets a set of event types (<see cref="EventType" />) to be recorded by Ignite.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<int> IncludedEventTypes { get; set; }
+        public ICollection<int>? IncludedEventTypes { get; set; }
 
         /// <summary>
         /// Gets or sets pre-configured local event listeners.
@@ -1158,7 +1148,7 @@ namespace Apache.Ignite.Core
         /// but important difference is that some events occur during startup and can be only received this way.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<LocalEventListener> LocalEventListeners { get; set; }
+        public ICollection<LocalEventListener>? LocalEventListeners { get; set; }
 
         /// <summary>
         /// Initializes the local event listeners collections.
@@ -1175,7 +1165,7 @@ namespace Apache.Ignite.Core
                 {
                     var listener = _localEventListenersInternal[i];
                     ValidateLocalEventListener(listener);
-                    _localEventListenerIds[listener.ListenerObject] = i;
+                    _localEventListenerIds[listener.ListenerObject!] = i;
                 }
             }
         }
@@ -1189,7 +1179,7 @@ namespace Apache.Ignite.Core
             {
                 InitLocalEventListeners();
 
-                return _localEventListenersInternal;
+                return _localEventListenersInternal!;
             }
         }
 
@@ -1202,7 +1192,7 @@ namespace Apache.Ignite.Core
             {
                 InitLocalEventListeners();
 
-                return _localEventListenerIds;
+                return _localEventListenerIds!;
             }
         }
 
@@ -1283,7 +1273,7 @@ namespace Apache.Ignite.Core
         /// Gets or sets the work directory.
         /// If not provided, a folder under <see cref="IgniteHome"/> will be used.
         /// </summary>
-        public string WorkDirectory { get; set; }
+        public string? WorkDirectory { get; set; }
 
         /// <summary>
         /// Gets or sets system-wide local address or host for all Ignite components to bind to.
@@ -1294,7 +1284,7 @@ namespace Apache.Ignite.Core
         /// <para />
         /// It is strongly recommended to set this parameter for all production environments.
         /// </summary>
-        public string Localhost { get; set; }
+        public string? Localhost { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether this node should be a daemon node.
@@ -1320,17 +1310,17 @@ namespace Apache.Ignite.Core
         /// NOTE: attribute names starting with "org.apache.ignite" are reserved for internal use.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, object> UserAttributes { get; set; }
+        public IDictionary<string, object>? UserAttributes { get; set; }
 
         /// <summary>
         /// Gets or sets the atomic data structures configuration.
         /// </summary>
-        public AtomicConfiguration AtomicConfiguration { get; set; }
+        public AtomicConfiguration? AtomicConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the transaction configuration.
         /// </summary>
-        public TransactionConfiguration TransactionConfiguration { get; set; }
+        public TransactionConfiguration? TransactionConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether late affinity assignment mode should be used.
@@ -1411,7 +1401,7 @@ namespace Apache.Ignite.Core
         /// If no logger is set, logging is delegated to Java, which uses the logger defined in Spring XML (if present)
         /// or logs to console otherwise.
         /// </summary>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
 
         /// <summary>
         /// Gets or sets the failure detection timeout used by <see cref="TcpDiscoverySpi"/>
@@ -1448,7 +1438,7 @@ namespace Apache.Ignite.Core
         /// Gets or sets the configurations for plugins to be started.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<IPluginConfiguration> PluginConfigurations { get; set; }
+        public ICollection<IPluginConfiguration>? PluginConfigurations { get; set; }
 
         /// <summary>
         /// Gets or sets the event storage interface.
@@ -1456,7 +1446,7 @@ namespace Apache.Ignite.Core
         /// Only predefined implementations are supported:
         /// <see cref="NoopEventStorageSpi"/>, <see cref="MemoryEventStorageSpi"/>.
         /// </summary>
-        public IEventStorageSpi EventStorageSpi { get; set; }
+        public IEventStorageSpi? EventStorageSpi { get; set; }
 
         /// <summary>
         /// Gets or sets the page memory configuration.
@@ -1465,12 +1455,12 @@ namespace Apache.Ignite.Core
         /// Obsolete, use <see cref="DataStorageConfiguration"/>.
         /// </summary>
         [Obsolete("Use DataStorageConfiguration.")]
-        public MemoryConfiguration MemoryConfiguration { get; set; }
+        public MemoryConfiguration? MemoryConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the data storage configuration.
         /// </summary>
-        public DataStorageConfiguration DataStorageConfiguration { get; set; }
+        public DataStorageConfiguration? DataStorageConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the SSL context factory that will be used for creating a secure socket layer b/w nodes.
@@ -1478,7 +1468,7 @@ namespace Apache.Ignite.Core
         /// Default is null (no SSL).
         /// <para />
         /// </summary>
-        public ISslContextFactory SslContextFactory { get; set; }
+        public ISslContextFactory? SslContextFactory { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating how user assemblies should be loaded on remote nodes.
@@ -1580,12 +1570,12 @@ namespace Apache.Ignite.Core
         /// Gets or sets the SQL connector configuration (for JDBC and ODBC).
         /// </summary>
         [Obsolete("Use ClientConnectorConfiguration instead.")]
-        public SqlConnectorConfiguration SqlConnectorConfiguration { get; set; }
+        public SqlConnectorConfiguration? SqlConnectorConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the client connector configuration (for JDBC, ODBC, and thin clients).
         /// </summary>
-        public ClientConnectorConfiguration ClientConnectorConfiguration { get; set; }
+        public ClientConnectorConfiguration? ClientConnectorConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether client connector is enabled:
@@ -1612,7 +1602,7 @@ namespace Apache.Ignite.Core
         /// Obsolete, use <see cref="DataStorageConfiguration"/>.
         /// </summary>
         [Obsolete("Use DataStorageConfiguration.")]
-        public PersistentStoreConfiguration PersistentStoreConfiguration { get; set; }
+        public PersistentStoreConfiguration? PersistentStoreConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether grid should be active on start.
@@ -1631,7 +1621,7 @@ namespace Apache.Ignite.Core
         /// <summary>
         /// Gets or sets consistent globally unique node identifier which survives node restarts.
         /// </summary>
-        public object ConsistentId { get; set; }
+        public object? ConsistentId { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether Java console output should be redirected
@@ -1707,7 +1697,7 @@ namespace Apache.Ignite.Core
         /// Only these implementations are supported:
         /// <see cref="NoOpFailureHandler"/>, <see cref="StopNodeOrHaltFailureHandler"/>, <see cref="StopNodeFailureHandler"/>.
         /// </summary>
-        public IFailureHandler FailureHandler { get; set; }
+        public IFailureHandler? FailureHandler { get; set; }
 
         /// <summary>
         /// Gets or sets SQL schemas to be created on node startup. Schemas are created on local node only and are not propagated.
@@ -1716,13 +1706,13 @@ namespace Apache.Ignite.Core
         /// By default schema names are case-insensitive. Use quotes to enforce case sensitivity.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> SqlSchemas { get; set; }
+        public ICollection<string>? SqlSchemas { get; set; }
 
         /// <summary>
         /// Gets or sets custom executor configuration for compute tasks.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<ExecutorConfiguration> ExecutorConfiguration { get; set; }
+        public ICollection<ExecutorConfiguration>? ExecutorConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether peer class loading is enabled for <b>Java</b> side.

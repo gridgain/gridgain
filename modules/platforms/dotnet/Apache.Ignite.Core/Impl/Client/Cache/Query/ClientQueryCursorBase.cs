@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
     using Apache.Ignite.Core.Impl.Cache.Query;
@@ -85,6 +86,14 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
             {
                 base.Dispose(disposing);
             }
+        }
+
+        /** <inheritdoc /> */
+        protected override Task DisposeAsyncCore()
+        {
+            // Close the server-side cursor without blocking a thread on the network round-trip.
+            return _socket.DoOutInOpAsync<object>(ClientOp.ResourceClose,
+                ctx => ctx.Writer.WriteLong(_cursorId), _ => null!);
         }
     }
 }

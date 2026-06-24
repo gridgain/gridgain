@@ -40,7 +40,7 @@ namespace Apache.Ignite.Core.Compute
         /// Initializes a new instance of the <see cref="ComputeUserUndeclaredException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ComputeUserUndeclaredException(string message) : base(message)
+        public ComputeUserUndeclaredException(string? message) : base(message)
         {
             // No-op.
         }
@@ -61,7 +61,7 @@ namespace Apache.Ignite.Core.Compute
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ComputeUserUndeclaredException(string message, Exception cause) : base(message, cause)
+        public ComputeUserUndeclaredException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

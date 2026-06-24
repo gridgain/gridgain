@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// Initializes a new instance of the <see cref="CacheStoreException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public CacheStoreException(string message) : base(message)
+        public CacheStoreException(string? message) : base(message)
         {
             // No-op.
         }
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public CacheStoreException(string message, Exception cause) : base(message, cause)
+        public CacheStoreException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

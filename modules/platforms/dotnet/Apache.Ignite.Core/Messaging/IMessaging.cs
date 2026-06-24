@@ -40,14 +40,14 @@ namespace Apache.Ignite.Core.Messaging
         /// </summary>
         /// <param name="message">Message to send.</param>
         /// <param name="topic">Topic to send to, null for default topic.</param>
-        void Send(object message, object topic = null);
+        void Send(object message, object? topic = null);
 
         /// <summary>
         /// Sends messages with specified topic to the nodes in the underlying cluster group.
         /// </summary>
         /// <param name="messages">Messages to send.</param>
         /// <param name="topic">Topic to send to, null for default topic.</param>
-        void SendAll(IEnumerable messages, object topic = null);
+        void SendAll(IEnumerable messages, object? topic = null);
 
         /// <summary>
         /// Sends a message with specified topic to the nodes in the underlying cluster group.
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Messaging
         /// <param name="timeout">
         /// Message timeout, null for for default value from configuration (IgniteConfiguration.getNetworkTimeout).
         /// </param>
-        void SendOrdered(object message, object topic = null, TimeSpan? timeout = null);
+        void SendOrdered(object message, object? topic = null, TimeSpan? timeout = null);
 
         /// <summary>
         /// Adds local listener for given topic on local node only. This listener will be notified whenever any
@@ -71,14 +71,14 @@ namespace Apache.Ignite.Core.Messaging
         /// then it will be unsubscribed from any further notifications.
         /// </param>
         /// <param name="topic">Topic to subscribe to.</param>
-        void LocalListen<T>(IMessageListener<T> listener, object topic = null);
+        void LocalListen<T>(IMessageListener<T> listener, object? topic = null);
 
         /// <summary>
         /// Unregisters local listener for given topic on local node only.
         /// </summary>
         /// <param name="listener">Listener predicate.</param>
         /// <param name="topic">Topic to unsubscribe from.</param>
-        void StopLocalListen<T>(IMessageListener<T> listener, object topic = null);
+        void StopLocalListen<T>(IMessageListener<T> listener, object? topic = null);
 
         /// <summary>
         /// Adds a message listener for a given topic to all nodes in the cluster group (possibly including
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Messaging
         /// <returns>
         /// Operation ID that can be passed to <see cref="StopRemoteListen"/> method to stop listening.
         /// </returns>
-        Guid RemoteListen<T>(IMessageListener<T> listener, object topic = null);
+        Guid RemoteListen<T>(IMessageListener<T> listener, object? topic = null);
 
         /// <summary>
         /// Adds a message listener for a given topic to all nodes in the cluster group (possibly including
@@ -110,7 +110,7 @@ namespace Apache.Ignite.Core.Messaging
         /// <returns>
         /// Operation ID that can be passed to <see cref="StopRemoteListen"/> method to stop listening.
         /// </returns>
-        Task<Guid> RemoteListenAsync<T>(IMessageListener<T> listener, object topic = null);
+        Task<Guid> RemoteListenAsync<T>(IMessageListener<T> listener, object? topic = null);
 
         /// <summary>
         /// Unregisters all listeners identified with provided operation ID on all nodes in the cluster group.

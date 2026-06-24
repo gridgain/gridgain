@@ -55,7 +55,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets the name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets a value indicating whether this index is descending. Default is false.

@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Transactions
         /// Initializes a new instance of the <see cref="TransactionTimeoutException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public TransactionTimeoutException(string message)
+        public TransactionTimeoutException(string? message)
             : base(message)
         {
             // No-op.
@@ -60,7 +60,7 @@ namespace Apache.Ignite.Core.Transactions
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public TransactionTimeoutException(string message, Exception cause) : base(message, cause)
+        public TransactionTimeoutException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

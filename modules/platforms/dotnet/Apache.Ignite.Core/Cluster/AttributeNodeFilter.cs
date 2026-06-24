@@ -33,13 +33,13 @@ namespace Apache.Ignite.Core.Cluster
     public sealed class AttributeNodeFilter : IClusterNodeFilter
     {
         /** */
-        private IDictionary<string, object> _attributes;
+        private IDictionary<string, object>? _attributes;
 
         /// <summary>
         /// Attributes dictionary match.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public IDictionary<string, object> Attributes
+        public IDictionary<string, object>? Attributes
         {
             get { return _attributes; }
             set
@@ -98,10 +98,8 @@ namespace Apache.Ignite.Core.Cluster
 
             while (count > 0)
             {
-                string attrKey = reader.ReadString();
+                string attrKey = reader.ReadString()!;
                 object attrVal = reader.ReadObject<object>();
-
-                Debug.Assert(attrKey != null);
 
                 Attributes[attrKey] = attrVal;
 
@@ -115,6 +113,11 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="writer">Writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
+            if (Attributes == null)
+            {
+                throw new InvalidOperationException("AttributeNodeFilter.Attributes must not be null.");
+            }
+
             writer.WriteInt(Attributes.Count);
 
             // Does not preserve ordering, it's fine.

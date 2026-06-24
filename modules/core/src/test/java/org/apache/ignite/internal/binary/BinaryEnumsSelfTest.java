@@ -254,6 +254,8 @@ public class BinaryEnumsSelfTest extends GridCommonAbstractTest {
 
         BinaryEnumObjectImpl binEnum = new BinaryEnumObjectImpl(binCtx, bytes);
 
+        assertEquals(bytes.length, srcBinEnum.size());
+        assertEquals(srcBinEnum.size(), binEnum.size());
         assertEquals(clsName, binEnum.className());
         assertEquals(typeId, binEnum.typeId());
         assertEquals(ord, binEnum.enumOrdinal());

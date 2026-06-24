@@ -41,12 +41,12 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Node where event occurred and was recorded.
         /// </summary>
-        IClusterNode Node { get; }
+        IClusterNode? Node { get; }
 
         /// <summary>
         /// Gets optional message for this event.
         /// </summary>
-        string Message { get; }
+        string? Message { get; }
 
         /// <summary>
         /// Gets type of this event. All system event types are defined in <see cref="EventType"/>

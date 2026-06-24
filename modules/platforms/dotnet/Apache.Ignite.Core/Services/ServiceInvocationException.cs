@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Services
         private const string KeyBinaryCause = "BinaryCause";
 
         /** Cause. */
-        private readonly IBinaryObject _binaryCause;
+        private readonly IBinaryObject? _binaryCause;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceInvocationException"/> class.
@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Services
         /// Initializes a new instance of the <see cref="ServiceInvocationException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ServiceInvocationException(string message) : base(message)
+        public ServiceInvocationException(string? message) : base(message)
         {
             // No-op.
         }
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ServiceInvocationException(string message, Exception cause) : base(message, cause)
+        public ServiceInvocationException(string? message, Exception? cause) : base(message, cause)
         {
         }
 
@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="binaryCause">The binary cause.</param>
-        public ServiceInvocationException(string message, IBinaryObject binaryCause)
+        public ServiceInvocationException(string? message, IBinaryObject binaryCause)
             :base(message)
         {
             _binaryCause = binaryCause;
@@ -79,16 +79,13 @@ namespace Apache.Ignite.Core.Services
         protected ServiceInvocationException(SerializationInfo info, StreamingContext ctx)
             : base(info, ctx)
         {
-            _binaryCause = (IBinaryObject) info.GetValue(KeyBinaryCause, typeof (IBinaryObject));
+            _binaryCause = (IBinaryObject?) info.GetValue(KeyBinaryCause, typeof (IBinaryObject));
         }
 
         /// <summary>
         /// Gets the binary cause.
         /// </summary>
-        public IBinaryObject BinaryCause
-        {
-            get { return _binaryCause; }
-        }
+        public IBinaryObject? BinaryCause => _binaryCause;
 
         /// <summary>
         /// When overridden in a derived class, sets the <see cref="SerializationInfo" />
@@ -99,6 +96,9 @@ namespace Apache.Ignite.Core.Services
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
+#if NET6_0_OR_GREATER
+        [Obsolete("Formatter-based serialization is obsolete and should not be used.")]
+#endif
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue(KeyBinaryCause, _binaryCause);

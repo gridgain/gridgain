@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Transactions
 {
     using System;
@@ -28,7 +30,7 @@ namespace Apache.Ignite.Core.Impl.Transactions
     /// <summary>
     /// Grid cache transaction implementation.
     /// </summary>
-    internal sealed class TransactionImpl : IDisposable
+    internal sealed class TransactionImpl : IDisposable, IAsyncDisposable
     {
         /** Metadatas. */
         private object[] _metas;
@@ -415,6 +417,27 @@ namespace Apache.Ignite.Core.Impl.Transactions
             }
         }
 
+        /** <inheritdoc /> */
+        [SuppressMessage("Microsoft.Usage", "CA1816:CallGCSuppressFinalizeCorrectly",
+            Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
+        [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
+            Justification = "DisposeAsync should not throw.")]
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await CloseAsync().ConfigureAwait(false);
+            }
+            catch (IgniteIllegalStateException)
+            {
+                _state = new StateHolder(TransactionState.Unknown);
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
+        }
+
         /// <summary>
         /// Gets a value indicating whether this transaction is closed.
         /// </summary>
@@ -463,6 +486,19 @@ namespace Apache.Ignite.Core.Impl.Transactions
             lock (this)
             {
                 _state = _state ?? new StateHolder((TransactionState) _txs.TxClose(this));
+            }
+        }
+
+        /// <summary>
+        /// Closes the transaction asynchronously, rolling it back unless it has already been completed.
+        /// Unlike <see cref="RollbackAsync"/>, this is a no-op when the transaction is already closed,
+        /// matching the synchronous <see cref="Close"/> used by <see cref="Dispose"/>.
+        /// </summary>
+        private Task CloseAsync()
+        {
+            lock (this)
+            {
+                return IsClosed ? TaskRunner.CompletedTask : CloseWhenComplete(_txs.RollbackAsync(this));
             }
         }
 

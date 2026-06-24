@@ -16,8 +16,8 @@
 
 namespace Apache.Ignite.Core.Impl.Services
 {
+    using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
     using System.Reflection;
     using System.Threading.Tasks;
@@ -103,8 +103,6 @@ namespace Apache.Ignite.Core.Impl.Services
             bool keepBinary, bool srvKeepBinary)
             : base(target)
         {
-            Debug.Assert(clusterGroup  != null);
-
             _clusterGroup = clusterGroup;
             _keepBinary = keepBinary;
             _srvKeepBinary = srvKeepBinary;
@@ -321,14 +319,11 @@ namespace Apache.Ignite.Core.Impl.Services
         }
 
         /** <inheritDoc /> */
-        public T GetService<T>(string name)
+        public T? GetService<T>(string name)
         {
             IgniteArgumentCheck.NotNullOrEmpty(name, "name");
 
             var services = GetServices<T>(name);
-
-            if (services == null)
-                return default(T);
 
             return services.FirstOrDefault();
         }
@@ -344,7 +339,7 @@ namespace Apache.Ignite.Core.Impl.Services
                     bool hasVal = r.ReadBool();
 
                     if (!hasVal)
-                        return new T[0];
+                        return Array.Empty<T>();
 
                     var count = r.ReadInt();
                         
@@ -370,13 +365,13 @@ namespace Apache.Ignite.Core.Impl.Services
         }
 
         /** <inheritDoc /> */
-        public T GetServiceProxy<T>(string name, bool sticky, IServiceCallContext callCtx) where T : class
+        public T GetServiceProxy<T>(string name, bool sticky, IServiceCallContext? callCtx) where T : class
         {
             IgniteArgumentCheck.NotNullOrEmpty(name, "name");
             IgniteArgumentCheck.Ensure(typeof(T).IsInterface, "T", 
                 "Service proxy type should be an interface: " + typeof(T));
 
-            T locInst;
+            T? locInst;
 
             // In local scenario try to return service instance itself instead of a proxy
             // Get as object because proxy interface may be different from real interface
@@ -392,7 +387,7 @@ namespace Apache.Ignite.Core.Impl.Services
             var platform = GetServiceDescriptors().Cast<ServiceDescriptor>().Single(x => x.Name == name).PlatformType;
 
             return ServiceProxyFactory<T>.CreateProxy((method, args) =>
-                InvokeProxyMethod(javaProxy, method.Name, method, args, platform, callCtx));
+                InvokeProxyMethod(javaProxy!, method.Name, method, args, platform, callCtx));
         }
 
         /** <inheritDoc /> */
@@ -408,7 +403,7 @@ namespace Apache.Ignite.Core.Impl.Services
         }
 
         /** <inheritDoc /> */
-        public dynamic GetDynamicServiceProxy(string name, bool sticky, IServiceCallContext callCtx)
+        public dynamic GetDynamicServiceProxy(string name, bool sticky, IServiceCallContext? callCtx)
         {
             IgniteArgumentCheck.NotNullOrEmpty(name, "name");
 
@@ -421,7 +416,7 @@ namespace Apache.Ignite.Core.Impl.Services
                     return locInst;
             }
 
-            var javaProxy = DoOutOpObject(OpServiceProxy, w =>
+            var javaProxy = DoOutOpObject(OpServiceProxy, (BinaryWriter w) =>
             {
                 w.WriteString(name);
                 w.WriteBoolean(sticky);
@@ -430,7 +425,7 @@ namespace Apache.Ignite.Core.Impl.Services
             var platform = GetServiceDescriptors().Cast<ServiceDescriptor>().Single(x => x.Name == name).PlatformType;
 
             return new DynamicServiceProxy((methodName, args) =>
-                InvokeProxyMethod(javaProxy, methodName, null, args, platform, callCtx));
+                InvokeProxyMethod(javaProxy!, methodName, null, args, platform, callCtx));
         }
 
         /// <summary>
@@ -446,7 +441,7 @@ namespace Apache.Ignite.Core.Impl.Services
         /// Invocation result.
         /// </returns>
         private object InvokeProxyMethod(IPlatformTargetInternal proxy, string methodName,
-            MethodBase method, object[] args, PlatformType platformType, IServiceCallContext callCtx)
+            MethodBase? method, object[] args, PlatformType platformType, IServiceCallContext? callCtx)
         {
             bool locRegisterSameJavaType = Marshaller.RegisterSameJavaTypeTl.Value;
 
@@ -459,7 +454,7 @@ namespace Apache.Ignite.Core.Impl.Services
             {
                 return DoOutInOp(OpInvokeMethod,
                     writer => ServiceProxySerializer.WriteProxyMethod(writer, methodName, method, args, platformType, callCtx),
-                    (stream, res) => ServiceProxySerializer.ReadInvocationResult(stream, Marshaller, _keepBinary),
+                    (stream, _) => ServiceProxySerializer.ReadInvocationResult(stream, Marshaller, _keepBinary),
                     proxy);
             }
             finally
@@ -475,7 +470,7 @@ namespace Apache.Ignite.Core.Impl.Services
         /// <summary>
         /// Reads the deployment result.
         /// </summary>
-        private object ReadDeploymentResult(BinaryReader r)
+        private object? ReadDeploymentResult(BinaryReader? r)
         {
             return r != null ? ReadDeploymentResult(r.Stream) : null;
         }
@@ -483,7 +478,7 @@ namespace Apache.Ignite.Core.Impl.Services
         /// <summary>
         /// Reads the deployment result.
         /// </summary>
-        private object ReadDeploymentResult(IBinaryStream s)
+        private object? ReadDeploymentResult(IBinaryStream s)
         {
             ServiceProxySerializer.ReadDeploymentResult(s, Marshaller, _keepBinary);
             return null;

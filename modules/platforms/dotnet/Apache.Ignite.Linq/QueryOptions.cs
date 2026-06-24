@@ -66,7 +66,7 @@ namespace Apache.Ignite.Linq
         /// <value>
         /// The name of the table.
         /// </value>
-        public string TableName { get; set; }
+        public string? TableName { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether distributed joins should be enabled for this query.
@@ -135,7 +135,7 @@ namespace Apache.Ignite.Linq
         /// The query will be executed only on nodes which are primary for specified partitions.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public int[] Partitions { get; set; }
+        public int[]? Partitions { get; set; }
 
         /// <summary>
         /// Gets or sets batch size for update queries.
@@ -150,6 +150,6 @@ namespace Apache.Ignite.Linq
         /// The specified label can be used to identify the running query in system views
         /// and in the log when printing warnings about long-running queries.
         /// </summary>
-        public string Label { get; set; }
+        public string? Label { get; set; }
     }
 }

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#nullable disable
 namespace Apache.Ignite.Core.Impl.Common
 {
     using System;
@@ -51,7 +52,7 @@ namespace Apache.Ignite.Core.Impl.Common
         private readonly Func<object, object, object, bool> _cacheEntryFilter;
         
         /** */
-        private readonly Tuple<Func<object, IMutableCacheEntryInternal, object, object>, Tuple<Type, Type>> 
+        private readonly Tuple<Func<object, IMutableCacheEntryInternal, object, object>, Tuple<Type, Type>>
             _cacheEntryProcessor;
 
         /** */

@@ -17,9 +17,12 @@
 namespace Apache.Ignite.Core.Impl.Client.Transactions
 {
     using System;
+    using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Transactions;
+    using Apache.Ignite.Core.Impl.Common;
     using Apache.Ignite.Core.Transactions;
 
     /// <summary>
@@ -50,7 +53,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
             TransactionConcurrency concurrency,
             TransactionIsolation isolation,
             TimeSpan timeout,
-            string label)
+            string? label)
         {
             _id = id;
             _socket = socket;
@@ -84,7 +87,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         public TimeSpan Timeout { get; private set; }
 
         /** <inheritdoc /> */
-        public string Label { get; private set; }
+        public string? Label { get; private set; }
 
         /** <inheritdoc /> */
         public void Dispose()
@@ -92,6 +95,28 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
             try
             {
                 Close(false);
+            }
+            catch
+            {
+                if (!_socket.IsDisposed)
+                {
+                    throw;
+                }
+            }
+            finally
+            {
+                GC.SuppressFinalize(this);
+            }
+        }
+
+        /** <inheritdoc /> */
+        [SuppressMessage("Microsoft.Usage", "CA1816:CallGCSuppressFinalizeCorrectly",
+            Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                await CloseAsync(false).ConfigureAwait(false);
             }
             catch
             {
@@ -157,6 +182,28 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
                     _closed = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// Closes the transaction asynchronously.
+        /// </summary>
+        private Task CloseAsync(bool commit)
+        {
+            if (_closed)
+            {
+                return TaskRunner.CompletedTask;
+            }
+
+            // Mark as closed up front (matches the synchronous Close, which sets the flag even on failure).
+            _closed = true;
+
+            return Socket.DoOutInOpAsync<object?>(ClientOp.TxEnd,
+                ctx =>
+                {
+                    ctx.Writer.WriteInt(_id);
+                    ctx.Writer.WriteBoolean(commit);
+                },
+                _ => null);
         }
 
         /// <summary>

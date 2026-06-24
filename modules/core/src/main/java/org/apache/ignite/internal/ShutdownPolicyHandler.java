@@ -16,6 +16,8 @@
 
 package org.apache.ignite.internal;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -102,6 +104,35 @@ public interface ShutdownPolicyHandler {
             default:
                 throw new IgniteException("Unknown shutdown policy [plc=" + shutdownPolicy + ']');
         }
+    }
+
+    /**
+     * REST-time unique-data check: names of the non-system cache groups for which this node is the only
+     * owner of at least one partition (draining/stopping would make that partition unavailable). Skips
+     * local/system groups and {@code backups=0} {@code PARTITIONED} caches, then reuses
+     * {@link GracefulShutdownPolicyHandler#haveCopyLocalPartitions} (no excluded nodes, no supplier
+     * collection); a group whose topology is not yet available is reported (conservative).
+     *
+     * @param ctx Kernal context.
+     * @return Names of cache groups solely owned by this node; empty if none.
+     */
+    static List<String> uniqueDataCacheGroups(GridKernalContext ctx) {
+        List<String> res = new ArrayList<>();
+
+        UUID locId = ctx.localNodeId();
+
+        for (CacheGroupContext grpCtx : ctx.cache().cacheGroups()) {
+            if (grpCtx.isLocal() || grpCtx.systemCache())
+                continue;
+
+            if (grpCtx.config().getCacheMode() == PARTITIONED && grpCtx.config().getBackups() == 0)
+                continue;
+
+            if (!GracefulShutdownPolicyHandler.haveCopyLocalPartitions(grpCtx, locId, Collections.emptySet(), null))
+                res.add(grpCtx.cacheOrGroupName());
+        }
+
+        return res;
     }
 
     /**
@@ -266,7 +297,7 @@ public interface ShutdownPolicyHandler {
 
                     nodesToExclude.retainAll(fullMap.keySet());
 
-                    if (!haveCopyLocalPartitions(grpCtx, nodesToExclude, proposedSuppliers)) {
+                    if (!haveCopyLocalPartitions(grpCtx, grid0.getLocalNodeId(), nodesToExclude, proposedSuppliers)) {
                         safeToStop = false;
 
                         if (log.isInfoEnabled()) {
@@ -416,17 +447,20 @@ public interface ShutdownPolicyHandler {
         }
 
         /**
-         * Checks that the cluster has another copy of each local partition for the specified group.
-         * Also, this method collects all nodes that can be used as suppliers for local partitions.
+         * Checks that the cluster has another copy of each local partition for the specified group, and
+         * (when {@code proposedSuppliers} is non-null) collects the nodes that can supply them. Shared by
+         * the GRACEFUL shutdown wait and the REST guard {@link #uniqueDataCacheGroups}.
          *
          * @param grpCtx Cache group.
+         * @param localNodeId Local node id.
          * @param nodesToExclude Nodes to exclude from check.
-         * @param proposedSuppliers Map of proposed suppliers for cache groups.
-         * @return {@code true} if all local partitions of the specified cache group have a copy in the cluster,
-         *                      and {@code false} otherwise.
+         * @param proposedSuppliers Map to collect proposed suppliers into, or {@code null} to skip.
+         * @return {@code true} if every local partition has a copy elsewhere; {@code false} otherwise
+         *     (including when the topology is not yet available).
          */
-        private boolean haveCopyLocalPartitions(
+        static boolean haveCopyLocalPartitions(
             CacheGroupContext grpCtx,
+            UUID localNodeId,
             Set<UUID> nodesToExclude,
             Map<UUID, Map<Integer, Set<Integer>>> proposedSuppliers
         ) {
@@ -435,9 +469,10 @@ public interface ShutdownPolicyHandler {
             if (fullMap == null)
                 return false;
 
-            UUID localNodeId = grid0.getLocalNodeId();
-
             GridDhtPartitionMap localPartMap = fullMap.get(localNodeId);
+
+            if (localPartMap == null)
+                return true;
 
             int parts = grpCtx.topology().partitions();
 
@@ -462,9 +497,10 @@ public interface ShutdownPolicyHandler {
                         continue;
 
                     if (entry.getValue().get(p) == GridDhtPartitionState.OWNING) {
-                        proposedSuppliers.computeIfAbsent(entry.getKey(), (nodeId) -> new HashMap<>())
-                            .computeIfAbsent(grpCtx.groupId(), grpId -> new HashSet<>())
-                            .add(p);
+                        if (proposedSuppliers != null)
+                            proposedSuppliers.computeIfAbsent(entry.getKey(), (nodeId) -> new HashMap<>())
+                                .computeIfAbsent(grpCtx.groupId(), grpId -> new HashSet<>())
+                                .add(p);
 
                         foundCopy = true;
                     }

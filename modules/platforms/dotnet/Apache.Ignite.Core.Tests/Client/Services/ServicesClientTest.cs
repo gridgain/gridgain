@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Services
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Client.Services;
@@ -583,6 +584,26 @@ namespace Apache.Ignite.Core.Tests.Client.Services
             Assert.AreEqual(svc.CacheName, svc1.CacheName);
             Assert.AreEqual(svc.OriginNodeId, svc1.OriginNodeId);
             Assert.AreEqual(svc.PlatformType, svc1.PlatformType);
+        }
+
+        [Test]
+        public async Task TestGetServiceDescriptorsAsync()
+        {
+            DeployAndGetTestService();
+
+            var svcs = await Client.GetServices().GetServiceDescriptorsAsync();
+
+            Assert.AreEqual(1, svcs.Count);
+            Assert.AreEqual(ServiceName, svcs.First().Name);
+
+            var svc = await Client.GetServices().GetServiceDescriptorAsync(ServiceName);
+
+            Assert.AreEqual(ServiceName, svc.Name);
+            Assert.AreEqual(
+                "org.apache.ignite.internal.processors.platform.dotnet.PlatformDotNetServiceImpl",
+                svc.ServiceClass
+            );
+            Assert.AreEqual(PlatformType.DotNet, svc.PlatformType);
         }
 
         /// <summary>

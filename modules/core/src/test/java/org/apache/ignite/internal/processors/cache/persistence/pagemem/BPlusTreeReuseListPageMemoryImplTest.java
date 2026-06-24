@@ -118,7 +118,8 @@ public class BPlusTreeReuseListPageMemoryImplTest extends BPlusTreeReuseSelfTest
             () -> true,
             new DataRegionMetricsImpl(new DataRegionConfiguration(), cctx),
             PageMemoryImpl.ThrottlingPolicy.DISABLED,
-            clo
+            clo,
+            PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO
         );
 
         mem.start();

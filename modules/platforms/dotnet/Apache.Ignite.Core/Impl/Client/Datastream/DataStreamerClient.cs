@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Net.Sockets;
@@ -37,6 +36,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
     /// Thin client data streamer.
     /// </summary>
     internal sealed class DataStreamerClient<TK, TV> : IDataStreamerClient<TK, TV>
+        where TK : notnull
     {
         /** Streamer flags. */
         [Flags]
@@ -83,7 +83,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private readonly ConcurrentStack<DataStreamerClientEntry<TK, TV>[]> _arrayPool
             = new ConcurrentStack<DataStreamerClientEntry<TK, TV>[]>();
 
-        private readonly Timer _autoFlushTimer;
+        private readonly Timer? _autoFlushTimer;
 
         /** */
         private int _arraysAllocated;
@@ -92,7 +92,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private long _entriesSent;
 
         /** Exception. When set, the streamer is closed. */
-        private volatile Exception _exception;
+        private volatile Exception? _exception;
 
         /** Cancelled flag. */
         private volatile bool _cancelled;
@@ -106,11 +106,8 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         public DataStreamerClient(
             ClientFailoverSocket socket,
             string cacheName,
-            DataStreamerClientOptions<TK, TV> options)
+            DataStreamerClientOptions<TK, TV>? options)
         {
-            Debug.Assert(socket != null);
-            Debug.Assert(!string.IsNullOrEmpty(cacheName));
-
             // Copy to prevent modification.
             _options = new DataStreamerClientOptions<TK, TV>(options);
             _socket = socket;
@@ -129,6 +126,12 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         public void Dispose()
         {
             Close(cancel: false);
+        }
+
+        /** <inheritdoc /> */
+        public ValueTask DisposeAsync()
+        {
+            return new ValueTask(CloseAsync(cancel: false));
         }
 
         /** <inheritdoc /> */
@@ -265,9 +268,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// </summary>
         internal DataStreamerClientEntry<TK, TV>[] GetPooledArray()
         {
-            DataStreamerClientEntry<TK,TV>[] res;
-
-            if (_arrayPool.TryPop(out res))
+            if (_arrayPool.TryPop(out var res))
             {
                 // Reset buffer and return.
                 Array.Clear(res, 0, res.Length);
@@ -377,7 +378,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         {
             semaphore.Wait();
 
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object?>();
 
             FlushBufferInternalAsync(buffer, socket, tcs);
 
@@ -399,14 +400,14 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferInternalAsync(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket socket,
-            TaskCompletionSource<object> tcs)
+            TaskCompletionSource<object?> tcs)
         {
             try
             {
                 socket.DoOutInOpAsync(
                         ClientOp.DataStreamerStart,
                         ctx => WriteBuffer(buffer, ctx.Writer),
-                        ctx => (object)null,
+                        ctx => (object?)null,
                         syncCallback: true)
                     .ContWith(
                         t => FlushBufferCompleteOrRetry(buffer, socket, tcs, t.Exception),
@@ -424,8 +425,8 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferCompleteOrRetry(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket socket,
-            TaskCompletionSource<object> tcs,
-            Exception exception)
+            TaskCompletionSource<object?> tcs,
+            Exception? exception)
         {
             if (exception == null)
             {
@@ -458,13 +459,12 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private void FlushBufferRetry(
             DataStreamerClientBuffer<TK, TV> buffer,
             ClientSocket failedSocket,
-            TaskCompletionSource<object> tcs)
+            TaskCompletionSource<object?> tcs)
         {
             try
             {
                 // Connection failed. Remove disconnected socket from the map.
-                DataStreamerClientPerNodeBuffer<TK, TV> removed;
-                _buffers.TryRemove(failedSocket, out removed);
+                _buffers.TryRemove(failedSocket, out var removed);
 
                 // Re-add entries to other buffers.
                 ReAddEntriesAndReturnBuffer(buffer);
@@ -537,7 +537,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
             else
             {
-                w.WriteObject<object>(null);
+                w.WriteObject<object?>(null);
             }
 
             var count = buffer.Count;
@@ -558,7 +558,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
 
                 if (entry.Remove)
                 {
-                    w.WriteObject<object>(null);
+                    w.WriteObject<object?>(null);
                 }
                 else
                 {
@@ -572,8 +572,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// </summary>
         private DataStreamerClientPerNodeBuffer<TK, TV> GetOrAddPerNodeBuffer(ClientSocket socket)
         {
-            DataStreamerClientPerNodeBuffer<TK,TV> res;
-            if (_buffers.TryGetValue(socket, out res))
+            if (_buffers.TryGetValue(socket, out var res))
             {
                 return res;
             }
@@ -625,7 +624,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
 
             // Prevent multiple parallel timer calls.
-            if (!Monitor.TryEnter(_autoFlushTimer))
+            if (!Monitor.TryEnter(_autoFlushTimer!))
             {
                 return;
             }
@@ -641,7 +640,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             }
             finally
             {
-                Monitor.Exit(_autoFlushTimer);
+                Monitor.Exit(_autoFlushTimer!);
             }
         }
 

@@ -24,6 +24,7 @@ import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockSta
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointProgress;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteOutClosure;
+import org.jetbrains.annotations.TestOnly;
 
 /**
  * Throttles threads that generate dirty pages during ongoing checkpoint.
@@ -35,6 +36,9 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
     /** Database manager. */
     private final IgniteOutClosure<CheckpointProgress> cpProgress;
+
+    /** Configured max-dirty-pages ratio. */
+    private final double maxDirtyPagesRatio;
 
     /** If true, throttle will only protect from checkpoint buffer overflow, not from dirty pages ratio cap excess. */
     private final boolean throttleOnlyPagesInCheckpoint;
@@ -60,18 +64,22 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
     private final ConcurrentHashMap<Long, Thread> cpBufThrottledThreads = new ConcurrentHashMap<>();
 
     /**
+     * @param maxDirtyPagesRatio Configured max-dirty-pages ratio. Only used when
+     *     {@code throttleOnlyPagesInCheckpoint} is {@code false}.
      * @param pageMemory Page memory.
      * @param cpProgress Database manager.
      * @param stateChecker checkpoint lock state checker.
      * @param throttleOnlyPagesInCheckpoint If true, throttle will only protect from checkpoint buffer overflow.
      * @param log Logger.
      */
-    public PagesWriteThrottle(PageMemoryImpl pageMemory,
+    public PagesWriteThrottle(double maxDirtyPagesRatio,
+        PageMemoryImpl pageMemory,
         IgniteOutClosure<CheckpointProgress> cpProgress,
         CheckpointLockStateChecker stateChecker,
         boolean throttleOnlyPagesInCheckpoint,
         IgniteLogger log
     ) {
+        this.maxDirtyPagesRatio = maxDirtyPagesRatio;
         this.pageMemory = pageMemory;
         this.cpProgress = cpProgress;
         this.stateChecker = stateChecker;
@@ -81,6 +89,17 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
 
         assert throttleOnlyPagesInCheckpoint || cpProgress != null
                 : "cpProgress must be not null if ratio based throttling mode is used";
+    }
+
+    /** Test-only constructor that uses {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}. */
+    @TestOnly
+    public PagesWriteThrottle(PageMemoryImpl pageMemory,
+        IgniteOutClosure<CheckpointProgress> cpProgress,
+        CheckpointLockStateChecker stateChecker,
+        boolean throttleOnlyPagesInCheckpoint,
+        IgniteLogger log
+    ) {
+        this(PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO, pageMemory, cpProgress, stateChecker, throttleOnlyPagesInCheckpoint, log);
     }
 
     /** {@inheritDoc} */
@@ -105,14 +124,13 @@ public class PagesWriteThrottle implements PagesWriteThrottlePolicy {
             int cpTotalPages = progress.currentCheckpointPagesCount();
 
             if (cpWrittenPages == cpTotalPages) {
-                // Checkpoint is already in fsync stage, increasing maximum ratio of dirty pages to 3/4
-                shouldThrottle = pageMemory.shouldThrottle(3.0 / 4);
+                // Checkpoint is already in fsync stage, use the configured max-dirty-pages cap as the throttle threshold.
+                shouldThrottle = pageMemory.shouldThrottle(maxDirtyPagesRatio);
             } else {
                 double dirtyRatioThreshold = ((double)cpWrittenPages) / cpTotalPages;
 
-                // Starting with 0.05 to avoid throttle right after checkpoint start
-                // 7/12 is maximum ratio of dirty pages
-                dirtyRatioThreshold = (dirtyRatioThreshold * 0.95 + 0.05) * 7 / 12;
+                // Starting with 0.05 to avoid throttle right after checkpoint start.
+                dirtyRatioThreshold = (dirtyRatioThreshold * 0.95 + 0.05) * maxDirtyPagesRatio * 7 / 9;
 
                 shouldThrottle = pageMemory.shouldThrottle(dirtyRatioThreshold);
             }

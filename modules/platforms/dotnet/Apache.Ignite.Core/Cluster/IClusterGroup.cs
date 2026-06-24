@@ -109,7 +109,7 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="name">Name of the attribute.</param>
         /// <param name="val">Optional attribute value to match.</param>
         /// <returns>Grid projection for nodes containing specified attribute.</returns>
-        IClusterGroup ForAttribute(string name, string val);
+        IClusterGroup ForAttribute(string name, string? val);
 
         /// <summary>
         /// Creates projection for all nodes that have cache with specified name running.
@@ -211,14 +211,14 @@ namespace Apache.Ignite.Core.Cluster
         /// <param name="id">Node ID.</param>
         /// <returns>Node with given ID from this projection or null if such node does not 
         /// exist in this projection.</returns>
-        IClusterNode GetNode(Guid id);
+        IClusterNode? GetNode(Guid id);
 
         /// <summary>
         /// Gets first node from the list of nodes in this projection.
         /// </summary>
         /// <returns>Node.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        IClusterNode GetNode();
+        IClusterNode? GetNode();
 
         /// <summary>
         /// Gets a metrics snapshot for this projection

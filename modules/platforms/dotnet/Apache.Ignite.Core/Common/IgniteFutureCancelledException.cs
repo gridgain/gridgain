@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="IgniteFutureCancelledException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public IgniteFutureCancelledException(string message) : base(message)
+        public IgniteFutureCancelledException(string? message) : base(message)
         {
             // No-op.
         }
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteFutureCancelledException(string message, Exception cause) : base(message, cause)
+        public IgniteFutureCancelledException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

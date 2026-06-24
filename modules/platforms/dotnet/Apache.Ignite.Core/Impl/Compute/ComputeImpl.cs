@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Compute
 {
     using System;
@@ -254,7 +256,10 @@ namespace Apache.Ignite.Core.Impl.Compute
         {
             IgniteArgumentCheck.NotNull(taskType, "taskType");
 
+            // SYSLIB0050: FormatterServices is obsolete in net8.0+; still required to materialize objects without invoking constructors.
+#pragma warning disable SYSLIB0050
             object task = FormatterServices.GetUninitializedObject(taskType);
+#pragma warning restore SYSLIB0050
 
             var task0 = task as IComputeTask<TArg, TJobRes, TReduceRes>;
 

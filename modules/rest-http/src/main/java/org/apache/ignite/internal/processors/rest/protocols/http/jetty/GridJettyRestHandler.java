@@ -57,11 +57,13 @@ import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestDrainRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestLogRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestProbeRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestPropertyRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestSupplyStatusRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTopologyRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestWarmUpRequest;
@@ -493,6 +495,20 @@ public class GridJettyRestHandler extends AbstractHandler {
         catch (IOException e) {
             U.error(log, "Failed to send HTTP response: " + cmdRes, e);
         }
+
+        // Response is now written and flushed to the client (ServletOutputStream closed above). Run
+        // any after-write action - e.g. cmd=supply-status&shutdown=true starts node stop here, so the
+        // 200 is guaranteed on the wire first.
+        Runnable afterWrite = cmdRes.afterWrite();
+
+        if (afterWrite != null) {
+            try {
+                afterWrite.run();
+            }
+            catch (Throwable e) {
+                U.error(log, "Failed to run after-write action for HTTP response: " + cmdRes, e);
+            }
+        }
     }
 
     /**
@@ -800,6 +816,35 @@ public class GridJettyRestHandler extends AbstractHandler {
                 GridRestProbeRequest restReq0 = new GridRestProbeRequest();
 
                 restReq0.kind(params.get("kind"));
+
+                restReq = restReq0;
+
+                break;
+            }
+
+            case DRAIN: {
+                GridRestDrainRequest restReq0 = new GridRestDrainRequest();
+
+                String action = params.get("action");
+                GridRestDrainRequest.Action act = GridRestDrainRequest.Action.of(action);
+
+                if (act == null)
+                    throw new IgniteCheckedException("Failed to parse drain action: " + action +
+                        " (expected one of: start, stop, status)");
+
+                restReq0.action(act);
+                restReq0.force(Boolean.parseBoolean(params.get("force")));
+
+                restReq = restReq0;
+
+                break;
+            }
+
+            case SUPPLY_STATUS: {
+                GridRestSupplyStatusRequest restReq0 = new GridRestSupplyStatusRequest();
+
+                restReq0.shutdown(Boolean.parseBoolean(params.get("shutdown")));
+                restReq0.force(Boolean.parseBoolean(params.get("force")));
 
                 restReq = restReq0;
 

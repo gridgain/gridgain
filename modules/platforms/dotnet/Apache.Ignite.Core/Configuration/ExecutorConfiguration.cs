@@ -31,7 +31,7 @@ namespace Apache.Ignite.Core.Configuration
         /// Gets or sets the thread pool name.
         /// Can not be null and should be unique with respect to other custom executors.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the thread pool size.

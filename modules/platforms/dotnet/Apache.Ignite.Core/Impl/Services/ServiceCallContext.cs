@@ -26,7 +26,7 @@ namespace Apache.Ignite.Core.Impl.Services
     internal class ServiceCallContext : IServiceCallContext
     {
         /** Context attributes. */
-        private IDictionary _attrs;
+        private readonly IDictionary _attrs;
 
         /// <summary>
         /// Constructs context from dictionary.
@@ -40,15 +40,15 @@ namespace Apache.Ignite.Core.Impl.Services
         }
 
         /** <inheritDoc /> */
-        public string GetAttribute(string name)
+        public string? GetAttribute(string name)
         {
-            return (string) _attrs[name];
+            return (string?) _attrs[name];
         }
 
         /** <inheritDoc /> */
-        public byte[] GetBinaryAttribute(string name)
+        public byte[]? GetBinaryAttribute(string name)
         {
-            return (byte[]) _attrs[name];
+            return (byte[]?) _attrs[name];
         }
         
         /// <summary>

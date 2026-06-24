@@ -74,19 +74,19 @@ namespace Apache.Ignite.Core.Binary
         /// <summary>
         /// Fully qualified type name. 
         /// </summary>
-        public string TypeName { get; set; }
+        public string? TypeName { get; set; }
 
         /// <summary>
         /// Name mapper for the given type. 
         /// </summary>
-        public IBinaryNameMapper NameMapper { get; set; }
+        public IBinaryNameMapper? NameMapper { get; set; }
 
         /// <summary>
         /// ID mapper for the given type. When it is necessary to resolve class (field) ID, then 
         /// this property will be checked first. 
         /// Otherwise, ID will be hash code of the class (field) simple name in lower case. 
         /// </summary>
-        public IBinaryIdMapper IdMapper { get; set; }
+        public IBinaryIdMapper? IdMapper { get; set; }
 
         /// <summary>
         /// Serializer for the given type. If not provided and class implements <see cref="IBinarizable" />
@@ -94,12 +94,12 @@ namespace Apache.Ignite.Core.Binary
         /// then all fields of the class except of those with [NotSerialized] attribute will be serialized
         /// with help of reflection.
         /// </summary>
-        public IBinarySerializer Serializer { get; set; }
+        public IBinarySerializer? Serializer { get; set; }
 
         /// <summary>
         /// Affinity key field name.
         /// </summary>
-        public string AffinityKeyFieldName { get; set; }
+        public string? AffinityKeyFieldName { get; set; }
 
         /// <summary>
         /// Keep deserialized flag. If set to non-null value, overrides default value set in 

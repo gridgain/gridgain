@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read byte array. 
         /// </summary>
         /// <returns>Byte array.</returns>
-        byte[] ReadByteArray();
+        byte[]? ReadByteArray();
 
         /// <summary>
         /// Read char value. 
@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read char array. 
         /// </summary>
         /// <returns>Char array.</returns>
-        char[] ReadCharArray();
+        char[]? ReadCharArray();
 
         /// <summary>
         /// Read short value. 
@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read short array. 
         /// </summary>
         /// <returns>Short array.</returns>
-        short[] ReadShortArray();
+        short[]? ReadShortArray();
 
         /// <summary>
         /// Read int value. 
@@ -70,7 +70,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read int array. 
         /// </summary>
         /// <returns>Int array.</returns>
-        int[] ReadIntArray();
+        int[]? ReadIntArray();
 
         /// <summary>
         /// Read long value. 
@@ -82,7 +82,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read long array. 
         /// </summary>
         /// <returns>Long array.</returns>
-        long[] ReadLongArray();
+        long[]? ReadLongArray();
 
         /// <summary>
         /// Read boolean value. 
@@ -94,7 +94,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read boolean array. 
         /// </summary>
         /// <returns>Boolean array.</returns>
-        bool[] ReadBooleanArray();
+        bool[]? ReadBooleanArray();
 
         /// <summary>
         /// Read float value. 
@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read float array. 
         /// </summary>
         /// <returns>Float array.</returns>
-        float[] ReadFloatArray();
+        float[]? ReadFloatArray();
 
         /// <summary>
         /// Read double value. 
@@ -118,7 +118,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read double array. 
         /// </summary>
         /// <returns>Double array.</returns>
-        double[] ReadDoubleArray();
+        double[]? ReadDoubleArray();
 
         /// <summary>
         /// Read decimal value. 
@@ -130,7 +130,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read decimal array. 
         /// </summary>
         /// <returns>Decimal array.</returns>
-        decimal?[] ReadDecimalArray();
+        decimal?[]? ReadDecimalArray();
 
         /// <summary>
         /// Read date value in UTC form. Shortcut for <c>ReadTimestamp(false)</c>.
@@ -142,19 +142,19 @@ namespace Apache.Ignite.Core.Binary
         /// Read date array in UTC form. Shortcut for <c>ReadTimestampArray(false)</c>.
         /// </summary>
         /// <returns>Date array.</returns>
-        DateTime?[] ReadTimestampArray();
+        DateTime?[]? ReadTimestampArray();
         
         /// <summary>
         /// Read string value. 
         /// </summary>
         /// <returns>String value.</returns>
-        string ReadString();
+        string? ReadString();
 
         /// <summary>
         /// Read string array. 
         /// </summary>
         /// <returns>String array.</returns>
-        string[] ReadStringArray();
+        string?[]? ReadStringArray();
 
         /// <summary>
         /// Read GUID value. 
@@ -166,7 +166,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read GUID array. 
         /// </summary>
         /// <returns>GUID array.</returns>
-        Guid?[] ReadGuidArray();
+        Guid?[]? ReadGuidArray();
 
         /// <summary>
         /// Read enum value.
@@ -178,7 +178,7 @@ namespace Apache.Ignite.Core.Binary
         /// Read enum array.
         /// </summary>
         /// <returns>Enum array.</returns>
-        T[] ReadEnumArray<T>();
+        T[]? ReadEnumArray<T>();
         
         /// <summary>
         /// Read object. 
@@ -190,13 +190,13 @@ namespace Apache.Ignite.Core.Binary
         /// Read object array. 
         /// </summary>
         /// <returns>Object array.</returns>
-        T[] ReadArray<T>();
+        T[]? ReadArray<T>();
 
         /// <summary>
         /// Read collection.
         /// </summary>
         /// <returns>Collection.</returns>
-        ICollection ReadCollection();
+        ICollection? ReadCollection();
 
         /// <summary>
         /// Read collection.
@@ -204,19 +204,19 @@ namespace Apache.Ignite.Core.Binary
         /// <param name="factory">Factory.</param>
         /// <param name="adder">Adder.</param>
         /// <returns>Collection.</returns>
-        ICollection ReadCollection(Func<int, ICollection> factory, Action<ICollection, object> adder);
+        ICollection? ReadCollection(Func<int, ICollection> factory, Action<ICollection, object> adder);
 
         /// <summary>
         /// Read dictionary. 
         /// </summary>
         /// <returns>Dictionary.</returns>
-        IDictionary ReadDictionary();
+        IDictionary? ReadDictionary();
 
         /// <summary>
         /// Read dictionary.
         /// </summary>
         /// <param name="factory">Factory.</param>
         /// <returns>Dictionary.</returns>
-        IDictionary ReadDictionary(Func<int, IDictionary> factory);
+        IDictionary? ReadDictionary(Func<int, IDictionary> factory);
     }
 }

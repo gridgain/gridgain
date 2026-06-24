@@ -22,7 +22,7 @@ namespace Apache.Ignite.Core.Client.Transactions
     /// <summary>
     /// Thin client transaction.
     /// </summary>
-    public interface ITransactionClient : IDisposable
+    public interface ITransactionClient : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// Gets the transaction concurrency mode.
@@ -44,7 +44,7 @@ namespace Apache.Ignite.Core.Client.Transactions
         /// <summary>
         /// Gets the transaction label.
         /// </summary>
-        string Label { get; }
+        string? Label { get; }
 
         /// <summary>
         /// Commits this transaction.

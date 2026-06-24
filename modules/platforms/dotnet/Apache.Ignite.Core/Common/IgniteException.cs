@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="IgniteException" /> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public IgniteException(string message) : base(message)
+        public IgniteException(string? message) : base(message)
         {
             // No-op.
         }
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public IgniteException(string message, Exception cause) : base(message, cause)
+        public IgniteException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -57,9 +57,12 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="info">Serialization information.</param>
         /// <param name="ctx">Streaming context.</param>
+        // SYSLIB0051: legacy formatter-based serialization ctor is obsolete in net8.0+ but preserved for binary compatibility.
+#pragma warning disable SYSLIB0051
         protected IgniteException(SerializationInfo info, StreamingContext ctx) : base(info, ctx)
         {
             // No-op.
         }
+#pragma warning restore SYSLIB0051
     }
 }

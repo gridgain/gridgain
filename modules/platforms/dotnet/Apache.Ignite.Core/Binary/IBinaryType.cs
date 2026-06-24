@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Binary
         /// Gets optional affinity key field name.
         /// </summary>
         /// <returns>Affinity key field name or null in case it is not provided.</returns>
-        string AffinityKeyFieldName { get; }
+        string? AffinityKeyFieldName { get; }
 
         /// <summary>
         /// Gets a value indicating whether this type represents an enum.

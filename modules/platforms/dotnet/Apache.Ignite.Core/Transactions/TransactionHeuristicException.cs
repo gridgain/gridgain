@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Transactions
         /// Initializes a new instance of the <see cref="TransactionHeuristicException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public TransactionHeuristicException(string message) : base(message)
+        public TransactionHeuristicException(string? message) : base(message)
         {
             // No-op.
         }
@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Transactions
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public TransactionHeuristicException(string message, Exception cause) : base(message, cause)
+        public TransactionHeuristicException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

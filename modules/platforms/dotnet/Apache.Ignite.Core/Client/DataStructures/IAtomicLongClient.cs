@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Client.DataStructures
 {
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Represents a distributed atomic long value.
     /// <para />
@@ -38,10 +40,22 @@ namespace Apache.Ignite.Core.Client.DataStructures
         long Read();
 
         /// <summary>
+        /// Returns current value.
+        /// </summary>
+        /// <returns>Current value of the atomic long.</returns>
+        Task<long> ReadAsync();
+
+        /// <summary>
         /// Increments current value and returns result.
         /// </summary>
         /// <returns>Current value of the atomic long.</returns>
         long Increment();
+
+        /// <summary>
+        /// Increments current value and returns result.
+        /// </summary>
+        /// <returns>Current value of the atomic long.</returns>
+        Task<long> IncrementAsync();
 
         /// <summary>
         /// Adds specified value to the current value and returns result.
@@ -51,10 +65,23 @@ namespace Apache.Ignite.Core.Client.DataStructures
         long Add(long value);
 
         /// <summary>
+        /// Adds specified value to the current value and returns result.
+        /// </summary>
+        /// <param name="value">The value to add.</param>
+        /// <returns>Current value of the atomic long.</returns>
+        Task<long> AddAsync(long value);
+
+        /// <summary>
         /// Decrements current value and returns result.
         /// </summary>
         /// <returns>Current value of the atomic long.</returns>
         long Decrement();
+
+        /// <summary>
+        /// Decrements current value and returns result.
+        /// </summary>
+        /// <returns>Current value of the atomic long.</returns>
+        Task<long> DecrementAsync();
 
         /// <summary>
         /// Sets current value to a specified value and returns the original value.
@@ -62,6 +89,13 @@ namespace Apache.Ignite.Core.Client.DataStructures
         /// <param name="value">The value to set.</param>
         /// <returns>Original value of the atomic long.</returns>
         long Exchange(long value);
+
+        /// <summary>
+        /// Sets current value to a specified value and returns the original value.
+        /// </summary>
+        /// <param name="value">The value to set.</param>
+        /// <returns>Original value of the atomic long.</returns>
+        Task<long> ExchangeAsync(long value);
 
         /// <summary>
         /// Compares current value with specified value for equality and, if they are equal, replaces current value.
@@ -72,14 +106,34 @@ namespace Apache.Ignite.Core.Client.DataStructures
         long CompareExchange(long value, long comparand);
 
         /// <summary>
+        /// Compares current value with specified value for equality and, if they are equal, replaces current value.
+        /// </summary>
+        /// <param name="value">The value to set.</param>
+        /// <param name="comparand">The value that is compared to the current value.</param>
+        /// <returns>Original value of the atomic long.</returns>
+        Task<long> CompareExchangeAsync(long value, long comparand);
+
+        /// <summary>
         /// Determines whether this instance was removed from cache.
         /// </summary>
         /// <returns>True if this atomic was removed from cache; otherwise, false.</returns>
         bool IsClosed();
 
         /// <summary>
+        /// Determines whether this instance was removed from cache.
+        /// </summary>
+        /// <returns>True if this atomic was removed from cache; otherwise, false.</returns>
+        Task<bool> IsClosedAsync();
+
+        /// <summary>
         /// Closes this instance.
         /// </summary>
         void Close();
+
+        /// <summary>
+        /// Closes this instance.
+        /// </summary>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        Task CloseAsync();
     }
 }

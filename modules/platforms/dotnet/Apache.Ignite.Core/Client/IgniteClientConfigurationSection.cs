@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Gets the Ignite client configuration.
         /// </summary>
-        public IgniteClientConfiguration IgniteClientConfiguration { get; private set; }
+        public IgniteClientConfiguration? IgniteClientConfiguration { get; private set; }
 
         /// <summary>
         /// Reads XML from the configuration file.

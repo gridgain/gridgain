@@ -55,6 +55,8 @@ import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeClu
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridChangeStateCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.cluster.GridClusterNameCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.datastructures.DataStructuresCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.drain.GridDrainCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.drain.GridSupplyStatusCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.probe.GridProbeCommandHandler;
@@ -67,7 +69,9 @@ import org.apache.ignite.internal.processors.rest.handlers.version.GridVersionCo
 import org.apache.ignite.internal.processors.rest.handlers.warmup.NodeWarmupCommandHandler;
 import org.apache.ignite.internal.processors.rest.protocols.tcp.GridTcpRestProtocol;
 import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestDrainRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestSupplyStatusRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestTaskRequest;
 import org.apache.ignite.internal.processors.rest.request.RestQueryRequest;
 import org.apache.ignite.internal.processors.security.OperationSecurityContext;
@@ -98,8 +102,10 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SECURITY_TOKE
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_SESSION_TIMEOUT;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_REST_START_ON_CLIENT;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.AUTHENTICATE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.DRAIN;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.NODE_STATE_BEFORE_START;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.PROBE;
+import static org.apache.ignite.internal.processors.rest.GridRestCommand.SUPPLY_STATUS;
 import static org.apache.ignite.internal.processors.rest.GridRestCommand.VERSION;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_AUTH_FAILED;
 import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_FAILED;
@@ -254,7 +260,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
         if (log.isDebugEnabled())
             log.debug("Received request from client: " + req);
 
-        if (SKIP_AUTHENTICATION_COMMANDS.contains(req.command()))
+        if (isAuthExempt(req))
             return handle(req, false);
 
         boolean authenticationEnabled = ctx.authentication().enabled();
@@ -582,6 +588,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new MemoryMetricsCommandHandler(ctx));
             addHandler(new NodeWarmupCommandHandler(ctx));
             addHandler(new GridProbeCommandHandler(ctx));
+            addHandler(new GridDrainCommandHandler(ctx));
+            addHandler(new GridSupplyStatusCommandHandler(ctx));
             addHandler(new GridPropertyCommandHandler(ctx));
 
             // Start protocols.
@@ -993,6 +1001,8 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case UPDATE_USER:
             case PROBE:
             case WARM_UP:
+            case DRAIN:
+            case SUPPLY_STATUS:
                 break;
 
             default:
@@ -1001,6 +1011,40 @@ public class GridRestProcessor extends GridProcessorAdapter {
 
         if (perm != null)
             ctx.security().authorize(name, perm);
+    }
+
+    /**
+     * Per-{@code (command, action)} authentication-exemption check. Commands with no mutate path go
+     * through the simple {@link #SKIP_AUTHENTICATION_COMMANDS} set; {@link GridRestCommand#DRAIN}
+     * mixes read and mutate actions on one command key, so {@code action=status} (the sole read
+     * path) is auth-exempt while {@code action=start} and {@code action=stop} (mutates) require
+     * authentication. Adding {@code DRAIN} wholesale to {@link #SKIP_AUTHENTICATION_COMMANDS} would
+     * be a violation - it would expose the mutating actions unauthenticated.
+     *
+     * @param req Request.
+     * @return {@code true} if the request is exempt from authentication.
+     */
+    private static boolean isAuthExempt(GridRestRequest req) {
+        if (SKIP_AUTHENTICATION_COMMANDS.contains(req.command()))
+            return true;
+
+        if (req.command() == DRAIN) {
+            GridRestDrainRequest.Action act = req instanceof GridRestDrainRequest
+                ? ((GridRestDrainRequest)req).action() : null;
+
+            return act == GridRestDrainRequest.Action.STATUS;
+        }
+
+        if (req.command() == SUPPLY_STATUS) {
+            boolean shutdown = req instanceof GridRestSupplyStatusRequest
+                && ((GridRestSupplyStatusRequest)req).shutdown();
+
+            // bare-GET / shutdown=false / absent -> informational read -> auth-exempt;
+            // shutdown=true -> mutating (triggers graceful shutdown) -> auth REQUIRED.
+            return !shutdown;
+        }
+
+        return false;
     }
 
     /**

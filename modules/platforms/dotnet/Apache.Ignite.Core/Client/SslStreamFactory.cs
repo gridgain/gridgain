@@ -48,9 +48,13 @@ namespace Apache.Ignite.Core.Client
 
             var sslStream = new SslStream(stream, false, ValidateServerCertificate, null);
 
+            // SYSLIB0057: X509Certificate2 file-path ctor is obsolete in net9+; X509CertificateLoader is the replacement
+            // but we still use the legacy ctor for back-compat with netstandard2.0.
+#pragma warning disable SYSLIB0057
             var cert = string.IsNullOrEmpty(CertificatePath)
                 ? null
                 : new X509Certificate2(CertificatePath, CertificatePassword);
+#pragma warning restore SYSLIB0057
 
             var certs = cert == null
                 ? null
@@ -64,7 +68,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Validates the server certificate.
         /// </summary>
-        private bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain,
+        private bool ValidateServerCertificate(object sender, X509Certificate? certificate, X509Chain? chain,
             SslPolicyErrors sslPolicyErrors)
         {
             if (SkipServerCertificateValidation)
@@ -87,12 +91,12 @@ namespace Apache.Ignite.Core.Client
         /// <c>keytool -importkeystore -srckeystore thekeystore.jks -srcstoretype JKS
         /// -destkeystore thekeystore.pfx -deststoretype PKCS12</c>
         /// </summary>
-        public string CertificatePath { get; set; }
+        public string? CertificatePath { get; set; }
 
         /// <summary>
         /// Gets or sets the certificate file password.
         /// </summary>
-        public string CertificatePassword { get; set; }
+        public string? CertificatePassword { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether to ignore invalid remote (server) certificates.

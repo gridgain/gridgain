@@ -46,7 +46,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// <summary>
         /// Gets the affinity key field name from attribute.
         /// </summary>
-        public static string GetFieldNameFromAttribute(Type type)
+        public static string? GetFieldNameFromAttribute(Type type)
         {
             IgniteArgumentCheck.NotNull(type, "type");
 

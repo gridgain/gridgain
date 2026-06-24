@@ -58,8 +58,8 @@ public enum ProtocolBitmaskFeature {
     /** Handle of {@link ClientServices#serviceDescriptors()}. */
     GET_SERVICE_DESCRIPTORS(9),
 
-    /** Invoke service methods with caller context. */
-    SERVICE_INVOKE_CALLCTX(10),
+    // 10 - reserved: legacy placeholder for service caller context, advertised by older GG/.NET clients
+    // without the wire format; SERVICE_INVOKE_CALLCTX uses a fresh GG id below to avoid protocol desync.
 
     /** Handle OP_HEARTBEAT and OP_GET_IDLE_TIMEOUT. */
     HEARTBEAT(11),
@@ -85,7 +85,10 @@ public enum ProtocolBitmaskFeature {
     CACHE_PLUGIN_CONFIGURATIONS(32),
 
     /** Vector Similarty function for VECTOR INDEX. */
-    QUERY_INDEX_VECTOR_SIMILARITY(33);
+    QUERY_INDEX_VECTOR_SIMILARITY(33),
+
+    /** Invoke service methods with caller context. GG-specific id (Ignite uses 10, reserved above). */
+    SERVICE_INVOKE_CALLCTX(34);
 
     /** */
     private static final EnumSet<ProtocolBitmaskFeature> ALL_FEATURES_AS_ENUM_SET =

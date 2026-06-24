@@ -63,10 +63,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private const int OpGetFieldsMeta = 8;
 
         /** */
-        private IList<string> _fieldNames;
+        private IList<string>? _fieldNames;
 
         /** */
-        private IList<IQueryCursorField> _fieldsMeta;
+        private IList<IQueryCursorField>? _fieldsMeta;
 
         /// <summary>
         /// Constructor.
@@ -75,7 +75,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <param name="keepBinary">Keep binary flag.</param>
         /// <param name="readerFunc">The reader function.</param>
         public FieldsQueryCursor(IPlatformTargetInternal target, bool keepBinary,
-            Func<IBinaryRawReader, int, IList<object>> readerFunc = null)
+            Func<IBinaryRawReader, int, IList<object>>? readerFunc = null)
             : base(target, keepBinary, readerFunc ?? ReadFieldsArrayList)
         {
             // No-op.

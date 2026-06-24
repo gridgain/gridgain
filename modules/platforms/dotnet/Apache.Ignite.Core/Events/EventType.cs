@@ -531,7 +531,7 @@ namespace Apache.Ignite.Core.Events
         {
             return typeof (EventType).GetFields(BindingFlags.Public | BindingFlags.Static)
                 .Where(x => x.FieldType == typeof (int))
-                .Select(x => (int) x.GetValue(null)).ToArray();
+                .Select(x => (int) x.GetValue(null)!).ToArray();
         }
     }
 }

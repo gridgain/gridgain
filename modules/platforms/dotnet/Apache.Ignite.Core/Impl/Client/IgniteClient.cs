@@ -19,11 +19,10 @@ namespace Apache.Ignite.Core.Impl.Client
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Globalization;
     using System.Net;
-    using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Client;
@@ -91,8 +90,6 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <param name="clientConfiguration">The client configuration.</param>
         public IgniteClient(IgniteClientConfiguration clientConfiguration)
         {
-            Debug.Assert(clientConfiguration != null);
-
             _configuration = new IgniteClientConfiguration(clientConfiguration);
 
             _marsh = new Marshaller(_configuration.BinaryConfiguration, _configuration.Logger)
@@ -136,6 +133,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -144,6 +142,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -153,18 +152,45 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        public async Task<ICacheClient<TK, TV>> GetOrCreateCacheAsync<TK, TV>(string name)
+            where TK : notnull
+        {
+            IgniteArgumentCheck.NotNull(name, "name");
+
+            await DoOutOpAsync(ClientOp.CacheGetOrCreateWithName, ctx => ctx.Writer.WriteString(name))
+                .ConfigureAwait(false);
+
+            return GetCache<TK, TV>(name);
+        }
+
+        /** <inheritDoc /> */
         public ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
 
             DoOutOp(ClientOp.CacheGetOrCreateWithConfiguration,
                 ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features));
 
-            return GetCache<TK, TV>(configuration.Name);
+            return GetCache<TK, TV>(configuration.Name!);
+        }
+
+        /** <inheritDoc /> */
+        public async Task<ICacheClient<TK, TV>> GetOrCreateCacheAsync<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
+        {
+            IgniteArgumentCheck.NotNull(configuration, "configuration");
+
+            await DoOutOpAsync(ClientOp.CacheGetOrCreateWithConfiguration,
+                    ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features))
+                .ConfigureAwait(false);
+
+            return GetCache<TK, TV>(configuration.Name!);
         }
 
         /** <inheritDoc /> */
         public ICacheClient<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -174,20 +200,53 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
+        public async Task<ICacheClient<TK, TV>> CreateCacheAsync<TK, TV>(string name)
+            where TK : notnull
+        {
+            IgniteArgumentCheck.NotNull(name, "name");
+
+            await DoOutOpAsync(ClientOp.CacheCreateWithName, ctx => ctx.Writer.WriteString(name))
+                .ConfigureAwait(false);
+
+            return GetCache<TK, TV>(name);
+        }
+
+        /** <inheritDoc /> */
         public ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNull(configuration, "configuration");
 
             DoOutOp(ClientOp.CacheCreateWithConfiguration,
                 ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features));
 
-            return GetCache<TK, TV>(configuration.Name);
+            return GetCache<TK, TV>(configuration.Name!);
+        }
+
+        /** <inheritDoc /> */
+        public async Task<ICacheClient<TK, TV>> CreateCacheAsync<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull
+        {
+            IgniteArgumentCheck.NotNull(configuration, "configuration");
+
+            await DoOutOpAsync(ClientOp.CacheCreateWithConfiguration,
+                    ctx => ClientCacheConfigurationSerializer.Write(ctx.Stream, configuration, ctx.Features))
+                .ConfigureAwait(false);
+
+            return GetCache<TK, TV>(configuration.Name!);
         }
 
         /** <inheritDoc /> */
         public ICollection<string> GetCacheNames()
         {
             return DoOutInOp(ClientOp.CacheGetNames, null, ctx => ctx.Reader.ReadStringCollection());
+        }
+
+        /** <inheritDoc /> */
+        public Task<ICollection<string>> GetCacheNamesAsync()
+        {
+            return DoOutInOpAsync(ClientOp.CacheGetNames, null,
+                ctx => (ICollection<string>) ctx.Reader.ReadStringCollection());
         }
 
         /** <inheritDoc /> */
@@ -202,6 +261,14 @@ namespace Apache.Ignite.Core.Impl.Client
             IgniteArgumentCheck.NotNull(name, "name");
 
             DoOutOp(ClientOp.CacheDestroy, ctx => ctx.Stream.WriteInt(BinaryUtils.GetCacheId(name)));
+        }
+
+        /** <inheritDoc /> */
+        public Task DestroyCacheAsync(string name)
+        {
+            IgniteArgumentCheck.NotNull(name, "name");
+
+            return DoOutOpAsync(ClientOp.CacheDestroy, ctx => ctx.Stream.WriteInt(BinaryUtils.GetCacheId(name)));
         }
 
         /** <inheritDoc /> */
@@ -292,19 +359,22 @@ namespace Apache.Ignite.Core.Impl.Client
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull
         {
             return GetDataStreamer<TK, TV>(cacheName, null);
         }
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options)
+            where TK : notnull
         {
             return GetDataStreamer(cacheName, new DataStreamerClientOptions<TK, TV>(options));
         }
 
         /** <inheritDoc /> */
         public IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName,
-            DataStreamerClientOptions<TK, TV> options)
+            DataStreamerClientOptions<TK, TV>? options)
+            where TK : notnull
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
@@ -312,15 +382,15 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
-        public IAtomicLongClient GetAtomicLong(string name, long initialValue, bool create)
+        public IAtomicLongClient? GetAtomicLong(string name, long initialValue, bool create)
         {
             return GetAtomicLong(name, null, initialValue, create);
         }
 
         /** <inheritDoc /> */
-        public IAtomicLongClient GetAtomicLong(
+        public IAtomicLongClient? GetAtomicLong(
             string name,
-            AtomicClientConfiguration configuration,
+            AtomicClientConfiguration? configuration,
             long initialValue,
             bool create)
         {
@@ -328,26 +398,10 @@ namespace Apache.Ignite.Core.Impl.Client
 
             if (create)
             {
-                _socket.DoOutInOp<object>(ClientOp.AtomicLongCreate, ctx =>
-                {
-                    var w = ctx.Writer;
-
-                    w.WriteString(name);
-                    w.WriteLong(initialValue);
-
-                    if (configuration != null)
-                    {
-                        w.WriteBoolean(true);
-                        w.WriteInt(configuration.AtomicSequenceReserveSize);
-                        w.WriteByte((byte)configuration.CacheMode);
-                        w.WriteInt(configuration.Backups);
-                        w.WriteString(configuration.GroupName);
-                    }
-                    else
-                    {
-                        w.WriteBoolean(false);
-                    }
-                }, null);
+                _socket.DoOutInOp<object>(
+                    ClientOp.AtomicLongCreate,
+                    ctx => WriteAtomicLongCreate(ctx, name, initialValue, configuration),
+                    null);
             }
 
             var res = new AtomicLongClient(_socket, name, configuration?.GroupName);
@@ -362,42 +416,125 @@ namespace Apache.Ignite.Core.Impl.Client
         }
 
         /** <inheritDoc /> */
-        public IIgniteSetClient<T> GetIgniteSet<T>(string name, CollectionClientConfiguration configuration)
+        public Task<IAtomicLongClient?> GetAtomicLongAsync(string name, long initialValue, bool create)
+        {
+            return GetAtomicLongAsync(name, null, initialValue, create);
+        }
+
+        /** <inheritDoc /> */
+        public async Task<IAtomicLongClient?> GetAtomicLongAsync(
+            string name,
+            AtomicClientConfiguration? configuration,
+            long initialValue,
+            bool create)
         {
             IgniteArgumentCheck.NotNullOrEmpty(name, "name");
 
-            return _socket.DoOutInOp(ClientOp.SetGetOrCreate, ctx =>
+            if (create)
             {
-                var w = ctx.Writer;
+                await DoOutOpAsync(
+                        ClientOp.AtomicLongCreate,
+                        ctx => WriteAtomicLongCreate(ctx, name, initialValue, configuration))
+                    .ConfigureAwait(false);
+            }
 
-                w.WriteString(name);
+            var res = new AtomicLongClient(_socket, name, configuration?.GroupName);
 
-                if (configuration != null)
-                {
-                    w.WriteBoolean(true);
-                    w.WriteByte((byte)configuration.AtomicityMode);
-                    w.WriteByte((byte)configuration.CacheMode);
-                    w.WriteInt(configuration.Backups);
-                    w.WriteString(configuration.GroupName);
-                    w.WriteBoolean(configuration.Colocated);
-                }
-                else
-                {
-                    w.WriteBoolean(false);
-                }
-
-            }, ctx =>
+            if (!create && await res.IsClosedAsync().ConfigureAwait(false))
             {
-                if (!ctx.Reader.ReadBoolean())
-                {
-                    return null;
-                }
+                // Return null when specified atomic long does not exist to match thick API behavior.
+                return null;
+            }
 
-                var colocated = ctx.Reader.ReadBoolean();
-                var cacheId = ctx.Reader.ReadInt();
+            return res;
+        }
 
-                return new IgniteSetClient<T>(_socket, name, colocated, cacheId);
-            });
+        /** <inheritDoc /> */
+        public IIgniteSetClient<T>? GetIgniteSet<T>(string name, CollectionClientConfiguration? configuration)
+        {
+            IgniteArgumentCheck.NotNullOrEmpty(name, "name");
+
+            return _socket.DoOutInOp(
+                ClientOp.SetGetOrCreate,
+                ctx => WriteIgniteSetGetOrCreate(ctx, name, configuration),
+                ctx => ReadIgniteSet<T>(ctx, name));
+        }
+
+        /** <inheritDoc /> */
+        public Task<IIgniteSetClient<T>?> GetIgniteSetAsync<T>(string name, CollectionClientConfiguration? configuration)
+        {
+            IgniteArgumentCheck.NotNullOrEmpty(name, "name");
+
+            return DoOutInOpAsync(
+                ClientOp.SetGetOrCreate,
+                ctx => WriteIgniteSetGetOrCreate(ctx, name, configuration),
+                ctx => ReadIgniteSet<T>(ctx, name));
+        }
+
+        /// <summary>
+        /// Writes the atomic long create request.
+        /// </summary>
+        private static void WriteAtomicLongCreate(
+            ClientRequestContext ctx, string name, long initialValue, AtomicClientConfiguration? configuration)
+        {
+            var w = ctx.Writer;
+
+            w.WriteString(name);
+            w.WriteLong(initialValue);
+
+            if (configuration != null)
+            {
+                w.WriteBoolean(true);
+                w.WriteInt(configuration.AtomicSequenceReserveSize);
+                w.WriteByte((byte)configuration.CacheMode);
+                w.WriteInt(configuration.Backups);
+                w.WriteString(configuration.GroupName);
+            }
+            else
+            {
+                w.WriteBoolean(false);
+            }
+        }
+
+        /// <summary>
+        /// Writes the Ignite set get-or-create request.
+        /// </summary>
+        private static void WriteIgniteSetGetOrCreate(
+            ClientRequestContext ctx, string name, CollectionClientConfiguration? configuration)
+        {
+            var w = ctx.Writer;
+
+            w.WriteString(name);
+
+            if (configuration != null)
+            {
+                w.WriteBoolean(true);
+                w.WriteByte((byte)configuration.AtomicityMode);
+                w.WriteByte((byte)configuration.CacheMode);
+                w.WriteInt(configuration.Backups);
+                w.WriteString(configuration.GroupName);
+                w.WriteBoolean(configuration.Colocated);
+            }
+            else
+            {
+                w.WriteBoolean(false);
+            }
+        }
+
+        /// <summary>
+        /// Reads the Ignite set get-or-create response.
+        /// </summary>
+        private IIgniteSetClient<T>? ReadIgniteSet<T>(ClientResponseContext ctx, string name)
+        {
+            if (!ctx.Reader.ReadBoolean())
+            {
+                return null;
+            }
+
+            var colocated = ctx.Reader.ReadBoolean();
+            var cacheId = ctx.Reader.ReadInt();
+
+            return new IgniteSetClient<T>(_socket, name, colocated, cacheId);
         }
 
         /** <inheritDoc /> */
@@ -434,8 +571,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <returns>Client node.</returns>
         public IClientClusterNode GetClientNode(Guid id)
         {
-            IClientClusterNode result;
-            if (!_nodes.TryGetValue(id, out result))
+            if (!_nodes.TryGetValue(id, out var result))
             {
                 throw new ArgumentException(string.Format(
                     CultureInfo.InvariantCulture, "Unable to find node with id='{0}'", id));
@@ -475,6 +611,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /** <inheritDoc /> */
         [ExcludeFromCodeCoverage]
         public IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName, bool keepBinary)
+            where TK : notnull
         {
             throw GetClientNotSupportedException();
         }
@@ -492,7 +629,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Gets the client not supported exception.
         /// </summary>
-        public static NotSupportedException GetClientNotSupportedException(string info = null)
+        public static NotSupportedException GetClientNotSupportedException(string? info = null)
         {
             var msg = "Operation is not supported in thin client mode.";
 
@@ -507,8 +644,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Does the out in op.
         /// </summary>
-        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc)
+        private T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
         {
             return _socket.DoOutInOp(opId, writeAction, readFunc);
         }
@@ -516,9 +653,26 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Does the out op.
         /// </summary>
-        private void DoOutOp(ClientOp opId, Action<ClientRequestContext> writeAction = null)
+        private void DoOutOp(ClientOp opId, Action<ClientRequestContext>? writeAction = null)
         {
             DoOutInOp<object>(opId, writeAction, null);
+        }
+
+        /// <summary>
+        /// Does the out in op asynchronously.
+        /// </summary>
+        private Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc)
+        {
+            return _socket.DoOutInOpAsync(opId, writeAction, readFunc);
+        }
+
+        /// <summary>
+        /// Does the out op asynchronously.
+        /// </summary>
+        private Task DoOutOpAsync(ClientOp opId, Action<ClientRequestContext>? writeAction = null)
+        {
+            return DoOutInOpAsync<object>(opId, writeAction, null);
         }
     }
 }

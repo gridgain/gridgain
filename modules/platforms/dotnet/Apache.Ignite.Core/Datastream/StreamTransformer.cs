@@ -33,7 +33,7 @@ namespace Apache.Ignite.Core.Datastream
     /// <typeparam name="TArg">The type of the processor argument.</typeparam>
     /// <typeparam name="TRes">The type of the processor result.</typeparam>
     public sealed class StreamTransformer<TK, TV, TArg, TRes> : IStreamReceiver<TK, TV>, 
-        IBinaryWriteAware
+        IBinaryWriteAware where TK : notnull
     {
         /** Entry processor. */
         private readonly ICacheEntryProcessor<TK, TV, TArg, TRes> _proc;
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Datastream
         {
             // Don't use InvokeAll because semantics is different, e.g. duplicate keys are ignored.
             foreach (var entry in entries)
-                cache.Invoke(entry.Key, _proc, default(TArg));
+                cache.Invoke(entry.Key, _proc!, default(TArg));
         }
 
         /** <inheritdoc /> */

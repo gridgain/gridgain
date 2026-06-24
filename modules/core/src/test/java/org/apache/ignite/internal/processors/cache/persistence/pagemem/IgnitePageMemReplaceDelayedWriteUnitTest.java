@@ -257,7 +257,7 @@ public class IgnitePageMemReplaceDelayedWriteUnitTest {
 
         PageMemoryImpl memory = new PageMemoryImpl(regCfg, provider, sizes, sctx, sctx.pageStore(), pageSize,
             pageWriter, null, () -> true, memMetrics, PageMemoryImpl.ThrottlingPolicy.DISABLED,
-            clo);
+            clo, PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO);
 
         memory.start();
         return memory;

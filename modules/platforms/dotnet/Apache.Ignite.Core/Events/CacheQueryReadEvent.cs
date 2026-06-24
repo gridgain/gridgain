@@ -61,12 +61,12 @@ namespace Apache.Ignite.Core.Events
         /// <param name="r">The reader to read data from.</param>
         internal CacheQueryReadEvent(IBinaryRawReader r) : base(r)
         {
-            _queryType = r.ReadString();
-            _cacheName = r.ReadString();
-            _className = r.ReadString();
-            _clause = r.ReadString();
+            _queryType = r.ReadString()!;
+            _cacheName = r.ReadString()!;
+            _className = r.ReadString()!;
+            _clause = r.ReadString()!;
             _subjectId = r.ReadGuid();
-            _taskName = r.ReadString();
+            _taskName = r.ReadString()!;
             _key = r.ReadObject<object>();
             _value = r.ReadObject<object>();
             _oldValue = r.ReadObject<object>();

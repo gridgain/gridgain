@@ -108,7 +108,7 @@ namespace Apache.Ignite.Core.Transactions
     ///     </code>
     /// </example>
     /// </summary>
-    public interface ITransaction : IDisposable
+    public interface ITransaction : IDisposable, IAsyncDisposable
     {
         /// <summary>
         /// ID of the node on which this transaction started.
@@ -171,7 +171,7 @@ namespace Apache.Ignite.Core.Transactions
         /// <summary>
         /// Label of current transaction.
         /// </summary>
-        string Label
+        string? Label
         {
             get;
         }
