@@ -88,7 +88,6 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import static java.lang.Thread.interrupted;
-import static java.lang.Thread.yield;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.configuration.WALMode.LOG_ONLY;

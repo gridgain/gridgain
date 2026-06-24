@@ -37,7 +37,6 @@ import org.apache.ignite.transactions.Transaction;
 import org.junit.Assume;
 import org.junit.Test;
 
-import static java.lang.Thread.yield;
 import static org.apache.ignite.cache.CacheAtomicityMode.TRANSACTIONAL;
 import static org.apache.ignite.cache.CacheWriteSynchronizationMode.FULL_SYNC;
 import static org.apache.ignite.transactions.TransactionConcurrency.PESSIMISTIC;
