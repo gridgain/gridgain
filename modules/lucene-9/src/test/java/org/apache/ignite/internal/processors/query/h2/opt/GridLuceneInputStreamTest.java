@@ -30,12 +30,12 @@ import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutpu
 
 /**
  * Tests {@link GridLuceneInputStream#readFloats(float[], int, int)} — the bulk vector read used by the
- * Lucene HNSW vector search. Covers both the fast path (a vector fully contained in one off-heap page
- * buffer, copied via {@code Unsafe}) and the fallback (a vector straddling a {@link
- * GridLuceneOutputStream#BUFFER_SIZE} boundary, read byte-wise and little-endian decoded). The fallback
- * decode is also the exact code the big-endian branch uses, so these tests cover that decode too; the
- * only big-endian-specific element — the {@code !GridUnsafe.BIG_ENDIAN} guard that routes to the
- * fallback — cannot be exercised on little-endian hardware.
+ * Lucene HNSW vector search. Covers the fast path (a vector fully contained in one off-heap page buffer,
+ * copied via {@code Unsafe}) and the boundary fallback (a vector straddling a {@link
+ * GridLuceneOutputStream#BUFFER_SIZE} edge, walked buffer-by-buffer and copied via {@code Unsafe}). Both
+ * paths copy Lucene's little-endian vector bytes straight into the destination, which is already correct
+ * on little-endian hardware; the big-endian fix-up — an in-place {@code Integer.reverseBytes} pass guarded
+ * by {@code GridUnsafe.BIG_ENDIAN} — cannot be exercised on little-endian hardware, so it is not covered here.
  */
 public class GridLuceneInputStreamTest extends GridCommonAbstractTest {
     /** Floats per page buffer (BUFFER_SIZE is a whole number of 4-byte floats). */
@@ -119,7 +119,7 @@ public class GridLuceneInputStreamTest extends GridCommonAbstractTest {
         }
     }
 
-    /** Fast path must decode bytes identically to an explicit little-endian {@code readByte} loop. */
+    /** Fast path must produce the same floats as an explicit little-endian {@code readByte} loop. */
     @Test
     public void testMatchesScalarLittleEndianDecode() throws IOException {
         float[] expected = randomFloats(1024);

@@ -158,19 +158,16 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
         }
     }
 
-    /** Reusable per-thread scratch for bulk primitive reads (IndexInput is cloned per query thread). */
-    private static final ThreadLocal<byte[]> SCRATCH = ThreadLocal.withInitial(() -> new byte[0]);
-
     /**
-     * Bulk float read. Fast path: on little-endian hardware, when the whole vector is contiguous in the
-     * current off-heap buffer, copy native memory straight into the destination {@code float[]} (the
-     * native byte order then matches Lucene's little-endian vector encoding) — no heap {@code byte[]}
-     * staging and no scalar decode loop. Falls back to a buffered byte read + explicit little-endian
-     * decode when a vector straddles a buffer boundary or the platform is big-endian. Replaces the
-     * default per-{@code readByte} scalar loop that dominated vector-search CPU.
+     * Bulk float read. Fast path: when the whole vector is contiguous in the current off-heap buffer, copy
+     * native memory straight into the destination {@code float[]} — no heap {@code byte[]} staging and no
+     * scalar decode loop. When a vector straddles a page-buffer boundary, walk the buffers copying each run
+     * straight into {@code dst} (still no staging). The copied bytes are in Lucene's little-endian order, so
+     * on a little-endian JVM (the common case) {@code dst} is already correct; on big-endian we reverse each
+     * 4-byte word in place. Replaces the default per-{@code readByte} scalar loop that dominated vector-search CPU.
      */
     @Override public void readFloats(float[] dst, int offset, int len) throws IOException {
-        assert offset >= 0 && (long)offset + len <= dst.length;
+        assert offset >= 0 && len <= dst.length - offset;
 
         int n = len << 2;
 
@@ -180,34 +177,41 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             switchCurrentBuffer(true);
         }
 
-        // Fast path is valid only on little-endian platforms: copyMemory reinterprets the off-heap bytes
-        // in native byte order, which matches Lucene's little-endian encoding only when the JVM is LE.
-        if (!GridUnsafe.BIG_ENDIAN && bufPosition + n <= bufLength) {
-            GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2), n);
+        long dstAddr = GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2);
+
+        if (bufPosition + n <= bufLength) {
+            // Fast path: the whole vector is contiguous in the current off-heap buffer — one native copy.
+            GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, dstAddr, n);
 
             bufPosition += n;
         } else {
-            // Slow path: the vector straddles a page-buffer boundary (or the JVM is big-endian), so a
-            // single native copy can't be used. Read all len*4 bytes into a reusable per-thread scratch
-            // array — readBytes() transparently walks across buffer boundaries — then rebuild each float
-            // from its 4 bytes in little-endian order (Lucene's on-disk vector encoding), which stays
-            // correct regardless of the platform's native byte order.
-            byte[] buf = SCRATCH.get();
+            // Slow path: the vector straddles a page-buffer boundary, so it can't be copied in one shot.
+            // Walk the buffers, copying each contiguous run straight into dst's native memory (still no
+            // heap byte[] staging); switchCurrentBuffer() advances to the next page between runs.
+            int rem = n;
 
-            if (buf.length < n) {
-                buf = new byte[n];
+            while (rem > 0) {
+                if (bufPosition >= bufLength) {
+                    currBufIdx++;
 
-                SCRATCH.set(buf);
+                    switchCurrentBuffer(true);
+                }
+
+                int chunk = Math.min(rem, bufLength - bufPosition);
+
+                GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, dstAddr, chunk);
+
+                bufPosition += chunk;
+                dstAddr += chunk;
+                rem -= chunk;
             }
+        }
 
-            readBytes(buf, 0, n);
-
-            for (int i = 0; i < len; i++) {
-                int j = i << 2;
-
-                dst[offset + i] = Float.intBitsToFloat(
-                    (buf[j] & 0xFF) | ((buf[j + 1] & 0xFF) << 8) | ((buf[j + 2] & 0xFF) << 16) | ((buf[j + 3] & 0xFF) << 24));
-            }
+        // The bytes copied above are in Lucene's little-endian order. That already matches the native float
+        // layout on a little-endian JVM; on big-endian, reverse each 4-byte word in place to fix it up.
+        if (GridUnsafe.BIG_ENDIAN) {
+            for (int i = 0; i < len; i++)
+                dst[offset + i] = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(dst[offset + i])));
         }
     }
 
