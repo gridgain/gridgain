@@ -341,12 +341,16 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         out.writeObject(autoAdjustAwaitingTime);
         out.writeLong(remainingTimeToBaselineAdjust);
         out.writeBoolean(baselineAdjustInProgress);
+
         out.writeObject(scaleUpAutoAdjustEnabled);
-        out.writeLong(scaleUpAutoAdjustAwaitingTime);
+        out.writeObject(scaleUpAutoAdjustAwaitingTime);
+
         out.writeObject(scaleDownAutoAdjustEnabled);
-        out.writeLong(scaleDownAutoAdjustAwaitingTime);
+        out.writeObject(scaleDownAutoAdjustAwaitingTime);
+
         out.writeLong(remainingTimeToBaselineScaleUpAdjust);
         out.writeBoolean(baselineScaleUpAdjustInProgress);
+
         out.writeLong(remainingTimeToBaselineScaleDownAdjust);
         out.writeBoolean(baselineScaleDownAdjustInProgress);
     }
