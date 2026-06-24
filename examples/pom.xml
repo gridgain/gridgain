@@ -136,12 +136,6 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-hibernate_5.1</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
             <artifactId>ignite-schedule</artifactId>
             <version>${project.version}</version>
         </dependency>

@@ -73,7 +73,6 @@
         <module>modules/mesos</module>
         <module>modules/yarn</module>
         <module>modules/zookeeper</module>
-        <module>modules/hibernate-core</module>
         <module>modules/web/ignite-appserver-test</module>
         <module>modules/web/ignite-websphere-test</module>
         <module>modules/cassandra</module>
@@ -84,9 +83,6 @@
         <module>modules/ml/xgboost-model-parser</module>
         <module>modules/opencensus</module>
         <module>modules/h2</module>
-        <module>modules/hibernate-4.2</module>
-        <module>modules/hibernate-5.1</module>
-        <module>modules/hibernate-5.3</module>
         <module>modules/geospatial</module>
         <module>modules/schedule</module>
         <module>modules/control-utility</module>
@@ -141,9 +137,6 @@
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
-                <module>modules/hibernate-4.2</module>
-                <module>modules/hibernate-5.1</module>
-                <module>modules/hibernate-5.3</module>
                 <module>modules/lucene-8</module>
 <!--                <module>modules/lucene-9</module>-->
                 <module>modules/numa-allocator</module>
