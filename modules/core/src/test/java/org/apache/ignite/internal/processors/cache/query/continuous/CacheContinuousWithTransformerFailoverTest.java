@@ -169,7 +169,8 @@ public class CacheContinuousWithTransformerFailoverTest extends GridCommonAbstra
                 }
             });
 
-            qry.setRemoteTransformerFactory(FactoryBuilder.factoryOf(new IgniteClosure<CacheEntryEvent<? extends Integer, ? extends Integer>, Integer>() {
+            qry.setRemoteTransformerFactory(FactoryBuilder.factoryOf(
+                new IgniteClosure<CacheEntryEvent<? extends Integer, ? extends Integer>, Integer>() {
                 @Override public Integer apply(CacheEntryEvent<? extends Integer, ? extends Integer> evt) {
                     latch.countDown();
 

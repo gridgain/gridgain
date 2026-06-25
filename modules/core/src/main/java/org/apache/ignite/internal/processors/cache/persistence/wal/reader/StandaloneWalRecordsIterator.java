@@ -161,7 +161,8 @@ public class StandaloneWalRecordsIterator extends AbstractWalRecordsIterator {
      *
      * @throws IgniteCheckedException if failed
      */
-    private static void strictCheck(List<FileDescriptor> walFiles, FileWALPointer lowBound, FileWALPointer highBound) throws IgniteCheckedException {
+    private static void strictCheck(List<FileDescriptor> walFiles, FileWALPointer lowBound, FileWALPointer highBound)
+        throws IgniteCheckedException {
         int idx = 0;
 
         if (lowBound.index() > Long.MIN_VALUE) {

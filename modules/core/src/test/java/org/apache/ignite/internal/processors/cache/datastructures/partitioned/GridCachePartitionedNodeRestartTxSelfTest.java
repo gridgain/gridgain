@@ -262,7 +262,8 @@ public class GridCachePartitionedNodeRestartTxSelfTest extends GridCommonAbstrac
 
         try (Transaction tx = grid(0).transactions().txStart(PESSIMISTIC, REPEATABLE_READ)) {
             // Put custom data
-            grid(0).cache(DEFAULT_CACHE_NAME).put(new GridCacheInternalKeyImpl(key, "testGroup"), new GridCacheAtomicLongValue(INIT_GRID_NUM));
+            grid(0).cache(DEFAULT_CACHE_NAME).put(new GridCacheInternalKeyImpl(key, "testGroup"),
+                new GridCacheAtomicLongValue(INIT_GRID_NUM));
 
             tx.commit();
         }

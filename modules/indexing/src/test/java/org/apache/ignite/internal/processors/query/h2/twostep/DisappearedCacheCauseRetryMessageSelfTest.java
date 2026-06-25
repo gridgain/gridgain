@@ -73,7 +73,8 @@ public class DisappearedCacheCauseRetryMessageSelfTest extends AbstractIndexingC
             if (!e.getMessage().contains("Failed to reserve partitions for query (cache is not found on local node) ["))
                 e.printStackTrace();
 
-            assertTrue(e.getMessage(), e.getMessage().contains("Failed to reserve partitions for query (cache is not found on local node) ["));
+            assertTrue(e.getMessage(),
+                e.getMessage().contains("Failed to reserve partitions for query (cache is not found on local node) ["));
         }
     }
 

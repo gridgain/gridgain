@@ -64,7 +64,8 @@ public class EncoderTrainerTest extends TrainerTest {
             vectorizer
         );
 
-        assertArrayEquals(new double[]{0.0, 2.0}, preprocessor.apply(7, new DenseVector(new Serializable[]{7.0, "Monday", "September"})).features().asArray(), 1e-8);
+        assertArrayEquals(new double[]{0.0, 2.0},
+            preprocessor.apply(7, new DenseVector(new Serializable[]{7.0, "Monday", "September"})).features().asArray(), 1e-8);
     }
 
     /** Tests {@code fit()} method. */
@@ -92,8 +93,10 @@ public class EncoderTrainerTest extends TrainerTest {
             datasetBuilder,
             vectorizer
         );
-        assertArrayEquals(new double[]{1.0, 0.0, 0.0, 0.0, 0.0, 1.0}, preprocessor.apply(7, VectorUtils.of(3.0, 0.0)).features().asArray(), 1e-8);
-        assertArrayEquals(new double[]{0.0, 1.0, 0.0, 1.0, 0.0, 0.0}, preprocessor.apply(8, VectorUtils.of(2.0, 12.0)).features().asArray(), 1e-8);
+        assertArrayEquals(new double[]{1.0, 0.0, 0.0, 0.0, 0.0, 1.0},
+            preprocessor.apply(7, VectorUtils.of(3.0, 0.0)).features().asArray(), 1e-8);
+        assertArrayEquals(new double[]{0.0, 1.0, 0.0, 1.0, 0.0, 0.0},
+            preprocessor.apply(8, VectorUtils.of(2.0, 12.0)).features().asArray(), 1e-8);
     }
 
     /** Tests {@code fit()} method. */
@@ -158,6 +161,7 @@ public class EncoderTrainerTest extends TrainerTest {
             vectorizer
         );
 
-        assertArrayEquals(new double[] {2.0, 0.0}, preprocessor.apply(7, new DenseVector(new Serializable[]{"Monday", "September"})).features().asArray(), 1e-8);
+        assertArrayEquals(new double[] {2.0, 0.0},
+            preprocessor.apply(7, new DenseVector(new Serializable[]{"Monday", "September"})).features().asArray(), 1e-8);
     }
 }

@@ -256,7 +256,8 @@ public class JdbcThinTcpIo {
     private HandshakeResult handshake(ClientListenerProtocolVersion ver) throws IOException, SQLException {
         BinaryConfiguration binaryCfg = JdbcThinUtils.resolveBinaryConfiguration(connProps);
 
-        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(), new IgniteConfiguration().setBinaryConfiguration(binaryCfg), null);
+        BinaryContext ctx = new BinaryContext(BinaryCachingMetadataHandler.create(),
+            new IgniteConfiguration().setBinaryConfiguration(binaryCfg), null);
 
         BinaryMarshaller marsh = new BinaryMarshaller();
 

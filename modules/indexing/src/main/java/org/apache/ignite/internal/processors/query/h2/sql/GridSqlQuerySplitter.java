@@ -82,7 +82,8 @@ public class GridSqlQuerySplitter {
      * <p>Warning: this option may lead to incorrect results in cases, when condition pushed into the right branch of
      * left outer join.
      */
-    private static final boolean FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN = Boolean.getBoolean("IGNITE_FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN");
+    private static final boolean FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN =
+        Boolean.getBoolean("IGNITE_FORCE_PUSHDOWN_CONDITIONS_TO_LEFT_JOIN");
 
     /** */
     private static final String MERGE_TABLE_SCHEMA = "PUBLIC"; // Schema PUBLIC must always exist.
@@ -1955,7 +1956,8 @@ public class GridSqlQuerySplitter {
                 break;
 
             case UNKNOWN_FUNCTION:
-                throw new IgniteSQLException("Custom aggregation function is not supported for not collocated data.", IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
+                throw new IgniteSQLException("Custom aggregation function is not supported for not collocated data.",
+                    IgniteQueryErrorCode.UNSUPPORTED_OPERATION);
 
             default:
                 throw new IgniteException("Unsupported aggregate: " + agg.type());

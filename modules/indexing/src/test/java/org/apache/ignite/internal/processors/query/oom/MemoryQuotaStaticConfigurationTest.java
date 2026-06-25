@@ -104,7 +104,8 @@ public class MemoryQuotaStaticConfigurationTest extends AbstractMemoryQuotaStati
      * Ensure that no disk spilling occurs
      * Execute in parallel N queries that would fit memory altogether
      * Ensure that all queries succeeds
-     * Execute in parallel N queries such that each take less than 60% heap / DFLT_QUERY_THREAD_POOL_SIZE but in total would overflow all memory
+     * Execute in parallel N queries such that each take less than 60% heap / DFLT_QUERY_THREAD_POOL_SIZE but in total would overflow all
+     * memory
      * Ensure that OutOfMemoryError is thrown
      * @throws Exception If failed.
      */

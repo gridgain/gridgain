@@ -116,7 +116,8 @@ public class SparkModelParser {
 
         if (shouldContainTreeMetadataSubDirectory(parsedSparkMdl)) {
             if (Arrays.stream(files).noneMatch("treesMetadata"::equals))
-                throw new IllegalArgumentException("Directory should contain treeMetadata sub-directory [directory_path=" + pathToMdl + "]");
+                throw new IllegalArgumentException("Directory should contain treeMetadata sub-directory [directory_path=" +
+                    pathToMdl + "]");
 
             String pathToTreesMetadata = pathToMdl + File.separator + "treesMetadata";
             File treesMetadataDir = IgniteUtils.resolveIgnitePath(pathToTreesMetadata);
@@ -517,7 +518,8 @@ public class SparkModelParser {
      */
     @NotNull private static DecisionTreeNode buildTree(Map<Integer, NodeData> nodes,
         NodeData rootNodeData) {
-        return rootNodeData.isLeafNode ? new DecisionTreeLeafNode(rootNodeData.prediction) : new DecisionTreeConditionalNode(rootNodeData.featureIdx,
+        return rootNodeData.isLeafNode ? new DecisionTreeLeafNode(rootNodeData.prediction)
+            : new DecisionTreeConditionalNode(rootNodeData.featureIdx,
             rootNodeData.threshold,
             buildTree(nodes, nodes.get(rootNodeData.rightChildId)),
             buildTree(nodes, nodes.get(rootNodeData.leftChildId)),

@@ -55,7 +55,8 @@ public class CrossValidationTest {
         DebugCrossValidation<DecisionTreeNode, Double, Integer, double[]> scoreCalculator =
             new DebugCrossValidation<>();
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         int folds = 4;
 
@@ -79,7 +80,8 @@ public class CrossValidationTest {
         for (int i = 0; i < 1000; i++)
             data.put(i, new double[] {i > 500 ? 1.0 : 0.0, i});
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 
@@ -119,7 +121,8 @@ public class CrossValidationTest {
             .withBatchSize(14)
             .withSeed(123L);
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
             new DebugCrossValidation<>();
@@ -162,7 +165,8 @@ public class CrossValidationTest {
             .withBatchSize(14)
             .withSeed(123L);
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
             .withMetric(BinaryClassificationMetricValues::accuracy);
@@ -173,7 +177,8 @@ public class CrossValidationTest {
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
 
         DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>)
+                new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
                 .withTrainer(trainer)
@@ -185,7 +190,8 @@ public class CrossValidationTest {
 
         CrossValidationResult crossValidationRes = scoreCalculator.tuneHyperParamterers();
 
-        assertArrayEquals(crossValidationRes.getBestScore(), new double[]{0.9745762711864406, 1.0, 0.8968253968253969, 0.8661417322834646}, 1e-6);
+        assertArrayEquals(crossValidationRes.getBestScore(),
+            new double[]{0.9745762711864406, 1.0, 0.8968253968253969, 0.8661417322834646}, 1e-6);
         assertEquals(crossValidationRes.getBestAvgScore(), 0.9343858500738256, 1e-6);
         assertEquals(crossValidationRes.getScoringBoard().size(), 80);
     }
@@ -206,7 +212,8 @@ public class CrossValidationTest {
             .withBatchSize(14)
             .withSeed(123L);
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
             .withMetric(BinaryClassificationMetricValues::accuracy);
@@ -223,7 +230,8 @@ public class CrossValidationTest {
             .addHyperParam("batchSize", trainer::withBatchSize, new Double[]{1.0, 2.0, 4.0, 8.0, 16.0});
 
         DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>)
+                new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
                 .withTrainer(trainer)
@@ -257,7 +265,8 @@ public class CrossValidationTest {
             .withBatchSize(14)
             .withSeed(123L);
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         BinaryClassificationMetrics metrics = (BinaryClassificationMetrics) new BinaryClassificationMetrics()
             .withMetric(BinaryClassificationMetricValues::accuracy);
@@ -278,7 +287,8 @@ public class CrossValidationTest {
             .addTrainer(trainer);
 
         DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]> scoreCalculator =
-            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>) new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
+            (DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>)
+                new DebugCrossValidation<LogisticRegressionModel, Double, Integer, double[]>()
                 .withUpstreamMap(data)
                 .withAmountOfParts(1)
                 .withPipeline(pipeline)
@@ -302,7 +312,8 @@ public class CrossValidationTest {
         for (int i = 0; i < 1000; i++)
             data.put(i, new double[] { i, i % 2 == 0 ? 1.0 : 0.0});
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
 
         DecisionTreeClassificationTrainer trainer = new DecisionTreeClassificationTrainer(1, 0);
 

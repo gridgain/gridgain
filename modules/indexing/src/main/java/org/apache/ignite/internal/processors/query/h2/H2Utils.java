@@ -1473,13 +1473,15 @@ public class H2Utils {
      * @param cls    Function implementation class.
      * @throws IgniteCheckedException If failed.
      */
-    public static void registerAggregateFunction(IgniteLogger log, ConnectionManager connMgr, String fnName, Class<? extends AggregateFunction> cls)
+    public static void registerAggregateFunction(IgniteLogger log, ConnectionManager connMgr, String fnName,
+        Class<? extends AggregateFunction> cls)
         throws IgniteCheckedException {
         Objects.requireNonNull(fnName, "Function name can't be null");
         Objects.requireNonNull(cls, "Class name can't be null");
 
         if (!AggregateFunction.class.isAssignableFrom(cls))
-            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" + AggregateFunction.class.getName() + "'");
+            throw new IgniteSQLException("Aggregate function '" + cls.getName() + "' should implement '" +
+                AggregateFunction.class.getName() + "'");
 
         connMgr.executeStatement(null, "CREATE AGGREGATE " + fnName + " FOR \"" + cls.getName() + "\"");
 

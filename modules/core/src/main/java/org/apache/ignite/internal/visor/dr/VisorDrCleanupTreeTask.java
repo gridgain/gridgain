@@ -48,7 +48,8 @@ import static org.apache.ignite.internal.processors.cache.tree.updatelog.Partiti
 /**  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorDrCleanupTreeTask extends VisorMultiNodeTask<VisorDrCleanupTreeTaskArgs, VisorDrCleanupTreeTaskResult, VisorDrCleanupTreeTaskResult> {
+public class VisorDrCleanupTreeTask
+    extends VisorMultiNodeTask<VisorDrCleanupTreeTaskArgs, VisorDrCleanupTreeTaskResult, VisorDrCleanupTreeTaskResult> {
     /**  */
     private static final long serialVersionUID = 0L;
 

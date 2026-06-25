@@ -107,7 +107,8 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         TcpDiscoveryMetricsUpdateMessage msgLap1T1 = createMetricsMessage(crd); // Lap 0, time 1
         msgLap1T1.setMetrics(srv.localNode().id(), new ClusterMetricsSnapshot()); // Lap 1
 
-        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2)); // Dummy message for blocking GridWorker.
+        // Dummy message for blocking GridWorker.
+        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2));
         sendDiscoMessage(srvSpi, msgLap1T1);
         sendDiscoMessage(srvSpi, createMetricsMessage(crd));
 
@@ -174,7 +175,8 @@ public class MetricsCompactionTest extends GridCommonAbstractTest {
         TcpDiscoveryMetricsUpdateMessage msgLap1T1 = createMetricsMessage(crd); // Lap 0, time 1
         msgLap1T1.setMetrics(srv.localNode().id(), new ClusterMetricsSnapshot()); // Lap 1
 
-        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2)); // Dummy message for blocking GridWorker.
+        // Dummy message for blocking GridWorker.
+        sendDiscoMessage(srvSpi, new TcpDiscoveryRingLatencyCheckMessage(crd.localNode().id(), 2));
         sendDiscoMessage(srvSpi, msgLap1T1);
         sendDiscoMessage(srvSpi, createMetricsMessage(crd));
 

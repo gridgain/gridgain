@@ -133,7 +133,8 @@ public class PartitionEvictionOrderTest extends GridCommonAbstractTest {
                     GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
 
                     top.partitionFactory((ctx, grp, id, recovery) -> new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                        @Override public long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
+                        @Override public long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task)
+                            throws NodeStoppingException {
                             evictionOrder.add(new T2<>(grp.groupId(), id));
 
                             return super.clearAll(stopClo, task);

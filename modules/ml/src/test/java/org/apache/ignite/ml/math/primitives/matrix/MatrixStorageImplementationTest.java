@@ -41,7 +41,8 @@ public class MatrixStorageImplementationTest extends ExternalizeTest<MatrixStora
                 expRowSize.set(x);
                 expColSize.set(y);
             },
-            (ms, desc) -> assertTrue("Expected size for " + desc, expColSize.get().equals(ms.columnSize()) && expRowSize.get().equals(ms.rowSize())));
+            (ms, desc) -> assertTrue("Expected size for " + desc,
+                expColSize.get().equals(ms.columnSize()) && expRowSize.get().equals(ms.rowSize())));
     }
 
     /** */

@@ -236,7 +236,8 @@ public class CacheStoreSessionListenerLifecycleSelfTest extends GridCommonAbstra
 
                 CacheConfiguration cacheCfg = cacheConfiguration(name);
 
-                cacheCfg.setCacheStoreSessionListenerFactories(new SessionListenerFactory(name + " 1"), new SessionListenerFactory(name + " 2"));
+                cacheCfg.setCacheStoreSessionListenerFactories(new SessionListenerFactory(name + " 1"),
+                    new SessionListenerFactory(name + " 2"));
 
                 ignite.createCache(cacheCfg);
             }

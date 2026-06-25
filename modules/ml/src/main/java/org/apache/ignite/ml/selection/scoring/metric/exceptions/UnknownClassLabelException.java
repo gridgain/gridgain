@@ -31,6 +31,7 @@ public class UnknownClassLabelException extends IgniteException {
      * @param negativeClsLb Negative class label.
      */
     public UnknownClassLabelException(double incorrectVal, double positiveClsLb, double negativeClsLb) {
-        super("The next class label: " + incorrectVal + " is not positive class label: " + positiveClsLb + " or negative class label: " + negativeClsLb);
+        super("The next class label: " + incorrectVal + " is not positive class label: " + positiveClsLb +
+            " or negative class label: " + negativeClsLb);
     }
 }

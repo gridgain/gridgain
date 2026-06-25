@@ -295,7 +295,8 @@ public class GridSqlQueryParser {
     private static final Getter<Merge, Column[]> MERGE_KEYS = getter(Merge.class, "keys");
 
     /** */
-    private static final Getter<CommandWithValues, List<Expression[]>> COMMAND_WITH_VALUES_VALS_EXPRESSIONS = getter(CommandWithValues.class, "valuesExpressionList");
+    private static final Getter<CommandWithValues, List<Expression[]>> COMMAND_WITH_VALUES_VALS_EXPRESSIONS =
+        getter(CommandWithValues.class, "valuesExpressionList");
 
     /** */
     private static final Getter<Merge, Query> MERGE_QUERY = getter(Merge.class, "query");
@@ -2383,7 +2384,8 @@ public class GridSqlQueryParser {
             UserAggregate userAgg = agg.getUserAggregate();
             Expression[] args = ABSTRACT_AGGREGATE_ARGS.get(agg);
 
-            GridSqlAggregateFunction fun = new GridSqlAggregateFunction(GridSqlFunctionType.UNKNOWN_FUNCTION, userAgg.getName(), DISTINCT.get(agg));
+            GridSqlAggregateFunction fun = new GridSqlAggregateFunction(
+                GridSqlFunctionType.UNKNOWN_FUNCTION, userAgg.getName(), DISTINCT.get(agg));
 
             for (Expression arg : args)
                 fun.addChild(parseExpression(arg, calcTypes));

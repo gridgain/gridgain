@@ -523,7 +523,8 @@ public class Checkpointer extends GridWorker {
                         tracker.pagesWriteDuration(),
                         tracker.fsyncDuration(),
                         tracker.totalDuration(),
-                        WriteSpeedFormatter.calculateAndFormatWriteSpeed(chp.pagesSize, storageCfg.getPageSize(), tracker.totalDurationInSeconds())
+                        WriteSpeedFormatter.calculateAndFormatWriteSpeed(chp.pagesSize, storageCfg.getPageSize(),
+                            tracker.totalDurationInSeconds())
                     ));
                 }
             }

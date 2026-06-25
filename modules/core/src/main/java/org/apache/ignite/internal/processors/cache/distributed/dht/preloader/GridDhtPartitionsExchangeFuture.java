@@ -190,7 +190,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * See {@link IgniteSystemProperties#IGNITE_SKIP_PARTITION_SIZE_VALIDATION} for details.
      * Default value is {@code false}.
      */
-    private static final boolean SKIP_PARTITION_SIZE_VALIDATION = Boolean.getBoolean(IgniteSystemProperties.IGNITE_SKIP_PARTITION_SIZE_VALIDATION);
+    private static final boolean SKIP_PARTITION_SIZE_VALIDATION =
+        Boolean.getBoolean(IgniteSystemProperties.IGNITE_SKIP_PARTITION_SIZE_VALIDATION);
 
     /** */
     public static final String DISTRIBUTED_LATCH_ID = "exchange";
@@ -961,7 +962,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     ", crd=" + crdNode +
                     ", evt=" + IgniteUtils.gridEventName(firstDiscoEvt.type()) +
                     ", evtNode=" + firstDiscoEvt.eventNode().id() +
-                    ", customEvt=" + (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT ? ((DiscoveryCustomEvent)firstDiscoEvt).customMessage() : null) +
+                    ", customEvt=" + (firstDiscoEvt.type() == EVT_DISCOVERY_CUSTOM_EVT ?
+                        ((DiscoveryCustomEvent)firstDiscoEvt).customMessage() : null) +
                     ", allowMerge=" + exchCtx.mergeExchanges() +
                     ", exchangeFreeSwitch=" + exchCtx.exchangeFreeSwitch() + ']');
             }
@@ -4889,7 +4891,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                     }
                                 }
 
-                                AffinityTopologyVersion resVer = msg.resultTopologyVersion() != null ? msg.resultTopologyVersion() : initialVersion();
+                                AffinityTopologyVersion resVer = msg.resultTopologyVersion() != null ?
+                                    msg.resultTopologyVersion() : initialVersion();
 
                                 if (log.isInfoEnabled()) {
                                     log.info("Received full message, will finish exchange [node=" + node.id() +
@@ -5375,7 +5378,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                                             newCrdFut.init(GridDhtPartitionsExchangeFuture.this);
                                         }
                                         catch (Throwable t) {
-                                            U.error(log, "Failed to initialize new coordinator future [topVer=" + initialVersion() + "]", t);
+                                            U.error(log, "Failed to initialize new coordinator future [topVer=" +
+                                                initialVersion() + "]", t);
 
                                             cctx.kernalContext().failure().process(new FailureContext(FailureType.CRITICAL_ERROR, t));
 

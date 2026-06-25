@@ -590,7 +590,8 @@ public class ClientCacheConfigurationSerializer {
             Collection<QueryIndex> indexes = new ArrayList<>(cnt);
 
             //check if similarity function feature is supported
-            boolean isVectorSimilarityFunctionSupported = protocolCtx.isFeatureSupported(ClientBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
+            boolean isVectorSimilarityFunctionSupported =
+                protocolCtx.isFeatureSupported(ClientBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY);
             for (int i = 0; i < cnt; i++) {
                 indexes.add(PlatformConfigurationUtils.readQueryIndex(in, isVectorSimilarityFunctionSupported));
             }

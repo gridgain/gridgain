@@ -184,6 +184,7 @@ public class RepairEntryProcessor implements EntryProcessor {
         return data.values().stream()
             .mapToLong(mapper::apply)
             .min()
-            .orElseThrow(() -> new IllegalStateException("Unreachable state [mapper = " + mapper.getClass().getName() + ", data=" + data + "]."));
+            .orElseThrow(() -> new IllegalStateException("Unreachable state [mapper = " + mapper.getClass().getName() +
+                ", data=" + data + "]."));
     }
 }

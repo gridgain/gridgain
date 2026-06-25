@@ -212,7 +212,8 @@ public class TxRollbackOnNodeLeftInActiveState extends GridCommonAbstractTest {
 
             Thread.sleep(500);
 
-            assertThrows(log, operation, TransactionRollbackException.class, String.format(NODE_LEFT_ROLLBACK_MSG, partPrimaryNodeId, partPrimaryNodeConsistentId));
+            assertThrows(log, operation, TransactionRollbackException.class,
+                String.format(NODE_LEFT_ROLLBACK_MSG, partPrimaryNodeId, partPrimaryNodeConsistentId));
 
             assertThrows(log, tx::commit, TransactionRollbackException.class, null);
         }

@@ -64,7 +64,8 @@ public class NumberUtil {
      * @see #fromHex(String, int, int)
      */
     public static String toHex(final byte[] bytes, final int offset, final int count) {
-        if(offset >= bytes.length) throw new IllegalArgumentException("Offset is greater than the length (" + offset + " >= " + bytes.length + ").")/*by contract*/;
+        if(offset >= bytes.length) throw new IllegalArgumentException("Offset is greater than the length (" + offset +
+            " >= " + bytes.length + ").")/*by contract*/;
         final int byteCount = Math.min( (bytes.length - offset), count);
         final int upperBound = byteCount + offset;
 
@@ -100,7 +101,8 @@ public class NumberUtil {
      * @see #toHex(byte[], int, int)
      */
     public static byte[] fromHex(final String string, final int offset, final int count) {
-        if(offset >= string.length()) throw new IllegalArgumentException("Offset is greater than the length (" + offset + " >= " + string.length() + ").")/*by contract*/;
+        if(offset >= string.length()) throw new IllegalArgumentException("Offset is greater than the length (" + offset +
+            " >= " + string.length() + ").")/*by contract*/;
         if( (count & 0x01) != 0) throw new IllegalArgumentException("Count is not divisible by two (" + count + ").")/*by contract*/;
         final int charCount = Math.min((string.length() - offset), count);
         final int upperBound = offset + charCount;

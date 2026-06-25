@@ -248,7 +248,8 @@ public class IgniteCacheClientReconnectTest extends GridCommonAbstractTest {
 
         spi.stopBlock();
 
-        GridTestUtils.assertThrows(log(), () -> fut.get(5000), IgniteCheckedException.class, "Client node in forceServerMode is not allowed to reconnect to the cluster and will be stopped.");
+        GridTestUtils.assertThrows(log(), () -> fut.get(5000), IgniteCheckedException.class,
+            "Client node in forceServerMode is not allowed to reconnect to the cluster and will be stopped.");
     }
 
     /**

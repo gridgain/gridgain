@@ -538,7 +538,8 @@ public final class MultilayerPerceptron implements IgniteModel<Matrix, Matrix>, 
         Matrix diff = groundTruth.like(groundTruth.rowSize(), groundTruth.columnSize());
 
         for (int col = 0; col < groundTruth.columnSize(); col++) {
-            // TODO: IGNITE-7155 Couldn't use views here because copy on views doesn't do actual copy and all changes are propagated to original.
+            // TODO: IGNITE-7155 Couldn't use views here because copy on views doesn't do actual copy and all changes are
+            // propagated to original.
             Vector gtCol = groundTruth.getCol(col);
             Vector predCol = lastLayerOutput.getCol(col);
             diff.assignColumn(col, loss.apply(gtCol).differential(predCol));

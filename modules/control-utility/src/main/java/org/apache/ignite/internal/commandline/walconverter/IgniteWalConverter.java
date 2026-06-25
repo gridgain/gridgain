@@ -106,7 +106,8 @@ public class IgniteWalConverter {
 
         final WalStat stat = params.isPrintStat() ? new WalStat() : null;
 
-        IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder = new IgniteWalIteratorFactory.IteratorParametersBuilder()
+        IgniteWalIteratorFactory.IteratorParametersBuilder iteratorParametersBuilder =
+            new IgniteWalIteratorFactory.IteratorParametersBuilder()
             .pageSize(params.getPageSize())
             .binaryMetadataFileStoreDir(params.getBinaryMetadataDir())
             .marshallerMappingFileStoreDir(params.getMarshallerMappingDir())

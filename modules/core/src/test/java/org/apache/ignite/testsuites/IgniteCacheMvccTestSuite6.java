@@ -97,8 +97,10 @@ public class IgniteCacheMvccTestSuite6 {
         ignoredTests.add(TxLocalDhtMixedCacheModesTest.class);
 
         // Skip tests that has Mvcc clones.
-        ignoredTests.add(PartitionedTransactionalPessimisticCacheGetsDistributionTest.class); // See PartitionedMvccTxPessimisticCacheGetsDistributionTest.
-        ignoredTests.add(ReplicatedTransactionalPessimisticCacheGetsDistributionTest.class); //See ReplicatedMvccTxPessimisticCacheGetsDistributionTest
+        // See PartitionedMvccTxPessimisticCacheGetsDistributionTest.
+        ignoredTests.add(PartitionedTransactionalPessimisticCacheGetsDistributionTest.class);
+        //See ReplicatedMvccTxPessimisticCacheGetsDistributionTest
+        ignoredTests.add(ReplicatedTransactionalPessimisticCacheGetsDistributionTest.class);
 
         List<Class<?>> suite = new ArrayList<>((IgniteCacheTestSuite6.suite(ignoredTests)));
 

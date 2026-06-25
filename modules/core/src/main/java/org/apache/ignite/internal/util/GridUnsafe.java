@@ -225,7 +225,8 @@ public abstract class GridUnsafe {
         else if (NEW_DIRECT_BUF_CONSTRUCTOR != null)
             return wrapPointerDirectBufCtor(ptr, len, NEW_DIRECT_BUF_CONSTRUCTOR);
         else
-            throw new RuntimeException("All alternative for a new DirectByteBuffer() creation failed: " + FeatureChecker.JAVA_VER_SPECIFIC_WARN);
+            throw new RuntimeException("All alternative for a new DirectByteBuffer() creation failed: " +
+                FeatureChecker.JAVA_VER_SPECIFIC_WARN);
     }
 
     /**

@@ -68,7 +68,8 @@ public class PartitionLogTree extends BPlusTree<UpdateLogRow, UpdateLogRow> {
     private final int part;
 
     /** */
-    private final boolean strictConsistencyCheck = IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK);
+    private final boolean strictConsistencyCheck =
+        IgniteSystemProperties.getBoolean(IgniteSystemProperties.IGNITE_STRICT_CONSISTENCY_CHECK);
 
     /** */
     private final IgniteLogger log;

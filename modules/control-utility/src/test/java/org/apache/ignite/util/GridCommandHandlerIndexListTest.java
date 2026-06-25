@@ -326,7 +326,8 @@ public class GridCommandHandlerIndexListTest extends GridCommandHandlerAbstractT
             conn.prepareStatement("create index idx_t1_enddate ON T1 (enddate)").execute();
 
             conn.prepareStatement("drop table if exists T2").execute();
-            conn.prepareStatement("create table T2 (id integer primary key, enddate timestamp) with \"cache_name=" + SPECIFIC_CACHE_NAME + "\"").execute();
+            conn.prepareStatement("create table T2 (id integer primary key, enddate timestamp) with \"cache_name=" +
+                SPECIFIC_CACHE_NAME + "\"").execute();
             conn.prepareStatement("create index idx_t2_enddate ON T2 (enddate)").execute();
         }
     }

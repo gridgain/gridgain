@@ -220,7 +220,8 @@ public class GridLocalConfigManager {
                 if (!F.isEmpty(skippedConfigs)) {
                     U.warn(log, "Static configuration for the following caches will be ignored because a persistent " +
                         "cache with the same name already exist (see " +
-                        "https://www.gridgain.com/docs/latest/developers-guide/configuring-caches/configuration-overview for more information): " +
+                        "https://www.gridgain.com/docs/latest/developers-guide/configuring-caches/configuration-overview " +
+                        "for more information): " +
                         skippedConfigs);
                 }
             }

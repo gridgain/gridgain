@@ -137,7 +137,8 @@ public class Step_14_Parallel_Genetic_Programming_Search {
                     .withParameterSearchStrategy(new EvolutionOptimizationStrategy())
                     .addHyperParam("p", p, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
                     .addHyperParam("maxDeep", maxDeep, new Double[]{1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0})
-                    .addHyperParam("minImpurityDecrease", minImpurityDecrease, new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
+                    .addHyperParam("minImpurityDecrease", minImpurityDecrease,
+                        new Double[]{0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0});
 
                 SerializableFunction<BinaryClassificationMetricValues, Double> acc = m -> m.accuracy();
 

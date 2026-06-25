@@ -51,5 +51,6 @@ public class FeatureChecker {
         "\nPlease add the following parameters to JVM startup settings and restart the application: {parameters: " +
             JAVA_9_10_11_OPTIONS +
             "\n}" +
-            "\nSee https://www.gridgain.com/docs/latest/getting-started/quick-start/java#running-gridgain-with-java-11-or-later for more information.";
+            "\nSee https://www.gridgain.com/docs/latest/getting-started/quick-start/java#running-gridgain-with-java-11-or-later " +
+            "for more information.";
 }

@@ -71,7 +71,8 @@ public class MarshallerContextTestImpl extends MarshallerContextImpl {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean registerClassName(byte platformId, int typeId, String clsName, boolean failIfUnregistered) throws IgniteCheckedException {
+    @Override public boolean registerClassName(byte platformId, int typeId, String clsName,
+        boolean failIfUnregistered) throws IgniteCheckedException {
         if (excluded != null && excluded.contains(clsName))
             return false;
 

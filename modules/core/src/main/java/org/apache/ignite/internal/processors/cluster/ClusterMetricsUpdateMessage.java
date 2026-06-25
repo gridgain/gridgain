@@ -90,7 +90,8 @@ public class ClusterMetricsUpdateMessage implements Message {
 
         switch (writer.state()) {
             case 0:
-                if (!writer.writeMap("allNodesMetrics", allNodesMetrics, MessageCollectionItemType.UUID, MessageCollectionItemType.BYTE_ARR))
+                if (!writer.writeMap("allNodesMetrics", allNodesMetrics, MessageCollectionItemType.UUID,
+                    MessageCollectionItemType.BYTE_ARR))
                     return false;
 
                 writer.incrementState();
@@ -115,7 +116,8 @@ public class ClusterMetricsUpdateMessage implements Message {
 
         switch (reader.state()) {
             case 0:
-                allNodesMetrics = reader.readMap("allNodesMetrics", MessageCollectionItemType.UUID, MessageCollectionItemType.BYTE_ARR, false);
+                allNodesMetrics = reader.readMap("allNodesMetrics", MessageCollectionItemType.UUID,
+                    MessageCollectionItemType.BYTE_ARR, false);
 
                 if (!reader.isLastRead())
                     return false;

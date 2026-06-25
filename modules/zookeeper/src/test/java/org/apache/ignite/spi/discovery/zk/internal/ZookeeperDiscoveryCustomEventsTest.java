@@ -241,7 +241,8 @@ public class ZookeeperDiscoveryCustomEventsTest extends ZookeeperDiscoverySpiTes
         );
         discoveryMgr.setCustomEventListener(TestFastStopProcessCustomMessageAck.class,
             new CustomEventListener<TestFastStopProcessCustomMessageAck>() {
-                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd, TestFastStopProcessCustomMessageAck msg) {
+                @Override public void onCustomEvent(AffinityTopologyVersion topVer, ClusterNode snd,
+                    TestFastStopProcessCustomMessageAck msg) {
                     List<T3<AffinityTopologyVersion, UUID, DiscoveryCustomMessage>> list = rcvdMsgs.get(nodeId);
 
                     if (list == null)

@@ -93,13 +93,15 @@ public class VisorDrResetTreeTask extends VisorMultiNodeTask<
         }
 
         msg.append("Task result:\n");
-        taskResult.forEach((cache, parts) -> msg.append("    ").append(cache).append("=").append(S.compact(parts)).append(System.lineSeparator()));
+        taskResult.forEach((cache, parts) -> msg.append("    ").append(cache).append("=").append(S.compact(parts))
+            .append(System.lineSeparator()));
 
         return new VisorDrResetTreeTaskResult(msg.toString());
     }
 
     /**  */
-    private static class ResetTreeJob extends VisorJob<VisorDrResetTreeTask.VisorDrResetTreeTaskArgs, VisorDrResetTreeTask.VisorDrResetTreeJobResult> {
+    private static class ResetTreeJob
+        extends VisorJob<VisorDrResetTreeTask.VisorDrResetTreeTaskArgs, VisorDrResetTreeTask.VisorDrResetTreeJobResult> {
         /**  */
         private static final long serialVersionUID = 0L;
 
@@ -159,7 +161,8 @@ public class VisorDrResetTreeTask extends VisorMultiNodeTask<
                     }
 
                     if (debug)
-                        ignite.log().debug("Reset DR state: cache=" + cache + ", partitions=" + Arrays.toString(partitionsProcessed.toIntArray()));
+                        ignite.log().debug("Reset DR state: cache=" + cache + ", partitions=" +
+                            Arrays.toString(partitionsProcessed.toIntArray()));
                 } catch (Exception ex) {
                     errors.add("Failed to reset DR state: cache=" + cache + ", error=" + ex.getMessage());
 

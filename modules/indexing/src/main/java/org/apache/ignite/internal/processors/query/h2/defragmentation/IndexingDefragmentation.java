@@ -324,7 +324,8 @@ public class IndexingDefragmentation {
             long mvccCntr = io.getMvccCounter(pageAddr, idx);
             int mvccOpCntr = io.getMvccOperationCounter(pageAddr, idx);
 
-            H2CacheRow row = (H2CacheRow) ((H2Tree) tree).createMvccRow(link, mvccCrdVer, mvccCntr, mvccOpCntr, CacheDataRowAdapter.RowData.LINK_ONLY);
+            H2CacheRow row = (H2CacheRow) ((H2Tree) tree).createMvccRow(link, mvccCrdVer, mvccCntr, mvccOpCntr,
+                CacheDataRowAdapter.RowData.LINK_ONLY);
 
             return new H2CacheRowWithIndex(row.getDesc(), row.getRow(), values);
         }

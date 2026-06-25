@@ -356,7 +356,8 @@ public class LongRunningQueryTest extends AbstractIndexingCommonTest {
      */
     private void sqlCheckLongRunning(boolean dml) {
         if (dml)
-            sqlCheckLongRunning("DELETE FROM test WHERE id not in (SELECT T0.id FROM test AS T0, test AS T1, test AS T2 where T0.id > ?)", 0);
+            sqlCheckLongRunning("DELETE FROM test WHERE id not in (SELECT T0.id FROM test AS T0, test AS T1, " +
+                "test AS T2 where T0.id > ?)", 0);
         else if (lazy)
             sqlCheckLongRunningLazy("SELECT * FROM test WHERE _key < sleep_func(?, ?)", 2000, LAZY_QRYS_KEY_CNT);
         else

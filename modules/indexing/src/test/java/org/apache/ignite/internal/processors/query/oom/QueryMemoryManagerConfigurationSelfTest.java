@@ -281,7 +281,8 @@ public class QueryMemoryManagerConfigurationSelfTest extends GridCommonAbstractT
         GridTestUtils.assertThrows(log, () -> {
                 U.parseBytes(s);
             }, IllegalArgumentException.class,
-            "Wrong format of bytes string. It is expected to be a number or a number followed by one of the symbols: 'k', 'm', 'g', '%'.\n" +
+            "Wrong format of bytes string. It is expected to be a number or a number followed by one of the symbols: " +
+                "'k', 'm', 'g', '%'.\n" +
                 " For example: '10000', '10k', '33m', '2G'. But was: " + s);
     }
 

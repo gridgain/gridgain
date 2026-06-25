@@ -106,4 +106,26 @@
         -->
         <module name="SingleSpaceSeparator"/>
     </module>
+
+    <!--
+        Checks that the line length not exceeds 140 chars.
+        See: https://checkstyle.org/config_sizes.html#LineLength
+    -->
+    <module name="LineLength">
+        <property name="max" value="140"/>
+    </module>
+
+    <!--
+        Enables inline, line-scoped suppression via comments, e.g.:
+            // CHECKSTYLE.OFF: LineLength - <reason>
+            <suppressed line(s)>
+            // CHECKSTYLE.ON: LineLength
+        Required for Checker-level checks such as LineLength (the TreeWalker comment filters cannot suppress it).
+        See: https://checkstyle.org/filters/suppresswithplaintextcommentfilter.html
+    -->
+    <module name="SuppressWithPlainTextCommentFilter">
+        <property name="offCommentFormat" value="CHECKSTYLE.OFF\: ([\w\|]+)"/>
+        <property name="onCommentFormat" value="CHECKSTYLE.ON\: ([\w\|]+)"/>
+        <property name="checkFormat" value="$1"/>
+    </module>
 </module>

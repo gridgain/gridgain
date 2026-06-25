@@ -516,7 +516,8 @@ public class GridNioServerWrapper {
                         ses = null;
                     }
 
-                    eRegistrySupplier.get().onException("Handshake timed out (will retry with increased timeout) [connTimeoutStrategy=" + connTimeoutStgy +
+                    eRegistrySupplier.get().onException("Handshake timed out (will retry with increased timeout) " +
+                        "[connTimeoutStrategy=" + connTimeoutStgy +
                         ", addr=" + addr + ']', e);
 
                     if (log.isDebugEnabled())
@@ -668,7 +669,8 @@ public class GridNioServerWrapper {
      * @return Client.
      * @throws IgniteCheckedException If failed.
      */
-    public GridCommunicationClient createTcpClient(ClusterNode node, int connIdx, boolean backwardCompatibility) throws IgniteCheckedException {
+    public GridCommunicationClient createTcpClient(ClusterNode node, int connIdx, boolean backwardCompatibility)
+        throws IgniteCheckedException {
         if (backwardCompatibility)
             return createTcpClientFun.apply(node, connIdx);
         else {

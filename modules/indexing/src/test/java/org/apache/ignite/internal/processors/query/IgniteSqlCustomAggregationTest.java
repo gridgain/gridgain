@@ -215,7 +215,8 @@ public class IgniteSqlCustomAggregationTest extends AbstractIndexingCommonTest {
         GridTestUtils.assertThrowsAnyCause(log, new Callable<Object>() {
             @Override public Object call() {
                 cache.query(new SqlFieldsQuery(
-                    "select companyId,FIRSTVALUE(name, DISTINCT age), LASTVALUE(name, DISTINCT age) from \"cache\".Person group by companyId")
+                    "select companyId,FIRSTVALUE(name, DISTINCT age), LASTVALUE(name, DISTINCT age) from \"cache\".Person " +
+                        "group by companyId")
                     .setCollocated(true)
                 ).getAll();
 

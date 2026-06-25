@@ -173,7 +173,8 @@ public class DrCleanupPartitionLogCommand extends AbstractCommand<DrCleanupParti
                             break;
 
                         case GROUPS_ARG:
-                            cacheGrps = CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg), CLEANUP_TREES.toString());
+                            cacheGrps =
+                                CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg), CLEANUP_TREES.toString());
                             break;
 
                         case NODES_ARG: {

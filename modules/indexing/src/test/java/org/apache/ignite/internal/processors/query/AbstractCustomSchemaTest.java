@@ -185,7 +185,8 @@ public abstract class AbstractCustomSchemaTest extends AbstractIndexingCommonTes
 
     /** */
     private void verifyTbls() {
-        List<List<?>> res = execSql("SELECT SCHEMA_NAME, KEY_ALIAS FROM " + t(QueryUtils.sysSchemaName(), "TABLES") + " ORDER BY SCHEMA_NAME");
+        List<List<?>> res = execSql("SELECT SCHEMA_NAME, KEY_ALIAS FROM " + t(QueryUtils.sysSchemaName(), "TABLES") +
+            " ORDER BY SCHEMA_NAME");
 
         List<List<?>> exp = Arrays.asList(
             Arrays.asList(SCHEMA_NAME_1, "S1_KEY"),

@@ -168,7 +168,8 @@ public class CacheMvccPartitionedSqlCoordinatorFailoverTest extends CacheMvccAbs
      */
     @Test
     public void testSqlReadInProgressCoordinatorFails() throws Exception {
-        readInProgressCoordinatorFails(false, false, PESSIMISTIC, REPEATABLE_READ, SQL, DML, new InitIndexing(Integer.class, Integer.class));
+        readInProgressCoordinatorFails(false, false, PESSIMISTIC, REPEATABLE_READ, SQL, DML,
+            new InitIndexing(Integer.class, Integer.class));
     }
 
     /**

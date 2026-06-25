@@ -150,7 +150,8 @@ public class SqlDisabledFeaturesSelfTest extends GridCommonAbstractTest {
 
     private static class TestTrigger implements Trigger {
 
-        @Override public void init(Connection conn, String schemaName, String triggerName, String tableName, boolean before, int type) throws SQLException {
+        @Override public void init(Connection conn, String schemaName, String triggerName, String tableName, boolean before,
+            int type) throws SQLException {
 
         }
 

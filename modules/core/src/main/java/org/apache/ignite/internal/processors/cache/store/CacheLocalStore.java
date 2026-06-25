@@ -26,8 +26,8 @@ import java.lang.annotation.Target;
  * Annotation for local {@link org.apache.ignite.cache.store.CacheStore} implementation. "Local" here means that there is no global
  * database behind the grid but each node has an independent one.
  *
- * @deprecated Use <a href="https://www.gridgain.com/docs/latest/developers-guide/persistence/native-persistence">Apache Ignite Native Persistence</a>
- * in case of need of distributed persistence store.
+ * @deprecated Use <a href="https://www.gridgain.com/docs/latest/developers-guide/persistence/native-persistence">Apache Ignite Native
+ * Persistence</a> in case of need of distributed persistence store.
  */
 @Deprecated
 @Documented

@@ -171,7 +171,8 @@ public class DiscoveryClientSocketTest extends GridCommonAbstractTest {
             info("Try to close a socket.");
 
             long startClose = System.currentTimeMillis();
-            //Do not use try-catch-resource here, because JVM has a bug on TLS implementation and requires to close socket streams explicitly.
+            //Do not use try-catch-resource here, because JVM has a bug on TLS implementation and requires to close socket
+            //streams explicitly.
             U.closeQuiet(clientSocket);
 
             info("Socket closed [time=" + (System.currentTimeMillis() - startClose) + ']');

@@ -2597,7 +2597,8 @@ public class GridDhtPartitionTopologyImpl implements GridDhtPartitionTopology {
 
                             if (stateChanged && log.isDebugEnabled()) {
                                 log.debug("Partition has been scheduled for eviction (this node is oldest non-affinity node) " +
-                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + part.id() + ", prevState=" + state0 + ", state=" + part.state() + "]");
+                                    "[grp=" + grp.cacheOrGroupName() + ", p=" + part.id() + ", prevState=" + state0 +
+                                    ", state=" + part.state() + "]");
                             }
 
                             break;

@@ -298,7 +298,8 @@ public class GridCommandHandlerPartitionReconciliationExtendedTest extends
      */
     @Test
     public void testWorkWithInternalCaches() throws Exception {
-        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation", "ignite-sys-cache, ignite-sys-atomic-cache@default-ds-group");
+        Set<String> usedCaches = getUsedCachesForArgs("--cache", "partition_reconciliation",
+            "ignite-sys-cache, ignite-sys-atomic-cache@default-ds-group");
 
         assertTrue(usedCaches.containsAll(Arrays.asList("ignite-sys-cache", "ignite-sys-atomic-cache@default-ds-group")));
         assertEquals(2, usedCaches.size());

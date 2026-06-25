@@ -77,7 +77,8 @@ public class AlgorithmSpecificDatasetExample {
 
                 Vectorizer<Integer, Vector, Integer, Double> vectorizer = new DummyVectorizer<Integer>(1);
 
-                IgniteFunction<LabeledVector<Double>, LabeledVector<double[]>> func = lv -> new LabeledVector<>(lv.features(), new double[]{lv.label()});
+                IgniteFunction<LabeledVector<Double>, LabeledVector<double[]>> func =
+                    lv -> new LabeledVector<>(lv.features(), new double[]{lv.label()});
 
                 //NOTE: This class is part of Developer API and all lambdas should be loaded on server manually.
                 Preprocessor<Integer, Vector> preprocessor = new PatchedPreprocessor<>(func, vectorizer);
@@ -86,7 +87,8 @@ public class AlgorithmSpecificDatasetExample {
                 SimpleLabeledDatasetDataBuilder<Integer, Vector, AlgorithmSpecificPartitionContext> builder =
                     new SimpleLabeledDatasetDataBuilder<>(preprocessor);
 
-                IgniteBiFunction<SimpleLabeledDatasetData, AlgorithmSpecificPartitionContext, SimpleLabeledDatasetData> builderFun = (data, ctx) -> {
+                IgniteBiFunction<SimpleLabeledDatasetData, AlgorithmSpecificPartitionContext, SimpleLabeledDatasetData> builderFun =
+                    (data, ctx) -> {
                     double[] features = data.getFeatures();
                     int rows = data.getRows();
 

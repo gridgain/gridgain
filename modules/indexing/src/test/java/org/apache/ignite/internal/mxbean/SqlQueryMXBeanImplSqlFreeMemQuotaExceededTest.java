@@ -65,8 +65,10 @@ public class SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest extends UserQueriesTe
             mapFailMsg),
             "failed");
 
-        long freeMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest" + MAPPER_IDX, "SQL Query", "SqlQueryMXBeanImpl", "SqlFreeMemoryBytes");
-        long maxMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest" + MAPPER_IDX, "SQL Query", "SqlQueryMXBeanImpl", "SqlGlobalMemoryQuotaBytes");
+        long freeMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest" + MAPPER_IDX, "SQL Query", "SqlQueryMXBeanImpl",
+            "SqlFreeMemoryBytes");
+        long maxMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemQuotaExceededTest" + MAPPER_IDX, "SQL Query", "SqlQueryMXBeanImpl",
+            "SqlGlobalMemoryQuotaBytes");
 
         if (freeMem < maxMem)
             fail(String.format("Expected no memory reserved: [freeMem=%d, maxMem=%d]", freeMem, maxMem));

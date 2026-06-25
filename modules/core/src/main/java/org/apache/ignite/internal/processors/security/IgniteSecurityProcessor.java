@@ -143,7 +143,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
             if (checkSenderNodeSubject && (senderNode == null || senderNode.isClient())) {
                 SecuritySubjectType type = node != null ? REMOTE_NODE : REMOTE_CLIENT;
 
-                log.warning("Switched to the 'deny all' policy because a client node tries to execute a request on behalf of another node " +
+                log.warning("Switched to the 'deny all' policy because a client node tries to execute a request on behalf " +
+                    "of another node " +
                     "[senderNodeId=" + senderNodeId + ", subjId=" + subjId + ", type=" + type + ']');
 
                 if (forcibleNodeKillEnabled && senderNode != null && ctx.config().getCommunicationSpi() instanceof TcpCommunicationSpi) {
@@ -153,7 +154,8 @@ public class IgniteSecurityProcessor implements IgniteSecurity, GridProcessor {
 
                     CommunicationTcpUtils.failNode(senderNode, tcpCommSpi.getSpiContext(), ex, log);
 
-                    String warn = "The client will be excluded from the topology since it tried to execute a non-secure operation [nodeId=" + senderNodeId + ']';
+                    String warn = "The client will be excluded from the topology since it tried to execute a non-secure " +
+                        "operation [nodeId=" + senderNodeId + ']';
 
                     log.warning(warn);
 

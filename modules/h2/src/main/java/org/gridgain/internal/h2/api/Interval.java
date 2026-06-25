@@ -147,7 +147,8 @@ public final class Interval {
                 return new Interval(IntervalQualifier.SECOND, true, 9_223_372_036L, 854_775_808);
             }
         }
-        return new Interval(IntervalQualifier.SECOND, negative, nanos / DateTimeUtils.NANOS_PER_SECOND, nanos % DateTimeUtils.NANOS_PER_SECOND);
+        return new Interval(IntervalQualifier.SECOND, negative, nanos / DateTimeUtils.NANOS_PER_SECOND,
+            nanos % DateTimeUtils.NANOS_PER_SECOND);
     }
 
     /**

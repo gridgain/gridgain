@@ -154,7 +154,9 @@ public class GridProbeCommandHandler extends GridRestCommandHandlerAdapter {
                     return readinessLadder();
 
                 // Liveness probe is the same as the bare GET which is kept for compatibility.
-                return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName()) ? new GridRestResponse("grid has started") : new GridRestResponse(GridRestResponse.SERVICE_UNAVAILABLE, "grid has not started"));
+                return new GridFinishedFuture<>(IgnitionEx.hasKernalStarted(ctx.igniteInstanceName())
+                    ? new GridRestResponse("grid has started")
+                    : new GridRestResponse(GridRestResponse.SERVICE_UNAVAILABLE, "grid has not started"));
             }
 
             case NODE_STATE_BEFORE_START: {

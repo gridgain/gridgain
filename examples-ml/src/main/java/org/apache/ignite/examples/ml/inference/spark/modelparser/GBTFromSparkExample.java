@@ -43,7 +43,8 @@ public class GBTFromSparkExample {
     /** Run example. */
     public static void main(String[] args) throws FileNotFoundException {
         System.out.println();
-        System.out.println(">>> Gradient Boosted trees model loaded from Spark through serialization over partitioned dataset usage example started.");
+        System.out.println(">>> Gradient Boosted trees model loaded from Spark through serialization over " +
+            "partitioned dataset usage example started.");
         // Start ignite grid.
         try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");

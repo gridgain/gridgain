@@ -150,7 +150,8 @@ public class SchemaVersionOne implements ISchemaVersion {
      */
     private static HLLType getType(final int ordinal) {
         if((ordinal < 0) || (ordinal >= TYPE_ORDINALS.length)) {
-            throw new IllegalArgumentException("Invalid type ordinal '" + ordinal + "'. Only 0-" + (TYPE_ORDINALS.length - 1) + " inclusive allowed.");
+            throw new IllegalArgumentException("Invalid type ordinal '" + ordinal + "'. Only 0-" +
+                (TYPE_ORDINALS.length - 1) + " inclusive allowed.");
         }
         return TYPE_ORDINALS[ordinal];
     }

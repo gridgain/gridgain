@@ -56,6 +56,7 @@ public class ImputerTrainerTest extends TrainerTest {
             vectorizer
         );
 
-        assertArrayEquals(new double[] {1, 0, 100}, preprocessor.apply(5, VectorUtils.of(Double.NaN, 0, Double.NaN)).features().asArray(), 1e-8);
+        assertArrayEquals(new double[] {1, 0, 100},
+            preprocessor.apply(5, VectorUtils.of(Double.NaN, 0, Double.NaN)).features().asArray(), 1e-8);
     }
 }

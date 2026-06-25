@@ -52,7 +52,8 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects keys with their {@link GridCacheVersion} according to a recheck list.
  */
 @GridInternal
-public class CollectPartitionKeysByRecheckRequestTask extends ComputeTaskAdapter<RecheckRequest, ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>>> {
+public class CollectPartitionKeysByRecheckRequestTask
+    extends ComputeTaskAdapter<RecheckRequest, ExecutionResult<Map<KeyCacheObject, Map<UUID, VersionedValue>>>> {
     /** */
     private static final long serialVersionUID = 0L;
 

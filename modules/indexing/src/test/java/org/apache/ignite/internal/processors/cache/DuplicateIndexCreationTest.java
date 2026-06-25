@@ -107,7 +107,8 @@ public class DuplicateIndexCreationTest extends GridCommonAbstractTest {
     @Test
     public void testIndexCreationViaAnnotations() throws Exception {
         SqlFieldsQuery queryCreateIndex = new SqlFieldsQuery("CREATE INDEX PERSON_NAME_IDX ON PUBLIC.PERSON (NAME)");
-        SqlFieldsQuery queryCreateIndexIfNotExist = new SqlFieldsQuery("CREATE INDEX PERSON_NAME_IDX IF NOT EXISTS ON PUBLIC.PERSON (NAME)");
+        SqlFieldsQuery queryCreateIndexIfNotExist =
+            new SqlFieldsQuery("CREATE INDEX PERSON_NAME_IDX IF NOT EXISTS ON PUBLIC.PERSON (NAME)");
 
         IgniteEx node = startGrid(0);
         node.cluster().state(ClusterState.ACTIVE);

@@ -187,7 +187,8 @@ class SqlAstTraverser {
                         + "only with the same partitions number configuration.");
             }
             // the only way to compare predicate classes, not work for different class loaders.
-            else if (!Objects.equals(className(left.cacheInfo().config().getNodeFilter()), className(right.cacheInfo().config().getNodeFilter()))) {
+            else if (!Objects.equals(className(left.cacheInfo().config().getNodeFilter()),
+                className(right.cacheInfo().config().getNodeFilter()))) {
                 hasOuterJoinMixedCacheModeIssue = new MixedModeCachesJoinIssue("Cache [cacheName=" + left.cacheName() + "] "
                         + "can`t be joined with [cacheName=" + right.cacheName() + "] due to different node filters configuration.");
             }

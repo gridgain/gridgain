@@ -465,7 +465,8 @@ public class DrFSTCommand
                         break;
 
                     case CACHES_PARAM:
-                        caches = CommandArgUtils.validateCachesArgument(argIter.nextCachesSet(CACHES_PARAM), FULL_STATE_TRANSFER.toString());
+                        caches = CommandArgUtils.validateCachesArgument(argIter.nextCachesSet(CACHES_PARAM),
+                            FULL_STATE_TRANSFER.toString());
                         break;
 
                     case SENDER_GROUP:

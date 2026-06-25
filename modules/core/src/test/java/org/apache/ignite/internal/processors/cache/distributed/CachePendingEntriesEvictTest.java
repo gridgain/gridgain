@@ -448,7 +448,8 @@ public class CachePendingEntriesEvictTest extends GridCommonAbstractTest {
 
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tsRows.size());
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, dataRows.size());
-        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt, grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
+        assertEquals(grpCtx.cacheOrGroupName() + " " + part, expDataCnt,
+            grpCtx.topology().localPartition(part).dataStore().cacheSize(CU.cacheId(DEFAULT_CACHE_NAME)));
         assertEquals(grpCtx.cacheOrGroupName() + " " + part, expTsCnt, tombstoneMetric0.value());
     }
 

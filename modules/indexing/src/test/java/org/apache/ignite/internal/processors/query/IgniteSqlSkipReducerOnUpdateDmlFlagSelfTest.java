@@ -435,7 +435,8 @@ public class IgniteSqlSkipReducerOnUpdateDmlFlagSelfTest extends AbstractIndexin
         String text = "MERGE INTO \"acc\".Account (_key, name, sn, depo)" +
             " VALUES (?, ?, ?, ?), (?, ?, ?, ?)";
 
-        checkUpdate(client.cache(CACHE_ACCOUNT), accounts, new SqlFieldsQuery(text).setArgs(0, "John Marry", 11111, 100, 1, "Marry John", 11112, 200));
+        checkUpdate(client.cache(CACHE_ACCOUNT), accounts,
+            new SqlFieldsQuery(text).setArgs(0, "John Marry", 11111, 100, 1, "Marry John", 11112, 200));
     }
 
     /**

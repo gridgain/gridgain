@@ -148,7 +148,8 @@ public class GridJettyObjectMapper extends ObjectMapper {
     }
 
     /** Custom deserializer for {@link VisorCacheKeyObject} */
-    private static final JsonDeserializer<VisorCacheKeyObject> VISOR_CACHE_KEY_OBJECT_DESERIALIZER = new JsonDeserializer<VisorCacheKeyObject>() {
+    private static final JsonDeserializer<VisorCacheKeyObject> VISOR_CACHE_KEY_OBJECT_DESERIALIZER =
+        new JsonDeserializer<VisorCacheKeyObject>() {
         /**
          * Convert string value to specified object type.
          *
@@ -329,7 +330,8 @@ public class GridJettyObjectMapper extends ObjectMapper {
         }
 
         /** {@inheritDoc} */
-        @Override public VisorCacheKeyObject deserialize(JsonParser p, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        @Override public VisorCacheKeyObject deserialize(JsonParser p, DeserializationContext ctxt)
+            throws IOException, JsonProcessingException {
             JsonToken jsonToken = null;
 
             VisorDataType type = null;
@@ -462,7 +464,8 @@ public class GridJettyObjectMapper extends ObjectMapper {
     };
 
     /** Custom serializer for {@link GridCacheSqlIndexMetadata} */
-    private static final JsonSerializer<GridCacheSqlIndexMetadata> IGNITE_SQL_INDEX_METADATA_SERIALIZER = new JsonSerializer<GridCacheSqlIndexMetadata>() {
+    private static final JsonSerializer<GridCacheSqlIndexMetadata> IGNITE_SQL_INDEX_METADATA_SERIALIZER =
+        new JsonSerializer<GridCacheSqlIndexMetadata>() {
         /** {@inheritDoc} */
         @Override public void serialize(GridCacheSqlIndexMetadata idx, JsonGenerator gen, SerializerProvider ser) throws IOException {
             gen.writeStartObject();

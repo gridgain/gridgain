@@ -216,7 +216,8 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
         // Put internal key to test filtering of internal objects.
 
         for (String cacheName : grid(0).cacheNames())
-            ((IgniteKernal)grid(0)).getCache(cacheName).getAndPut(new GridCacheInternalKeyImpl("LONG", ""), new GridCacheAtomicLongValue(0));
+            ((IgniteKernal)grid(0)).getCache(cacheName).getAndPut(new GridCacheInternalKeyImpl("LONG", ""),
+                new GridCacheAtomicLongValue(0));
 
         try {
             Collection<GridCacheSqlMetadata> metas =
@@ -738,7 +739,8 @@ public abstract class IgniteCacheAbstractFieldsQuerySelfTest extends GridCommonA
     public void testSelectAllJoined() throws Exception {
         QueryCursor<List<?>> qry =
             personCache.query(sqlFieldsQuery(
-                String.format("select p._key, p._val, p.*, o._key, o._val, o.* from \"%s\".Person p, \"%s\".Organization o where p.orgId = o.id",
+                String.format("select p._key, p._val, p.*, o._key, o._val, o.* from \"%s\".Person p, " +
+                    "\"%s\".Organization o where p.orgId = o.id",
                     personCache.getName(), orgCache.getName())));
 
         List<List<?>> res = new ArrayList<>(qry.getAll());

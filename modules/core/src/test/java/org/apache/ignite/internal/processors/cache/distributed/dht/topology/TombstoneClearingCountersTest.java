@@ -964,7 +964,8 @@ public class TombstoneClearingCountersTest extends GridCommonAbstractTest {
                         boolean recovery
                     ) {
                         return new GridDhtLocalPartition(ctx, grp, id, recovery) {
-                            @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
+                            @Override protected long clearAll(BooleanSupplier stopClo,
+                                PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
                                 if (testId == id)
                                     reason = task.reason();
 

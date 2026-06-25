@@ -208,7 +208,9 @@ public interface ReconciliationResultCollector {
         protected final Map<String, Map<Integer, TreeSet<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
 
         /** Entries that were detected as inconsistent but weren't repaired due to some reason. */
-        protected final Map<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries = new HashMap<>();
+        protected final Map<String,
+            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> skippedEntries =
+            new HashMap<>();
 
         /** Custom comparator for {@link PartitionReconciliationDataRowMeta}. It only compares binary representation of keys. */
         public static class RowMetaComparator implements Comparator<PartitionReconciliationDataRowMeta> {
@@ -629,7 +631,8 @@ public interface ReconciliationResultCollector {
             }
 
             synchronized (skippedEntries) {
-                Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> c = skippedEntries.get(cacheName);
+                Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> c =
+                    skippedEntries.get(cacheName);
                 if (c != null)
                     skipped = c.remove(partId);
 

@@ -137,8 +137,10 @@ public class GridProbeCommandTest extends GridCommonAbstractTest {
 
     /**
      * <p>Test rest cmd=probe command given a non fully started kernal. </p>
-     *  <p>1. start the grid on a separate thread w/a plugin that will keep it waiting, at a point after rest http processor is ready, until signaled to proceed. </p>
-     *  <p>2. when the grid.start() has reached the plugin init method(rest http processor has started now), issue a rest command against the non-fully started kernal. </p>
+     *  <p>1. start the grid on a separate thread w/a plugin that will keep it waiting, at a point after rest http processor is ready,
+     *  until signaled to proceed. </p>
+     *  <p>2. when the grid.start() has reached the plugin init method(rest http processor has started now), issue a rest command against
+     *  the non-fully started kernal. </p>
      *  <p>3. validate that the probe cmd has returned the appropriate erroneous code and message. </p>
      *  <p>4. stop the grid. </p>
      *

@@ -134,7 +134,8 @@ public class CacheLazyEntry<K, V> extends CacheInterceptorEntry<K, V> {
     /** {@inheritDoc} */
     @Override public K getKey() {
         if (key == null)
-            key = (K)cctx.unwrapBinaryIfNeeded(keyObj, keepBinary, U.deploymentClassLoader(cctx.kernalContext(), U.contextDeploymentClassLoaderId(cctx.kernalContext())));
+            key = (K)cctx.unwrapBinaryIfNeeded(keyObj, keepBinary,
+                U.deploymentClassLoader(cctx.kernalContext(), U.contextDeploymentClassLoaderId(cctx.kernalContext())));
 
         return key;
     }
@@ -152,7 +153,8 @@ public class CacheLazyEntry<K, V> extends CacheInterceptorEntry<K, V> {
      */
     public V getValue(boolean keepBinary) {
         if (val == null)
-            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true, U.deploymentClassLoader(cctx.kernalContext(), U.contextDeploymentClassLoaderId(cctx.kernalContext())));
+            val = (V)cctx.unwrapBinaryIfNeeded(valObj, keepBinary, true,
+                U.deploymentClassLoader(cctx.kernalContext(), U.contextDeploymentClassLoaderId(cctx.kernalContext())));
 
         return val;
     }

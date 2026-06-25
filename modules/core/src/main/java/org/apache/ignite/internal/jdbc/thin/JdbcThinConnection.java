@@ -2310,7 +2310,8 @@ public class JdbcThinConnection implements Connection {
         /** {@inheritDoc} */
         @Override public String getClassName(byte platformId, int typeId) throws ClassNotFoundException, IgniteCheckedException {
             assert platformId == MarshallerPlatformIds.JAVA_ID
-                : String.format("Only Java platform is supported [expPlatformId=%d, actualPlatformId=%d].", MarshallerPlatformIds.JAVA_ID, platformId);
+                : String.format("Only Java platform is supported [expPlatformId=%d, actualPlatformId=%d].",
+                    MarshallerPlatformIds.JAVA_ID, platformId);
 
             String clsName = cache.get(typeId);
             if (clsName == null) {

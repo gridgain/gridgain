@@ -70,7 +70,8 @@ public class IgniteChangingBaselineCacheQueryNodeRestartSelfTest extends IgniteC
     }
 
     /** {@inheritDoc} */
-    @Override protected IgniteInternalFuture createRestartAction(final AtomicBoolean done, final AtomicInteger restartCnt) throws Exception {
+    @Override protected IgniteInternalFuture createRestartAction(final AtomicBoolean done,
+        final AtomicInteger restartCnt) throws Exception {
         return multithreadedAsync(new Callable<Object>() {
             /** */
             private final long baselineTopChangeInterval = 10 * 1000;

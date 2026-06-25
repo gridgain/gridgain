@@ -70,7 +70,8 @@ public class ClientReconnectionSelfTest extends GridCommonAbstractTest {
 
         Collection<String> addrs = new ArrayList<>();
 
-        for (int port = ClientTestRestServer.FIRST_SERVER_PORT; port < ClientTestRestServer.FIRST_SERVER_PORT + ClientTestRestServer.SERVERS_CNT; port++)
+        for (int port = ClientTestRestServer.FIRST_SERVER_PORT;
+            port < ClientTestRestServer.FIRST_SERVER_PORT + ClientTestRestServer.SERVERS_CNT; port++)
             addrs.add(host + ":" + port);
 
         cfg.setServers(addrs);

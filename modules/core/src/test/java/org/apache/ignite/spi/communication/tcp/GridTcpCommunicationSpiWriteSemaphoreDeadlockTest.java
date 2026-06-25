@@ -209,7 +209,8 @@ public class GridTcpCommunicationSpiWriteSemaphoreDeadlockTest extends GridCommo
             proceedExceptionCaught(ses, ex);
         }
 
-        @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses, Object msg, boolean fut, IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
+        @Override public GridNioFuture<?> onSessionWrite(GridNioSession ses, Object msg, boolean fut,
+            IgniteInClosure<IgniteException> ackC) throws IgniteCheckedException {
             if (msg instanceof ConnectionCheckMessage) {
                 try {
                     // Block the current selector thread.

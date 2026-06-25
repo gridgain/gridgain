@@ -91,7 +91,8 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
      * @param inlineSize         Inline size.
      * @param similarityFunction Vector Similarity Function for VECTOR index.
      */
-    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, SimilarityFunction similarityFunction) {
+    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize,
+        SimilarityFunction similarityFunction) {
         this(typDesc, name, type, inlineSize);
         this.similarityFunction = similarityFunction;
     }

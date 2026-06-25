@@ -180,7 +180,8 @@ public class SecurityPermissionSetBuilderTest extends GridCommonAbstractTest {
         Collection<SecurityPermission> permTracing = new ArrayList<>(permissions(TRACING_CONFIGURATION_UPDATE));
         permSet.setTracingPermissions(permTracing);
 
-        Collection<SecurityPermission> permSys = new ArrayList<>(permissions(ADMIN_VIEW, EVENTS_ENABLE, JOIN_AS_SERVER, CACHE_CREATE, CACHE_DESTROY));
+        Collection<SecurityPermission> permSys =
+            new ArrayList<>(permissions(ADMIN_VIEW, EVENTS_ENABLE, JOIN_AS_SERVER, CACHE_CREATE, CACHE_DESTROY));
         permSet.setSystemPermissions(permSys);
 
         permsBuilder.appendPermissionSet(permSet);

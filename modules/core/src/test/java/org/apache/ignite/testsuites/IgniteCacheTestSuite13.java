@@ -93,11 +93,16 @@ public class IgniteCacheTestSuite13 {
 
         // Compatibility statistics tests.
         GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsManagerSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImplSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCacheSelfTest.class, ignoredTests);
-        GridTestUtils.addTestIfNeeded(suite, org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite,
+            org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanImplSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite,
+            org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanImplIllegalArgumentsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite,
+            org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMxBeanCacheGroupsTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite,
+            org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCacheSelfTest.class, ignoredTests);
+        GridTestUtils.addTestIfNeeded(suite,
+            org.apache.ignite.internal.stat.IoStatisticsMetricsLocalMXBeanCachePersistenceSelfTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, GridCacheLongRunningTransactionDiagnosticsTest.class, ignoredTests);
 

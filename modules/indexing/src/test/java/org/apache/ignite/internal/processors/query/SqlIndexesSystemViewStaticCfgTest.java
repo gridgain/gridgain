@@ -126,10 +126,12 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         startNodes();
 
         List<Object> expCache = Arrays.asList(
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE",
+                "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
             Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
-            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+            Arrays.asList(94416770, "cache", 94416770, "cache", "cache", "TESTVALUE", "_key_PK_hash", "HASH",
+                "\"_KEY\" ASC", false, true, null)
         );
 
         checkIndexes(expCache::equals);
@@ -168,22 +170,31 @@ public class SqlIndexesSystemViewStaticCfgTest extends GridCommonAbstractTest {
         startNodes();
 
         List<Object> expGrpBoth = Arrays.asList(
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE",
+                "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
             Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
-            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK", "BTREE",
+                "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047377, "cache1", "cache1", "TESTVALUE", "_key_PK_hash", "HASH",
+                "\"_KEY\" ASC", false, true, null),
 
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE",
+                "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
             Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE",
+                "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH",
+                "\"_KEY\" ASC", false, true, null)
         );
 
         List<Object> expGrpSingle = Arrays.asList(
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE", "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "TESTVALUE_I_ASC_IDX", "BTREE",
+                "\"I\" ASC, \"_KEY\" ASC", false, false, 10),
             Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "__SCAN_", "SCAN", null, false, false, null),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE", "\"_KEY\" ASC", true, true, 5),
-            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH", "\"_KEY\" ASC", false, true, null)
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK", "BTREE",
+                "\"_KEY\" ASC", true, true, 5),
+            Arrays.asList(98629247, "group", -1368047376, "cache2", "cache2", "TESTVALUE", "_key_PK_hash", "HASH",
+                "\"_KEY\" ASC", false, true, null)
         );
 
         checkIndexes(expGrpBoth::equals);

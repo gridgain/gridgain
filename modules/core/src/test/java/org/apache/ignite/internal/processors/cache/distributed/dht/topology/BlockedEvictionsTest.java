@@ -716,7 +716,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
      * @return Evicted partition.
      * @throws Exception If failed.
      */
-    protected int testOperationDuringEviction(boolean persistence, int mode, Consumer<Integer> c, Consumer<Integer> initC) throws Exception {
+    protected int testOperationDuringEviction(boolean persistence, int mode, Consumer<Integer> c,
+        Consumer<Integer> initC) throws Exception {
         this.persistence = persistence;
 
         AtomicInteger holder = new AtomicInteger();
@@ -729,7 +730,8 @@ public class BlockedEvictionsTest extends GridCommonAbstractTest {
                     GridDhtPartitionTopologyImpl top = (GridDhtPartitionTopologyImpl) instance;
 
                     top.partitionFactory(new GridDhtPartitionTopologyImpl.PartitionFactory() {
-                        @Override public GridDhtLocalPartition create(GridCacheSharedContext ctx, CacheGroupContext grp, int id, boolean recovery) {
+                        @Override public GridDhtLocalPartition create(GridCacheSharedContext ctx, CacheGroupContext grp,
+                            int id, boolean recovery) {
                             return new GridDhtLocalPartitionSyncEviction(ctx, grp, id, recovery, mode, l1, l2) {
                                 /** */
                                 @Override protected void sync() {

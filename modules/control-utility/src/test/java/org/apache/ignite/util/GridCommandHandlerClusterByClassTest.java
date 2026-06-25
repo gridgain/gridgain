@@ -607,7 +607,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         corruptDataEntry(cacheCtx, 1, true, false, new GridCacheVersion(0, 0, 0), "broken");
 
-        corruptDataEntry(cacheCtx, 1 + cacheCtx.config().getAffinity().partitions() / 2, false, true, new GridCacheVersion(0, 0, 0), "broken");
+        corruptDataEntry(cacheCtx, 1 + cacheCtx.config().getAffinity().partitions() / 2, false, true,
+            new GridCacheVersion(0, 0, 0), "broken");
 
         assertEquals(EXIT_CODE_OK, execute("--cache", "idle_verify"));
 
@@ -1428,7 +1429,8 @@ public class GridCommandHandlerClusterByClassTest extends GridCommandHandlerClus
 
         // Ensure we cannot delete a cache groups.
         injectTestSystemIn(CONFIRM_MSG);
-        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES, DEFAULT_CACHE_NAME + "," + DEFAULT_CACHE_NAME + "0"));
+        assertEquals(EXIT_CODE_OK, execute("--cache", CLEAR.text(), CacheClear.CACHES,
+            DEFAULT_CACHE_NAME + "," + DEFAULT_CACHE_NAME + "0"));
         assertContains(log, testOut.toString(), expConfirmation);
 
         autoConfirmation = true;

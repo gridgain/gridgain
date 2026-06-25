@@ -46,7 +46,8 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Repair partition counters job.
  */
-class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRepairPartitionCountersTaskArg, Collection<VisorDrRepairPartitionCountersJobResult>> {
+class VisorDrRepairPartitionCountersJob extends VisorDrPartitionCountersJob<VisorDrRepairPartitionCountersTaskArg,
+    Collection<VisorDrRepairPartitionCountersJobResult>> {
     /** */
     private static final long serialVersionUID = 0L;
 

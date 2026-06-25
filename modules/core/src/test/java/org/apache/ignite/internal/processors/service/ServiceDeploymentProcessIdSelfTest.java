@@ -86,8 +86,10 @@ public class ServiceDeploymentProcessIdSelfTest {
         customEvt.eventNode(node);
 
         return Arrays.asList(new Object[][] {
-            {customEvt.getClass().getSimpleName(), new IgniteBiTuple<>(customEvt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))},
-            {evt.getClass().getSimpleName(), new IgniteBiTuple<>(evt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))}});
+            {customEvt.getClass().getSimpleName(),
+                new IgniteBiTuple<>(customEvt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))},
+            {evt.getClass().getSimpleName(),
+                new IgniteBiTuple<>(evt, new AffinityTopologyVersion(ThreadLocalRandom.current().nextLong()))}});
     }
 
     /** */

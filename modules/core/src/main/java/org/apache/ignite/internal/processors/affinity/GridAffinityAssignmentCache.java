@@ -853,7 +853,8 @@ public class GridAffinityAssignmentCache {
         }
 
         assert cache.topologyVersion().compareTo(lastAffChangeTopVer) >= 0 &&
-            cache.topologyVersion().compareTo(topVer) <= 0 : "Invalid cached affinity: [cache=" + cache + ", topVer=" + topVer + ", lastAffChangedTopVer=" + lastAffChangeTopVer + "]";
+            cache.topologyVersion().compareTo(topVer) <= 0 : "Invalid cached affinity: [cache=" + cache + ", topVer=" + topVer +
+                ", lastAffChangedTopVer=" + lastAffChangeTopVer + "]";
 
         return cache;
     }

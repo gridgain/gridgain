@@ -244,7 +244,8 @@ public class ConnectionPropertiesImpl implements ConnectionProperties, Serializa
      * which returns binary configuration for JDBC client.
      */
     private StringProperty binaryConfigFactory = new StringProperty("binaryConfigurationFactory",
-        "Custom class name that implements javax.cache.configuration.Factory<BinaryConfiguration> (binary configuration)", null, null, false, null);
+        "Custom class name that implements javax.cache.configuration.Factory<BinaryConfiguration> (binary configuration)",
+        null, null, false, null);
 
     /** Boolean flag that if set will be used for {@link org.apache.ignite.binary.BinaryBasicIdMapper} initialization. */
     private BooleanProperty useLowerCaseForBinaryTypes = new BooleanProperty("useLowerCaseForBinaryTypes",

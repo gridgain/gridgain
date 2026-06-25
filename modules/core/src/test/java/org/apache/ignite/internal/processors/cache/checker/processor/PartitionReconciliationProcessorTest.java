@@ -109,7 +109,8 @@ public class PartitionReconciliationProcessorTest {
     public void testBatchDoesNotHaveElementsNothingSchedule() throws IgniteCheckedException {
         MockedProcessor processor = MockedProcessor.create(false);
 
-        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(null, new HashMap<>()));
+        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes =
+            new ExecutionResult<>(new T2<>(null, new HashMap<>()));
 
         processor.addTask(new Batch(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, PARTITION_ID, null))
@@ -131,7 +132,8 @@ public class PartitionReconciliationProcessorTest {
         KeyCacheObject nextKey = new KeyCacheObjectImpl(1, null, PARTITION_ID);
         Map<KeyCacheObject, Map<UUID, GridCacheVersion>> batchRes = new HashMap<>();
         batchRes.put(nextKey, new HashMap<>());
-        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes = new ExecutionResult<>(new T2<>(nextKey, batchRes));
+        ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>> emptyRes =
+            new ExecutionResult<>(new T2<>(nextKey, batchRes));
 
         processor.addTask(new Batch(ReconciliationExecutionContext.IGNORE_JOB_PERMITS_SESSION_ID, UUID.randomUUID(),
             DEFAULT_CACHE, PARTITION_ID, null))

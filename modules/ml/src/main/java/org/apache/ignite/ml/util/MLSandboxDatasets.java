@@ -51,7 +51,10 @@ public enum MLSandboxDatasets {
     /** The Wine recognition data. Could be found <a href="https://archive.ics.uci.edu/ml/machine-learning-databases/wine/">here</a>. */
     WINE_RECOGNITION("wine.txt", false, ","),
 
-    /** The Boston house-prices dataset. Could be found <a href="https://archive.ics.uci.edu/ml/machine-learning-databases/housing/">here</a>. */
+    /**
+     * The Boston house-prices dataset. Could be found
+     * <a href="https://archive.ics.uci.edu/ml/machine-learning-databases/housing/">here</a>.
+     */
     BOSTON_HOUSE_PRICES("boston_housing_dataset.txt", false, ","),
 
     /** Example from book Barber D. Bayesian reasoning and machine learning. Chapter 10. */
@@ -60,7 +63,10 @@ public enum MLSandboxDatasets {
     /** Wholesale customers dataset. Could be found <a href="https://archive.ics.uci.edu/ml/datasets/Wholesale+customers">here</a>. */
     WHOLESALE_CUSTOMERS("wholesale_customers.csv", true, ","),
 
-    /** Fraud detection problem [part of whole dataset]. Could be found <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/">here</a>. */
+    /**
+     * Fraud detection problem [part of whole dataset]. Could be found
+     * <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/">here</a>.
+     */
     FRAUD_DETECTION("fraud_detection.csv", false, ",");
 
     /** Filename. */

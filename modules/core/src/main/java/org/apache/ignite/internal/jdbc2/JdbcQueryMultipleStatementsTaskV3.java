@@ -54,7 +54,8 @@ class JdbcQueryMultipleStatementsTaskV3 extends JdbcQueryMultipleStatementsTask 
         Boolean isQry, boolean loc, Object[] args, int fetchSize, long maxMem, boolean locQry, boolean collocatedQry,
         boolean distributedJoins, boolean enforceJoinOrder, boolean lazy,
         boolean allowMultipleStatements, String qryInitiatorId) {
-        super(ignite, schemaName, sql, isQry, loc, args, fetchSize, maxMem, locQry, collocatedQry, distributedJoins, enforceJoinOrder, lazy);
+        super(ignite, schemaName, sql, isQry, loc, args, fetchSize, maxMem, locQry, collocatedQry, distributedJoins,
+            enforceJoinOrder, lazy);
 
         this.allowMultipleStatements = allowMultipleStatements;
         this.qryInitiatorId = qryInitiatorId;

@@ -692,7 +692,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         final Supplier<ClusterNode> locNodeSupplier = () -> getSpiContext().localNode();
         final Supplier<Ignite> igniteExSupplier = this::ignite;
         final Function<UUID, Boolean> pingNode = (nodeId) -> getSpiContext().pingNode(nodeId);
-        final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().failure() : null;
+        final Supplier<FailureProcessor> failureProcessorSupplier = () -> ignite instanceof IgniteEx
+            ? ((IgniteEx)ignite).context().failure() : null;
         final Supplier<TcpCommunicationMetricsListener> metricLsnrSupplier = () -> metricsLsnr;
         final Supplier<Boolean> isStopped = () -> getSpiContext().isStopping();
 

@@ -979,7 +979,8 @@ public class TestIndex extends TestDb {
         );
     }
 
-    private void testIndexesAndQueriesWithInStatements(@Nullable String index, SqlAction indexesSetup, QueryChallenge... templates) throws SQLException {
+    private void testIndexesAndQueriesWithInStatements(@Nullable String index, SqlAction indexesSetup,
+        QueryChallenge... templates) throws SQLException {
         stat.execute("create table in_table (f0 int, f1 int, f2 int, f3 int, f4 int, primary key (f0))");
 
         try {
