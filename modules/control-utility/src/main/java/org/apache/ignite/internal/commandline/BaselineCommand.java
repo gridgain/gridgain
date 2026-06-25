@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -342,44 +343,53 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
                 break;
 
             case AUTO_ADJUST:
+                fillBaselineArgs(argIter, autoAdjustArg -> {
+                    if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                        baselineArgs.withEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
+
+                    if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                        baselineArgs.withSoftBaselineTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                });
+
+                break;
             case SCALE_UP_AUTO_ADJUST:
+                fillBaselineArgs(argIter, autoAdjustArg -> {
+                    if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                        baselineArgs.withScaleUpEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
+
+                    if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                        baselineArgs.withSoftBaselineScaleUpTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                });
+
+                break;
             case SCALE_DOWN_AUTO_ADJUST:
-                do {
-                    AutoAdjustCommandArg autoAdjustArg = CommandArgUtils.of(
-                        argIter.nextArg("Expected one of auto-adjust arguments"), AutoAdjustCommandArg.class
-                    );
+                fillBaselineArgs(argIter, autoAdjustArg -> {
+                    if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                        baselineArgs.withScaleDownEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
 
-                    if (autoAdjustArg == null)
-                        throw new IllegalArgumentException("Expected one of auto-adjust arguments");
-
-                    if (cmd == AUTO_ADJUST) {
-                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
-                            baselineArgs.withEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
-
-                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
-                            baselineArgs.withSoftBaselineTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
-                    }
-                    else if (cmd == SCALE_UP_AUTO_ADJUST) {
-                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
-                            baselineArgs.withScaleUpEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
-
-                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
-                            baselineArgs.withSoftBaselineScaleUpTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
-                    }
-                    else if (cmd == SCALE_DOWN_AUTO_ADJUST) {
-                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
-                            baselineArgs.withScaleDownEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
-
-                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
-                            baselineArgs.withSoftBaselineScaleDownTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
-                    }
-                }
-                while (argIter.hasNextSubArg());
+                    if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                        baselineArgs.withSoftBaselineScaleDownTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                });
 
                 break;
         }
 
         this.baselineArgs = baselineArgs.build();
+    }
+
+    /** Fill baselineArgs helper. */
+    private void fillBaselineArgs(CommandArgIterator argIter, Consumer<AutoAdjustCommandArg> autoAdjustArgConsumer) {
+        do {
+            AutoAdjustCommandArg autoAdjustArg = CommandArgUtils.of(
+                argIter.nextArg("Expected one of auto-adjust arguments"), AutoAdjustCommandArg.class
+            );
+
+            if (autoAdjustArg == null)
+                throw new IllegalArgumentException("Expected one of auto-adjust arguments");
+
+            autoAdjustArgConsumer.accept(autoAdjustArg);
+        }
+        while (argIter.hasNextSubArg());
     }
 
     /** {@inheritDoc} */

@@ -166,6 +166,7 @@ public class BaselineTopologyUpdater {
                 || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
     }
 
+    /** Returns the baseline auto-adjust status. */
     private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
             return ((baselineConfiguration.isBaselineAutoAdjustEnabled(true) && scaleUp)
@@ -203,6 +204,8 @@ public class BaselineTopologyUpdater {
     }
 
     /**
+     * @param scaleUp If {@code true}, the statistics of baseline scale up auto-adjust will be return,
+     *                if {@code false} - for scale down.
      * @return Statistic of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {

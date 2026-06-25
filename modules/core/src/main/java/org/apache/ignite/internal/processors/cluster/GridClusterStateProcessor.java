@@ -2075,6 +2075,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
+     * @param scaleUp The baseline is adjusted for scale up {@code true}, or scale down {@code false}.
      * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
@@ -2136,6 +2137,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
+     * @param scaleUp The timout is adjusted for scale up {@code true}, or scale down {@code false}.
      * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
      * server topology change (node join/left/fail).
      * @return Future for await operation completion.
@@ -2167,6 +2169,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
+     * @param scaleUp To get scale up's status {@code true}, to get scale down's status {@code false}.
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {

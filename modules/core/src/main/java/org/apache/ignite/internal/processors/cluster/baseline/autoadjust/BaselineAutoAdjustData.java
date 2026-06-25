@@ -34,8 +34,10 @@ class BaselineAutoAdjustData {
     /** {@code true} If this data was adjusted. */
     private volatile boolean adjusted;
 
+    /** {@code true} If this data was adjusted for scale up. */
     private volatile boolean scaleUpAdjusted;
 
+    /** {@code true} If this data was adjusted for scale down. */
     private volatile boolean scaleDownAdjusted;
 
     /**
@@ -66,12 +68,15 @@ class BaselineAutoAdjustData {
         invalidated = true;
     }
 
+    /**
+     * Mark that this data was adjusted.
+     */
     public void onAdjust() {
         adjusted = true;
     }
 
     /**
-     * Mark that this data was adjusted.
+     * @param scaleUp If {@code true} marks that this data for scale up was adjusted, if {@code false} - for scale down.
      */
     public void onAdjust(boolean scaleUp) {
         if (scaleUp)
@@ -102,6 +107,7 @@ class BaselineAutoAdjustData {
     }
 
     /**
+     * @param scaleUp If {@code true}, the status will be return for scale up, if {@code false} - for scale down.
      * @return {@code true} If this data already adjusted.
      */
     public boolean isAdjusted(boolean scaleUp) {

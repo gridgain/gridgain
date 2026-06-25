@@ -274,8 +274,9 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @return Value of manual baseline control or auto adjusting baseline on scale up, if {@code true}
-     * or scale down, if {@code fasle}.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust status will be returned,
+     *                if {@code false} - scale down's.
+     * @return Value of manual baseline control or auto adjusting baseline.
      */
     public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         if (scaleUp)
@@ -302,8 +303,9 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline on
-     *                                         scale up if {@code true} or scale down if {@code false}.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust enable flag will be updated,
+     *                if {@code false} - scale down's.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline.
      * @throws IgniteCheckedException if failed.
      */
     public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(boolean scaleUp, GridKernalContext ctx,
@@ -330,15 +332,17 @@ public class DistributedBaselineConfiguration {
 
     /**
      * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * join/exit).
+     *         join/exit).
      */
     public long getBaselineAutoAdjustTimeout() {
         return baselineAutoAdjustTimeout.getOrDefault(dfltTimeout);
     }
 
     /**
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be returned,
+     *                if {@code false} - scale down's.
      * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * join, if {@code true} or node exit, if {@code false}).
+     *         join/exit).
      */
     public long getBaselineAutoAdjustTimeout(boolean scaleUp) {
         if (scaleUp)
@@ -364,8 +368,9 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be updated, if {@code false} - scale down's.
      * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * discovery event(node join).
+     *                                  discovery event(node join/exit).
      * @throws IgniteCheckedException If failed.
      */
     public GridFutureAdapter<?> updateBaselineAutoAdjustTimeoutAsync(boolean scaleUp, GridKernalContext ctx,

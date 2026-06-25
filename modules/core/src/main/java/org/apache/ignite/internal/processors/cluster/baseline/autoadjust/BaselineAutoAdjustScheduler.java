@@ -196,6 +196,8 @@ class BaselineAutoAdjustScheduler {
     }
 
     /**
+     * @param scaleUp If {@code true}, the time of last scheduled task for scale up will be return,
+     *                if {@code false} - for scale down.
      * @return Time of last scheduled task or -1 if it doesn't exist.
      */
     public synchronized long lastScheduledTaskTime(boolean scaleUp) {

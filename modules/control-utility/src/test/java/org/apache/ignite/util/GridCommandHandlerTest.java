@@ -70,6 +70,7 @@ import org.apache.ignite.internal.GridJobExecuteResponse;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.TestRecordingCommunicationSpi;
 import org.apache.ignite.internal.client.GridClientFactory;
 import org.apache.ignite.internal.client.impl.GridClientImpl;
@@ -1624,7 +1625,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     * Test that updating of baseline scale down auto_adjustment settings via control.sh actually influence cluster's baseline.
      *
      * @throws Exception If failed.
      */
@@ -1726,7 +1727,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     * Test that updating of baseline scale up auto_adjustment settings via control.sh actually influence cluster's baseline.
      *
      * @throws Exception If failed.
      */
@@ -1784,7 +1785,8 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     * Test that updating of the baseline scale up and scale down auto_adjustment settings via control.sh with disabled
+     * {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is not allowed.
      *
      * @throws Exception If failed.
      */
@@ -1823,7 +1825,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Tests that baseline auto-adjustment enabling works from control.sh
+     * Tests that separate baseline scale up auto-adjustment enabling works from control.sh.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
@@ -1858,7 +1860,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Tests that baseline auto-adjustment enabling works from control.sh
+     * Tests that separate baseline scale down auto-adjustment enabling works from control.sh.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
@@ -1917,7 +1919,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Tests that baseline auto-adjustment timeout setting works from control.sh
+     * Tests that separate baseline scale up auto-adjustment timeout setting works from control.sh.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
@@ -1954,7 +1956,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
-     * Tests that baseline auto-adjustment timeout setting works from control.sh
+     * Tests that separate baseline scale down auto-adjustment timeout setting works from control.sh.
      */
     @Test
     @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")

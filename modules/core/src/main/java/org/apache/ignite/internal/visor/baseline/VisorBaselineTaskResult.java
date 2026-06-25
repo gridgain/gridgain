@@ -70,24 +70,28 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
     /** Is baseline adjust in progress? */
     private boolean baselineAdjustInProgress;
 
+    /** Baseline scale up auto adjust enable flag. */
     private Boolean scaleUpAutoAdjustEnabled;
 
+    /** Await time of baseline scale up auto adjust after last topology event in ms. */
     private Long scaleUpAutoAdjustAwaitingTime;
 
+    /** Baseline scale down auto adjust enable flag. */
     private Boolean scaleDownAutoAdjustEnabled;
 
+    /** Await time of baseline scale down auto adjust after last topology event in ms. */
     private Long scaleDownAutoAdjustAwaitingTime;
 
-    /** Time to next baseline adjust. */
+    /** Time to next baseline scale up adjust. */
     private long remainingTimeToBaselineScaleUpAdjust = -1;
 
-    /** Is baseline adjust in progress? */
+    /** Is baseline scale up adjust in progress? */
     private boolean baselineScaleUpAdjustInProgress;
 
-    /** Time to next baseline adjust. */
+    /** Time to next baseline scale down adjust. */
     private long remainingTimeToBaselineScaleDownAdjust = -1;
 
-    /** Is baseline adjust in progress? */
+    /** Is baseline scale down adjust in progress? */
     private boolean baselineScaleDownAdjustInProgress;
 
     /**
@@ -197,8 +201,15 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
      * @param topVer Current topology version.
      * @param baseline Current baseline nodes.
      * @param servers Current server nodes.
-     * @param remainingTimeToBaselineAdjust Time to next baseline adjust.
-     * @param baselineAdjustInProgress {@code true} If baseline adjust is in progress.
+     * @param autoAdjustEnabled Baseline auto-adjust enabled flag.
+     * @param autoAdjustAwaitingTime Baselie auto-adjust timeout.
+     * @param scaleUpAutoAdjustEnabled Baseline scale up auto-adjust enabled flag.
+     * @param scaleUpAutoAdjustAwaitingTime Baseline scale up auto-adjust timeout.
+     * @param scaleDownAutoAdjustEnabled Baseline scale down auto-adjust enabled flag.
+     * @param scaleDownAutoAdjustAwaitingTime Baseline scale down auto-adjust timeout.
+     * @param adjustStatus The status of baseline auto-adjust.
+     * @param scaleUpAdjustStatus The status of baseline scale up auto-adjust.
+     * @param scaleDownAdjustStatus The status of baseline scale down auto-adjust.
      */
     public VisorBaselineTaskResult(
         boolean active,
@@ -285,18 +296,30 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         return autoAdjustAwaitingTime;
     }
 
+    /**
+     * @return Baseline scale up auto adjust enable flag.
+     */
     public Boolean isScaleUpAutoAdjustEnabled() {
         return scaleUpAutoAdjustEnabled;
     }
 
+    /**
+     * @return Await time of baseline scale up auto adjust after last topology event in ms.
+     */
     public Long getScaleUpAutoAdjustAwaitingTime() {
         return scaleUpAutoAdjustAwaitingTime;
     }
 
+    /**
+     * @return Baseline scale down auto adjust enable flag.
+     */
     public Boolean isScaleDownAutoAdjustEnabled() {
         return scaleDownAutoAdjustEnabled;
     }
 
+    /**
+     * @return Await time of baseline scale down auto adjust after last topology event in ms.
+     */
     public Long getScaleDownAutoAdjustAwaitingTime() {
         return scaleDownAutoAdjustAwaitingTime;
     }
@@ -315,18 +338,30 @@ public class VisorBaselineTaskResult extends VisorDataTransferObject {
         return baselineAdjustInProgress;
     }
 
+    /**
+     * @return Time to next baseline scale up adjust.
+     */
     public long getRemainingTimeToBaselineScaleUpAdjust() {
         return remainingTimeToBaselineScaleUpAdjust;
     }
 
+    /**
+     * @return {@code true} If baseline scale up adjust is in progress.
+     */
     public boolean isBaselineScaleUpAdjustInProgress() {
         return baselineScaleUpAdjustInProgress;
     }
 
+    /**
+     * @return Time to next baseline scale down adjust.
+     */
     public long getRemainingTimeToBaselineScaleDownAdjust() {
         return remainingTimeToBaselineScaleDownAdjust;
     }
 
+    /**
+     * @return {@code true} If baseline adjust is in progress.
+     */
     public boolean isBaselineScaleDownAdjustInProgress() {
         return baselineScaleDownAdjustInProgress;
     }

@@ -750,8 +750,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust enable flag will be updated,
+     *                if {@code false} - scale down's.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline.
      * @return Future for await operation completion.
      */
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean scaleUp, boolean baselineAutoAdjustEnabled) {
@@ -804,8 +805,10 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be updated,
+     *                if {@code false} - scale down's.
      * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join).
+     * server topology change (node join/left/fail).
      * @return Future for await operation completion.
      */
     public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(boolean scaleUp, long baselineAutoAdjustTimeout) {
