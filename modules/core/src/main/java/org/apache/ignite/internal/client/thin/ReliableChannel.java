@@ -580,7 +580,7 @@ final class ReliableChannel implements AutoCloseable {
         }
 
         // Add connected channels to the list to avoid unnecessary reconnects, unless address finder is used.
-        if (holders != null && clientCfg.getAddressesFinder() == null) {
+        if (holders != null && discoveryCtx.usesDefaultAddressFinder()) {
             // Do not modify the original list.
             newAddrs = new ArrayList<>(newAddrs);
 

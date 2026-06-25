@@ -35,6 +35,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.client.ClientAddressFinder;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.DnsClientAddressFinder;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
@@ -97,7 +98,7 @@ public class ClientDiscoveryContext {
      * @return {@code True} if updated.
      */
     boolean refresh(ClientChannel ch) {
-        if (addrFinder != null || !enabled)
+        if (!enabled || !usesDefaultAddressFinder())
             return false; // Disabled or custom finder is used.
 
         if (!ch.protocolCtx().isFeatureSupported(ProtocolBitmaskFeature.CLUSTER_GROUP_GET_NODES_ENDPOINTS))
@@ -198,7 +199,7 @@ public class ClientDiscoveryContext {
         Collection<List<InetSocketAddress>> endpoints = null;
         TopologyInfo topInfo = this.topInfo;
 
-        if (addrFinder != null || topInfo.topVer == UNKNOWN_TOP_VER) {
+        if (topInfo.topVer == UNKNOWN_TOP_VER || !usesDefaultAddressFinder()) {
             String[] hostAddrs = addrFinder == null ? addresses : addrFinder.getAddresses();
 
             if (F.isEmpty(hostAddrs))
@@ -215,6 +216,14 @@ public class ClientDiscoveryContext {
         }
 
         return endpoints;
+    }
+
+    /**
+     *
+     * @return Whether the default address finder is used (i.e. no custom address finder is configured).
+     */
+    boolean usesDefaultAddressFinder() {
+        return addrFinder == null || addrFinder instanceof DnsClientAddressFinder;
     }
 
     /**
