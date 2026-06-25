@@ -64,13 +64,6 @@ import org.apache.ignite.configuration.IgniteConfiguration;
  *         (or rolls back) it when session ends. If there is no ongoing
  *         cache transaction, this listener is no-op.
  *     </li>
- *     <li>
- *         {@ignitelink org.apache.ignite.cache.store.hibernate.CacheHibernateStoreSessionListener} -
- *         Hibernate-based session listener. It creates a new Hibernate
- *         session for each Ignite session. If there is an ongoing cache
- *         transaction, a corresponding Hibernate transaction is created
- *         as well.
- *     </li>
  * </ul>
  * <h2>Configuration</h2>
  * There are two ways to configure a session listener:

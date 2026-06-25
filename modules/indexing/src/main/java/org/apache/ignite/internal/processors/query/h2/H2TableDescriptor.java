@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.cache.QueryIndexType;
 import org.apache.ignite.internal.cache.query.LuceneIndex;
@@ -41,6 +42,8 @@ import org.gridgain.internal.h2.result.SortOrder;
 import org.gridgain.internal.h2.table.Column;
 import org.gridgain.internal.h2.table.IndexColumn;
 import org.jetbrains.annotations.NotNull;
+
+import static org.apache.ignite.internal.processors.query.h2.maintenance.MaintenanceRebuildIndexUtils.indexNamesScheduledForRebuild;
 
 /**
  * Information about table in database.
@@ -80,7 +83,7 @@ public class H2TableDescriptor {
     private H2PkHashIndex pkHashIdx;
 
     /** Flag of table has been created from SQL. */
-    private boolean isSql;
+    private final boolean isSql;
 
     /**
      * Constructor.
@@ -182,7 +185,7 @@ public class H2TableDescriptor {
     /**
      * @return Type.
      */
-    GridQueryTypeDescriptor type() {
+    public GridQueryTypeDescriptor type() {
         return type;
     }
 
@@ -365,19 +368,36 @@ public class H2TableDescriptor {
     }
 
     /**
-     * Get collection of user indexes.
+     * Returns a collection of user indexes.
      *
-     * @return User indexes.
+     * <p>Indexes scheduled for rebuild via an active {@code indexRebuildMaintenanceTask} are not constructed.
+     *
+     * @return User indexes (excluding any scheduled for maintenance rebuild).
      */
     public Collection<GridH2IndexBase> createUserIndexes() {
         assert tbl != null;
 
-        ArrayList<GridH2IndexBase> res = new ArrayList<>();
+        List<GridH2IndexBase> res = new ArrayList<>();
+
+        Set<String> indexesToRebuild = indexNamesScheduledForRebuild(
+                idx.kernalContext().maintenanceRegistry(),
+                cacheInfo.cacheId()
+        );
+
+        IgniteLogger log = idx.kernalContext().log(H2TableDescriptor.class);
 
         for (GridQueryIndexDescriptor idxDesc : type.indexes().values()) {
-            GridH2IndexBase idx = createUserIndex(idxDesc);
+            if (indexesToRebuild.contains(idxDesc.name())) {
+                if (log.isInfoEnabled()) {
+                    log.info("Skipping index construction during recovery; will be rebuilt by " +
+                        "indexRebuildMaintenanceTask [cache=" + cacheInfo.name() +
+                        ", index=" + idxDesc.name() + ']');
+                }
 
-            res.add(idx);
+                continue;
+            }
+
+            res.add(createUserIndex(idxDesc));
         }
 
         return res;
@@ -389,7 +409,6 @@ public class H2TableDescriptor {
      * @param idxDesc Index descriptor.
      * @return Index.
      */
-    @SuppressWarnings("ZeroLengthArrayAllocation")
     public GridH2IndexBase createUserIndex(GridQueryIndexDescriptor idxDesc) {
         IndexColumn keyCol = tbl.indexColumn(QueryUtils.KEY_COL, SortOrder.ASCENDING);
         IndexColumn affCol = tbl.getAffinityKeyColumn();

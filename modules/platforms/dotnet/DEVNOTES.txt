@@ -42,3 +42,13 @@ Tests
 
 * Run a smaller subset of tests - exclude long tests and examples tests:
   dotnet test Apache.Ignite.Core.Tests.DotNetCore.csproj --filter "TestCategory!=LONG_TEST&TestCategory!=EXAMPLES_TEST"
+
+* Notes:
+  - Tests start a real embedded Ignite JVM node. A JDK must be on PATH and the Java jars
+    must be built (modules/*/target/ignite-*.jar). IGNITE_HOME is auto-detected from the
+    source tree, so no env var is required.
+  - The grid binds localhost TCP ports (discovery 47500+, communication 47100+,
+    thin client 10800); sandboxed/network-restricted environments must allow this.
+  - Do not pass --no-build before the test host has been built
+  - Java grid shutdown messages (e.g. "Node left", "partition map exchange") are normal
+    log noise; judge the result by the final Passed!/Failed! summary line.

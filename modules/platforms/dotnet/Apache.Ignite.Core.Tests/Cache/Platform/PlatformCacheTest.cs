@@ -660,6 +660,64 @@ namespace Apache.Ignite.Core.Tests.Cache.Platform
             }
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a local platform-cache scan query cursor
+        /// (<c>PlatformCacheQueryCursor</c>) returns the same entries as synchronous iteration.
+        /// </summary>
+        [Test]
+        public async Task TestLocalScanQueryAsyncEnumeration()
+        {
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            await cache.PutAllAsync(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            // Local scan with a partition iterates the platform cache directly via PlatformCacheQueryCursor.
+            var part = _grid.GetAffinity(cache.Name).GetPartition(TestUtils.GetPrimaryKey(_grid, cache.Name));
+
+            var expected = cache.Query(new ScanQuery<int, Foo> {Local = true, Partition = part})
+                .Select(e => e.Key)
+                .OrderBy(k => k)
+                .ToList();
+
+            var actual = new List<int>();
+
+            await foreach (var entry in cache.Query(new ScanQuery<int, Foo> {Local = true, Partition = part}))
+            {
+                actual.Add(entry.Key);
+            }
+
+            actual.Sort();
+
+            Assert.IsNotEmpty(actual);
+            CollectionAssert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
+        /// Tests that async enumeration of a local platform-cache scan query cursor
+        /// (<c>PlatformCacheQueryCursor</c>) honors the cancellation token.
+        /// </summary>
+        [Test]
+        public void TestLocalScanQueryAsyncEnumerationHonorsCancellation()
+        {
+            var cache = GetCache<int, Foo>(CacheTestMode.ServerLocal);
+            cache.PutAll(Enumerable.Range(1, 100).ToDictionary(x => x, x => new Foo(x)));
+
+            var part = _grid.GetAffinity(cache.Name).GetPartition(TestUtils.GetPrimaryKey(_grid, cache.Name));
+            var qry = new ScanQuery<int, Foo> {Local = true, Partition = part};
+
+            var cts = new CancellationTokenSource();
+            cts.Cancel();
+
+            Assert.CatchAsync<OperationCanceledException>(async () =>
+            {
+                await foreach (var entry in cache.Query(qry).WithCancellation(cts.Token))
+                {
+                    Assert.Fail("Cancelled enumeration must not yield entries, but got key " + entry.Key);
+                }
+            });
+        }
+#endif
+
         /// <summary>
         /// Tests that local scan query reserves the partition when <see cref="ScanQuery{TK,TV}.Partition"/> is set.
         /// </summary>
