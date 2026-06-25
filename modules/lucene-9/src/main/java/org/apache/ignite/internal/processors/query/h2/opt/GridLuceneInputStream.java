@@ -25,6 +25,7 @@ import org.apache.lucene.store.IndexInput;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.Objects;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
 
@@ -167,7 +168,9 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
      * 4-byte word in place. Replaces the default per-{@code readByte} scalar loop that dominated vector-search CPU.
      */
     @Override public void readFloats(float[] dst, int offset, int len) throws IOException {
-        assert offset >= 0 && len <= dst.length - offset;
+        // Bounds-check the destination in production: the copyMemory writes below are unchecked native
+        // stores, so enforce offset >= 0, len >= 0, offset + len <= dst.length here (not just under -ea).
+        Objects.checkFromIndexSize(offset, len, dst.length);
 
         int n = len << 2;
 
