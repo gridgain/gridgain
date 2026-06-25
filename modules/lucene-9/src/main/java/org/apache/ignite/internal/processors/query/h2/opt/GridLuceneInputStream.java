@@ -187,7 +187,8 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, dstAddr, n);
 
             bufPosition += n;
-        } else {
+        }
+        else {
             // Slow path: the vector straddles a page-buffer boundary, so it can't be copied in one shot.
             // Walk the buffers, copying each contiguous run straight into dst's native memory (still no
             // heap byte[] staging); switchCurrentBuffer() advances to the next page between runs.
