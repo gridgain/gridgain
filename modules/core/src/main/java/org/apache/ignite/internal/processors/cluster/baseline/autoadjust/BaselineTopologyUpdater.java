@@ -93,8 +93,10 @@ public class BaselineTopologyUpdater {
      */
     public void triggerBaselineUpdate(long topologyVersion, boolean scaleUp) {
         if (!isTopologyWatcherEnabled(scaleUp)) {
-            synchronized (this) {
-                lastBaselineData = NULL_BASELINE_DATA;
+            if (!isTopologyWatcherEnabled(!scaleUp)) {
+                synchronized (this) {
+                    lastBaselineData = NULL_BASELINE_DATA;
+                }
             }
 
             return;
@@ -210,30 +212,16 @@ public class BaselineTopologyUpdater {
      */
     public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
         synchronized (this) {
-            if (scaleUp) {
-                if (lastBaselineData.isAdjusted(true) ||
-                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true))
-                    return BaselineAutoAdjustStatus.notScheduled();
+            if (lastBaselineData.isAdjusted(scaleUp) ||
+                baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, scaleUp))
+                return BaselineAutoAdjustStatus.notScheduled();
 
-                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(scaleUp);
 
-                if (timeToLastTask <= 0)
-                    return BaselineAutoAdjustStatus.inProgress();
+            if (timeToLastTask <= 0)
+                return BaselineAutoAdjustStatus.inProgress();
 
-                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
-            }
-            else {
-                if (lastBaselineData.isAdjusted(false) ||
-                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
-                    return BaselineAutoAdjustStatus.notScheduled();
-
-                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(false);
-
-                if (timeToLastTask <= 0)
-                    return BaselineAutoAdjustStatus.inProgress();
-
-                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
-            }
+            return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
         }
     }
 }

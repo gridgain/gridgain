@@ -23,11 +23,11 @@ import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
  */
 public interface BaselineAutoAdjustMXBean {
     /** */
-    @MXBeanDescription("Whether baseline autoadjustment is enabled ot not.")
+    @MXBeanDescription("Whether baseline autoadjustment is enabled or not.")
     boolean isAutoAdjustmentEnabled();
 
     /** */
-    @MXBeanDescription("Whether baseline autoadjustment is enabled ot not.")
+    @MXBeanDescription("Whether baseline scale up (scaleUp==true) or scale down (scaleUp==false) autoadjustment is enabled or not.")
     boolean isAutoAdjustmentEnabled(boolean scaleUp);
 
     /** */
@@ -66,7 +66,6 @@ public interface BaselineAutoAdjustMXBean {
         @MXBeanParameter(name = "scaleUp", description = "ScaleUp/scaleDown flag.") boolean scaleUp,
         @MXBeanParameter(name = "enabled", description = "Enable/disable flag.") boolean enabled
     );
-
 
     /** */
     @MXBeanDescription("Set baseline autoadjustment timeout value.")

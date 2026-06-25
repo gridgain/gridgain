@@ -89,10 +89,10 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
 
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
             Command.usage(logger, "Set baseline autoadjustment settings separately for scale up:", BASELINE,
-                AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
+                SCALE_UP_AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
                 optional(CMD_AUTO_CONFIRMATION));
             Command.usage(logger, "Set baseline autoadjustment settings separately for scale down:", BASELINE,
-                AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
+                SCALE_DOWN_AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
                 optional(CMD_AUTO_CONFIRMATION));
         }
     }
