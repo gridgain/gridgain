@@ -2094,6 +2094,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return Value of time which we would wait before the actual topology change since last server topology change
      * (node join/left/fail).
      * @throws IgniteException If operation failed.
+     */
     public long baselineAutoAdjustTimeout() {
         return distributedBaselineConfiguration.getBaselineAutoAdjustTimeout();
     }
