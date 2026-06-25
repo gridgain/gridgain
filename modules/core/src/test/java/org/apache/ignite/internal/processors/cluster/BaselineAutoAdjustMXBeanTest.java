@@ -109,12 +109,12 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
         assertEquals(0L, cluster.baselineAutoAdjustTimeout(false));
         assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(false));
 
-        cluster.baselineScaleUpAutoAdjustEnabled(false);
+        cluster.baselineAutoAdjustEnabled(true, false);
         assertFalse(bltMxBean.isAutoAdjustmentEnabled(true));
         assertTrue(bltMxBean.isAutoAdjustmentEnabled(false));
 
-        cluster.baselineScaleUpAutoAdjustTimeout(31_000L);
-        cluster.baselineScaleDownAutoAdjustTimeout(32_000L);
+        cluster.baselineAutoAdjustTimeout(true, 31_000L);
+        cluster.baselineAutoAdjustTimeout(false, 32_000L);
         assertEquals(31_000L, bltMxBean.getAutoAdjustmentTimeout(true));
         assertEquals(32_000L, bltMxBean.getAutoAdjustmentTimeout(false));
 

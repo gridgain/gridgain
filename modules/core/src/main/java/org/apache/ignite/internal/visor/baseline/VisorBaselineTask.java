@@ -239,16 +239,16 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 ignite.cluster().baselineAutoAdjustTimeout(settings.getAutoAdjustAwaitingTime());
 
             if (settings.isScaleUpAutoAdjustEnabled() != null)
-                ignite.cluster().baselineScaleUpAutoAdjustEnabled(settings.isScaleUpAutoAdjustEnabled());
+                ignite.cluster().baselineAutoAdjustEnabled(true, settings.isScaleUpAutoAdjustEnabled());
 
             if (settings.getScaleUpAutoAdjustAwaitingTime() != null)
-                ignite.cluster().baselineScaleUpAutoAdjustTimeout(settings.getScaleUpAutoAdjustAwaitingTime());
+                ignite.cluster().baselineAutoAdjustTimeout(true, settings.getScaleUpAutoAdjustAwaitingTime());
 
             if (settings.isScaleDownAutoAdjustEnabled() != null)
-                ignite.cluster().baselineScaleDownAutoAdjustEnabled(settings.isScaleDownAutoAdjustEnabled());
+                ignite.cluster().baselineAutoAdjustEnabled(false, settings.isScaleDownAutoAdjustEnabled());
 
             if (settings.getScaleDownAutoAdjustAwaitingTime() != null)
-                ignite.cluster().baselineScaleDownAutoAdjustTimeout(settings.getScaleDownAutoAdjustAwaitingTime());
+                ignite.cluster().baselineAutoAdjustTimeout(false, settings.getScaleDownAutoAdjustAwaitingTime());
 
             return collect();
         }

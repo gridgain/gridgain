@@ -96,10 +96,7 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentEnabled(boolean scaleUp, boolean enabled) {
         try {
-            if (scaleUp)
-                baselineConfiguration.updateBaselineScaleUpAutoAdjustEnabledAsync(ctx, enabled).get();
-            else
-                baselineConfiguration.updateBaselineScaleDownAutoAdjustEnabledAsync(ctx, enabled).get();
+            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(scaleUp, ctx, enabled).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -119,10 +116,7 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     /** {@inheritDoc} */
     @Override public void setAutoAdjustmentTimeout(boolean scaleUp, long timeout) {
         try {
-            if (scaleUp)
-                baselineConfiguration.updateBaselineScaleUpAutoAdjustTimeoutAsync(ctx, timeout).get();
-            else
-                baselineConfiguration.updateBaselineScaleDownAutoAdjustTimeoutAsync(ctx, timeout).get();
+            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(scaleUp, ctx, timeout).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

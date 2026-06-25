@@ -419,23 +419,13 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException {
-        cluster.baselineScaleUpAutoAdjustEnabled(baselineScaleUpAutoAdjustEnabled);
+    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException {
+        cluster.baselineAutoAdjustEnabled(scaleUp, baselineAutoAdjustEnabled);
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) throws IgniteException {
-        cluster.baselineScaleUpAutoAdjustTimeout(baselineScaleUpAutoAdjustTimeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) throws IgniteException {
-        cluster.baselineScaleDownAutoAdjustEnabled(baselineScaleDownAutoAdjustEnabled);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) throws IgniteException {
-        cluster.baselineScaleDownAutoAdjustTimeout(baselineScaleDownAutoAdjustTimeout);
+    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException {
+        cluster.baselineAutoAdjustTimeout(scaleUp, baselineAutoAdjustTimeout);
     }
 
     /** {@inheritDoc} */

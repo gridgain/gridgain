@@ -628,18 +628,11 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
-     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
      * cluster in auto-adjust for scale up. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
      */
-    public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException;
-
-    /**
-     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust for scale down. {@code False} If cluster in manuale.
-     * @throws IgniteException If operation failed.
-     */
-    public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) throws IgniteException;
+    public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
      * @return Number of milliseconds to wait before the actual topology change since last server topology change
@@ -666,18 +659,11 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
-     * @param baselineScaleUpAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
-     * server topology change (node join).
-     * @throws IgniteException If failed.
-     */
-    public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) throws IgniteException;
-
-    /**
-     * @param baselineScaleDownAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
+     * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
      * server topology change (node left/fail).
      * @throws IgniteException If failed.
      */
-    public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) throws IgniteException;
+    public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
      * @return Status of baseline auto-adjust.

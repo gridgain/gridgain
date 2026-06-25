@@ -552,14 +552,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
            }
         });
 
-        distributedBaselineConfiguration.listenAutoAdjustScaleUpEnabled((name, oldVal, newVal) -> {
+        distributedBaselineConfiguration.listenAutoAdjustEnabled(true, (name, oldVal, newVal) -> {
             if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                 long topVer = ctx.discovery().topologyVersion();
                 baselineTopologyUpdater.triggerBaselineUpdate(topVer, true);
             }
         });
 
-        distributedBaselineConfiguration.listenAutoAdjustScaleDownEnabled((name, oldVal, newVal) -> {
+        distributedBaselineConfiguration.listenAutoAdjustEnabled(false, (name, oldVal, newVal) -> {
             if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                 long topVer = ctx.discovery().topologyVersion();
                 baselineTopologyUpdater.triggerBaselineUpdate(topVer, false);
@@ -2075,29 +2075,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineScaleUpAutoAdjustEnabledAsync(boolean baselineScaleUpAutoAdjustEnabled) {
+    public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean scaleUp, boolean baselineAutoAdjustEnabled) {
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineScaleUpAutoAdjustEnabledAsync(ctx, baselineScaleUpAutoAdjustEnabled));
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-    }
-
-    /**
-     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineScaleDownAutoAdjustEnabledAsync(boolean baselineScaleDownAutoAdjustEnabled) {
-        try {
-            return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineScaleDownAutoAdjustEnabledAsync(ctx, baselineScaleDownAutoAdjustEnabled));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(scaleUp, ctx, baselineAutoAdjustEnabled));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -2151,33 +2136,16 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
+     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
      * server topology change (node join/left/fail).
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineScaleUpAutoAdjustTimeoutAsync(long baselineScaleUpAutoAdjustTimeout) {
-        A.ensure(baselineScaleUpAutoAdjustTimeout >= 0, "timeout should be positive or zero");
+    public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(boolean scaleUp, long baselineAutoAdjustTimeout) {
+        A.ensure(baselineAutoAdjustTimeout >= 0, "timeout should be positive or zero");
 
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineScaleUpAutoAdjustTimeoutAsync(ctx, baselineScaleUpAutoAdjustTimeout));
-        }
-        catch (IgniteCheckedException e) {
-            throw U.convertException(e);
-        }
-    }
-
-    /**
-     * @param baselineScaleDownAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join/left/fail).
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineScaleDownAutoAdjustTimeoutAsync(long baselineScaleDownAutoAdjustTimeout) {
-        A.ensure(baselineScaleDownAutoAdjustTimeout >= 0, "timeout should be positive or zero");
-
-        try {
-            return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineScaleDownAutoAdjustTimeoutAsync(ctx, baselineScaleDownAutoAdjustTimeout));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(scaleUp, ctx, baselineAutoAdjustTimeout));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
