@@ -92,6 +92,7 @@ public class BaselineTopologyUpdater {
      * @param topologyVersion version of topology
      */
     public void triggerBaselineUpdate(long topologyVersion, boolean scaleUp) {
+        // Only reset shared data when NEITHER direction is watching.
         if (!isTopologyWatcherEnabled(scaleUp)) {
             if (!isTopologyWatcherEnabled(!scaleUp)) {
                 synchronized (this) {
