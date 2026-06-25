@@ -682,6 +682,11 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      * @return Status of baseline auto-adjust.
      */
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * @return Status of baseline auto-adjust.
+     */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp);
 
     /**

@@ -257,10 +257,10 @@ public class DistributedBaselineConfiguration {
     public void onActivate() throws IgniteCheckedException {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE) && log.isInfoEnabled())
             log.info(format(SEPARATE_AUTO_ADJUST_CONFIGURED_MESSAGE,
-                (isBaselineScaleUpAutoAdjustEnabled() ? "enabled" : "disabled"),
-                getBaselineScaleUpAutoAdjustTimeout(),
-                (isBaselineScaleDownAutoAdjustEnabled() ? "enabled" : "disabled"),
-                getBaselineScaleDownAutoAdjustTimeout()
+                (isBaselineAutoAdjustEnabled(true) ? "enabled" : "disabled"),
+                getBaselineAutoAdjustTimeout(true),
+                (isBaselineAutoAdjustEnabled(false) ? "enabled" : "disabled"),
+                getBaselineAutoAdjustTimeout(false)
             ));
 
         if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && log.isInfoEnabled())
@@ -278,19 +278,16 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @return Value of manual baseline control or auto adjusting baseline on scale up.
+     * @return Value of manual baseline control or auto adjusting baseline on scale up, if {@code true}
+     * or scale down, if {@code fasle}.
      */
-    public boolean isBaselineScaleUpAutoAdjustEnabled() {
-        return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
-            && baselineScaleUpAutoAdjustEnabled.getOrDefault(dfltScaleUpEnabled);
-    }
-
-    /**
-     * @return Value of manual baseline control or auto adjusting baseline on scale down.
-     */
-    public boolean isBaselineScaleDownAutoAdjustEnabled() {
-        return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
-            && baselineScaleDownAutoAdjustEnabled.getOrDefault(dfltScaleDownEnabled);
+    public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        if (scaleUp)
+            return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
+                && baselineScaleUpAutoAdjustEnabled.getOrDefault(dfltScaleUpEnabled);
+        else
+            return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
+                && baselineScaleDownAutoAdjustEnabled.getOrDefault(dfltScaleDownEnabled);
     }
 
     /**
@@ -348,18 +345,13 @@ public class DistributedBaselineConfiguration {
 
     /**
      * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * join).
+     * join, if {@code true} or node exit, if {@code false}).
      */
-    public long getBaselineScaleUpAutoAdjustTimeout() {
-        return baselineScaleUpAutoAdjustTimeout.getOrDefault(dfltScaleUpTimeout);
-    }
-
-    /**
-     * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * exit).
-     */
-    public long getBaselineScaleDownAutoAdjustTimeout() {
-        return baselineScaleDownAutoAdjustTimeout.getOrDefault(dfltScaleDownTimeout);
+    public long getBaselineAutoAdjustTimeout(boolean scaleUp) {
+        if (scaleUp)
+            return baselineScaleUpAutoAdjustTimeout.getOrDefault(dfltScaleUpTimeout);
+        else
+            return baselineScaleDownAutoAdjustTimeout.getOrDefault(dfltScaleDownTimeout);
     }
 
     /**

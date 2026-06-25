@@ -87,7 +87,7 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 cluster.baselineAutoAdjustTimeout(true),
                 cluster.isBaselineAutoAdjustEnabled(false),
                 cluster.baselineAutoAdjustTimeout(false),
-                cluster.baselineAutoAdjustStatus(false),
+                cluster.baselineAutoAdjustStatus(),
                 cluster.baselineAutoAdjustStatus(true),
                 cluster.baselineAutoAdjustStatus(false)
             );

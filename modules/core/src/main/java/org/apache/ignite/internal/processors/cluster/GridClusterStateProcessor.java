@@ -2044,8 +2044,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return scaleUp ? distributedBaselineConfiguration.isBaselineScaleUpAutoAdjustEnabled()
-                : distributedBaselineConfiguration.isBaselineScaleDownAutoAdjustEnabled();
+            return scaleUp ? distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(true)
+                : distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(false);
 
         return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled();
     }
@@ -2118,8 +2118,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     public long baselineAutoAdjustTimeout(boolean scaleUp) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return scaleUp ? distributedBaselineConfiguration.getBaselineScaleUpAutoAdjustTimeout()
-                : distributedBaselineConfiguration.getBaselineScaleDownAutoAdjustTimeout();
+            return scaleUp ? distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(true)
+                : distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(false);
 
         return distributedBaselineConfiguration.getBaselineAutoAdjustTimeout();
     }
@@ -2189,6 +2189,13 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      */
     public DistributedBaselineConfiguration baselineConfiguration() {
         return distributedBaselineConfiguration;
+    }
+
+    /**
+     * @return Status of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
+        return baselineTopologyUpdater.getStatus();
     }
 
     /**

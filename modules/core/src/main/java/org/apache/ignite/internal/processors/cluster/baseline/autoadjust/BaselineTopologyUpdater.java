@@ -121,11 +121,11 @@ public class BaselineTopologyUpdater {
                         long timeout;
                         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                             if (scaleUp) {
-                                timeout = baselineConfiguration.getBaselineScaleUpAutoAdjustTimeout();
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(true);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleUp(baselineData, timeout);
                             }
                             else {
-                                timeout = baselineConfiguration.getBaselineScaleDownAutoAdjustTimeout();
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(false);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleDown(baselineData, timeout);
                             }
                         }
@@ -168,8 +168,8 @@ public class BaselineTopologyUpdater {
 
     private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return ((baselineConfiguration.isBaselineScaleUpAutoAdjustEnabled() && scaleUp)
-                || (baselineConfiguration.isBaselineScaleDownAutoAdjustEnabled() && !scaleUp));
+            return ((baselineConfiguration.isBaselineAutoAdjustEnabled(true) && scaleUp)
+                || (baselineConfiguration.isBaselineAutoAdjustEnabled(false) && !scaleUp));
 
         return baselineConfiguration.isBaselineAutoAdjustEnabled();
     }
@@ -188,44 +188,49 @@ public class BaselineTopologyUpdater {
     /**
      * @return Statistic of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
+    public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
-                if (scaleUp) {
-                    if (lastBaselineData.isAdjusted(true) ||
-                        baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true))
-                        return BaselineAutoAdjustStatus.notScheduled();
-
-                    long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
-
-                    if (timeToLastTask <= 0)
-                        return BaselineAutoAdjustStatus.inProgress();
-
-                    return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
-                }
-                else {
-                    if (lastBaselineData.isAdjusted(false) ||
-                        baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
-                        return BaselineAutoAdjustStatus.notScheduled();
-
-                    long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
-
-                    if (timeToLastTask <= 0)
-                        return BaselineAutoAdjustStatus.inProgress();
-
-                    return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
-                }
-            }
-
             if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
                 return BaselineAutoAdjustStatus.notScheduled();
 
-            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(false);
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
 
             if (timeToLastTask <= 0)
                 return BaselineAutoAdjustStatus.inProgress();
 
             return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+        }
+    }
+
+    /**
+     * @return Statistic of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
+        synchronized (this) {
+            if (scaleUp) {
+                if (lastBaselineData.isAdjusted(true) ||
+                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true))
+                    return BaselineAutoAdjustStatus.notScheduled();
+
+                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
+
+                if (timeToLastTask <= 0)
+                    return BaselineAutoAdjustStatus.inProgress();
+
+                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+            }
+            else {
+                if (lastBaselineData.isAdjusted(false) ||
+                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
+                    return BaselineAutoAdjustStatus.notScheduled();
+
+                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(false);
+
+                if (timeToLastTask <= 0)
+                    return BaselineAutoAdjustStatus.inProgress();
+
+                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+            }
         }
     }
 }

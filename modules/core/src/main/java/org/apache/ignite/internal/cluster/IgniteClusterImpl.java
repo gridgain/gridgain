@@ -866,6 +866,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
+        return ctx.state().baselineAutoAdjustStatus();
+    }
+
+    /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
         return ctx.state().baselineAutoAdjustStatus(scaleUp);
     }
