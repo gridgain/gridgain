@@ -28,6 +28,9 @@ import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
 import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
+import static org.apache.ignite.internal.IgniteFeatures.BASELINE_SEPARATE_AUTO_ADJUSTMENT;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustData.NULL_BASELINE_DATA;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
@@ -76,7 +79,9 @@ public class BaselineTopologyUpdater {
             ctx.log(BaselineAutoAdjustExecutor.class),
             cluster,
             ctx.pools().getSystemExecutorService(),
-            this::isTopologyWatcherEnabled
+            this::isTopologyWatcherEnabled,
+            () -> isTopologyWatcherEnabled(true),
+            () -> isTopologyWatcherEnabled(false)
         ), ctx.log(BaselineAutoAdjustScheduler.class));
         this.discoveryMgr = ctx.discovery();
         this.ctx = ctx;
@@ -86,8 +91,8 @@ public class BaselineTopologyUpdater {
      * Schedule update of the baseline topology
      * @param topologyVersion version of topology
      */
-    public void triggerBaselineUpdate(long topologyVersion) {
-        if (!isTopologyWatcherEnabled()) {
+    public void triggerBaselineUpdate(long topologyVersion, boolean scaleUp) {
+        if (!isTopologyWatcherEnabled(scaleUp)) {
             synchronized (this) {
                 lastBaselineData = NULL_BASELINE_DATA;
             }
@@ -112,11 +117,26 @@ public class BaselineTopologyUpdater {
                             return;
                         }
 
-                        long timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
+                        boolean scheduled;
+                        long timeout;
+                        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+                            if (scaleUp) {
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(true);
+                                scheduled = baselineAutoAdjustScheduler.scheduleScaleUp(baselineData, timeout);
+                            }
+                            else {
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(false);
+                                scheduled = baselineAutoAdjustScheduler.scheduleScaleDown(baselineData, timeout);
+                            }
+                        }
+                        else {
+                            timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
+                            scheduled = baselineAutoAdjustScheduler.schedule(baselineData, timeout);
+                        }
 
                         // In case of merging exchanges the baseline data can be already expired
                         // and so it should be rejected by scheduler.
-                        if (baselineAutoAdjustScheduler.schedule(baselineData, timeout))
+                        if (scheduled)
                             log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
                     });
             }
@@ -135,10 +155,33 @@ public class BaselineTopologyUpdater {
     }
 
     /**
+     * @return {@code true} if auto-adjust baseline enabled for the scale up {@code true} or scale down {@code false}.
+     */
+    private boolean isTopologyWatcherEnabled(boolean scaleUp) {
+        return isSupported(ctx)
+            && !ctx.clientNode()
+            && stateProcessor.clusterState().active()
+            && isBaselineAutoAdjustEnabled(scaleUp)
+            && (CU.isPersistenceEnabled(cluster.ignite().configuration())
+                || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
+    }
+
+    private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return ((baselineConfiguration.isBaselineAutoAdjustEnabled(true) && scaleUp)
+                || (baselineConfiguration.isBaselineAutoAdjustEnabled(false) && !scaleUp));
+
+        return baselineConfiguration.isBaselineAutoAdjustEnabled();
+    }
+
+    /**
      * @return {@code True} if all nodes in the cluster support auto-adjust baseline.
      * @see IgniteFeatures#BASELINE_AUTO_ADJUSTMENT
      */
     public static boolean isSupported(GridKernalContext ctx) {
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return IgniteFeatures.allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT);
+
         return IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT);
     }
 
@@ -147,7 +190,7 @@ public class BaselineTopologyUpdater {
      */
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData))
+            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
@@ -156,6 +199,38 @@ public class BaselineTopologyUpdater {
                 return BaselineAutoAdjustStatus.inProgress();
 
             return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+        }
+    }
+
+    /**
+     * @return Statistic of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
+        synchronized (this) {
+            if (scaleUp) {
+                if (lastBaselineData.isAdjusted(true) ||
+                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true))
+                    return BaselineAutoAdjustStatus.notScheduled();
+
+                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(true);
+
+                if (timeToLastTask <= 0)
+                    return BaselineAutoAdjustStatus.inProgress();
+
+                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+            }
+            else {
+                if (lastBaselineData.isAdjusted(false) ||
+                    baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
+                    return BaselineAutoAdjustStatus.notScheduled();
+
+                long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(false);
+
+                if (timeToLastTask <= 0)
+                    return BaselineAutoAdjustStatus.inProgress();
+
+                return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+            }
         }
     }
 }

@@ -51,7 +51,11 @@ public enum BaselineSubcommands {
     /**
      * Baseline auto-adjust configuration.
      */
-    AUTO_ADJUST("auto_adjust", VisorBaselineOperation.AUTOADJUST);
+    AUTO_ADJUST("auto_adjust", VisorBaselineOperation.AUTOADJUST),
+
+    SCALE_UP_AUTO_ADJUST("scale_up_auto_adjust", VisorBaselineOperation.SCALE_UP_AUTOADJUST),
+
+    SCALE_DOWN_AUTO_ADJUST("scale_down_auto_adjust", VisorBaselineOperation.SCALE_DOWN_AUTOADJUST);
 
     /** Enumerated values. */
     private static final BaselineSubcommands[] VALS = values();

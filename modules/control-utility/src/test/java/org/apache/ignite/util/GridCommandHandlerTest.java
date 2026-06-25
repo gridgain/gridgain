@@ -1629,6 +1629,69 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleDownAutoAdjustmentAutoRemoveNode() throws Exception {
+        Ignite ignite = startGrids(3);
+
+        LogListener[] lsnrs = new LogListener[3];
+
+        for (int g = 0; g < 3; g++) {
+            IgniteEx grid = grid(g);
+
+            ListeningTestLogger log = U.field(grid.configuration().getGridLogger(), "impl");
+
+            LogListener.Builder bldr = LogListener
+                .matches("Baseline parameter 'baselineAutoAdjustTimeout' was changed from '300000' to '2000'");
+
+            if (g == 0) {
+                // The BLT change info is printed on coordinator.
+                bldr = bldr
+                    .andMatches("Baseline auto-adjust will be executed in '2000' ms")
+                    .andMatches("Baseline auto-adjust will be executed right now.");
+            }
+
+            log.registerListener(lsnrs[g] = bldr.build());
+        }
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(3, ignite.cluster().currentBaselineTopology().size());
+
+        stopGrid(2);
+
+        for (int i = 0; i < lsnrs.length; i++) {
+            LogListener lsnr = lsnrs[i];
+            assertTrue("Failed to wait for the expected log output on " + i, lsnr.check(10000));
+        }
+
+        assertTrue(waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 10000));
+
+        Collection<BaselineNode> baselineNodesAfter = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "disable"));
+
+        stopGrid(1);
+
+        Thread.sleep(3000L);
+
+        Collection<BaselineNode> baselineNodesFinal = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(
+            baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
+            baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
     public void testBaselineAutoAdjustmentAutoAddNode() throws Exception {
         Ignite ignite = startGrids(1);
 
@@ -1668,6 +1731,47 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleUpAutoAdjustmentAutoAddNode() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "2000"));
+
+        assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+
+        startGrid(1);
+
+        assertEquals(1, ignite.cluster().currentBaselineTopology().size());
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline"));
+
+        assertTrue(waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 10000));
+
+        Collection<BaselineNode> baselineNodesAfter = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "disable"));
+
+        startGrid(2);
+
+        Thread.sleep(3000L);
+
+        Collection<BaselineNode> baselineNodesFinal = ignite.cluster().currentBaselineTopology();
+
+        assertEquals(
+            baselineNodesAfter.stream().map(BaselineNode::consistentId).collect(Collectors.toList()),
+            baselineNodesFinal.stream().map(BaselineNode::consistentId).collect(Collectors.toList())
+        );
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
@@ -1677,6 +1781,21 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         ignite.cluster().state(ACTIVE);
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "enable", "timeout", "2000"));
+    }
+
+    /**
+     * Test that updating of baseline auto_adjustment settings via control.sh actually influence cluster's baseline.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testBaselineScaleUpAndScaleDownAutoAdjustmentFeatureDisabled() throws Exception {
+        Ignite ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "2000"));
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "2000"));
     }
 
     /**
@@ -1704,6 +1823,76 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Tests that baseline auto-adjustment enabling works from control.sh
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleUpAutoAdjustmentCouldBeEnabledSeparatelyFromScaleDown() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "enable"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout(true));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "disable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+    }
+
+    /**
+     * Tests that baseline auto-adjustment enabling works from control.sh
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleDownAutoAdjustmentCouldBeEnabledSeparatelyFromScaleUp() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "enable"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout(true));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "disable"));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(5 * 60_000, ignite.cluster().baselineAutoAdjustTimeout());
+    }
+
+    /**
      * Tests that baseline auto-adjustment timeout setting works from control.sh
      */
     @Test
@@ -1725,7 +1914,80 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled());
 
         assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout());
+    }
 
+    /**
+     * Tests that baseline auto-adjustment timeout setting works from control.sh
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleUpAutoAdjustmentTimeoutCouldBeChangedSeparatelyFromScaleDown() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "12345"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertEquals(12345, ignite.cluster().baselineAutoAdjustTimeout(true));
+
+        assertEquals(5 * 60 * 1000, ignite.cluster().baselineAutoAdjustTimeout(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "54321"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout(true));
+
+        assertEquals(5 * 60 * 1000, ignite.cluster().baselineAutoAdjustTimeout(false));
+    }
+
+    /**
+     * Tests that baseline auto-adjustment timeout setting works from control.sh
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineScaleDownAutoAdjustmentTimeoutCouldBeChangedSeparatelyFromScaleUp() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled());
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "12345"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(12345, ignite.cluster().baselineAutoAdjustTimeout(false));
+
+        assertEquals(5 * 60 * 1000, ignite.cluster().baselineAutoAdjustTimeout(true));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "54321"));
+
+        assertTrue(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertEquals(54321, ignite.cluster().baselineAutoAdjustTimeout(false));
+
+        assertEquals(5 * 60 * 1000, ignite.cluster().baselineAutoAdjustTimeout(true));
     }
 
     /**
@@ -1747,6 +2009,35 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     }
 
     /**
+     * Tests correct error exit code for wrong baseline auto-adjustment timeout setting in control.sh
+     */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testBaselineAutoAdjustmentScaleUpAndScaleDownTimeoutWrongArguments() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "enable", "timeout", "-1"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "enable", "timeout", "-1"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "enabled", "timeout"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "enabled", "timeout"));
+    }
+
+    /**
      * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
      */
     @Test
@@ -1760,6 +2051,30 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "timeout", "qwer"));
 
         assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "auto_adjust", "qwer"));
+    }
+
+    /**
+     * Tests correct error exit code for wrong baseline auto-adjustment enabling in control.sh
+     */
+    @Test
+    public void testBaselineScaleUpAndScaleDownAutoAdjustmentWrongArguments() throws Exception {
+        IgniteEx ignite = startGrids(1);
+
+        ignite.cluster().state(ACTIVE);
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(true));
+
+        assertFalse(ignite.cluster().isBaselineAutoAdjustEnabled(false));
+
+        assertEquals(EXIT_CODE_OK, execute("--baseline", "auto_adjust", "enable"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "timeout", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_up_auto_adjust", "qwer"));
+
+        assertEquals(EXIT_CODE_INVALID_ARGUMENTS, execute("--baseline", "scale_down_auto_adjust", "qwer"));
     }
 
     /**

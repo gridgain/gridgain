@@ -44,6 +44,7 @@ import org.apache.ignite.internal.visor.util.VisorTaskUtils;
 import static java.lang.Boolean.TRUE;
 import static java.util.Collections.singletonMap;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.commandline.CommandHandler.DELIM;
 import static org.apache.ignite.internal.commandline.CommandList.BASELINE;
@@ -52,6 +53,8 @@ import static org.apache.ignite.internal.commandline.CommandLogger.optional;
 import static org.apache.ignite.internal.commandline.CommonArgParser.CMD_AUTO_CONFIRMATION;
 import static org.apache.ignite.internal.commandline.TaskExecutor.executeTaskByNameOnNode;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.AUTO_ADJUST;
+import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.SCALE_DOWN_AUTO_ADJUST;
+import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.SCALE_UP_AUTO_ADJUST;
 import static org.apache.ignite.internal.commandline.baseline.BaselineSubcommands.of;
 import static org.apache.ignite.internal.commandline.util.TopologyUtils.coordinatorId;
 
@@ -82,6 +85,15 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
                 AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
                 optional(CMD_AUTO_CONFIRMATION)
             );
+
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            Command.usage(logger, "Set baseline autoadjustment settings separately for scale up:", BASELINE,
+                AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
+                optional(CMD_AUTO_CONFIRMATION));
+            Command.usage(logger, "Set baseline autoadjustment settings separately for scale down:", BASELINE,
+                AUTO_ADJUST.text(), "[disable|enable] [timeout <timeoutMillis>]",
+                optional(CMD_AUTO_CONFIRMATION));
+        }
     }
 
     /** {@inheritDoc} */
@@ -134,13 +146,17 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
      * @return Task argument.
      */
     private VisorBaselineTaskArg toVisorArguments(BaselineArguments args) {
-        if (args.getCmd() == AUTO_ADJUST) {
+        if (args.getCmd() == AUTO_ADJUST || args.getCmd() == SCALE_UP_AUTO_ADJUST || args.getCmd() == SCALE_DOWN_AUTO_ADJUST) {
             return new VisorBaselineTaskArg(
                 args.getCmd().visorBaselineOperation(),
                 args.getTopVer(),
                 args.getConsistentIds(),
                 args.getEnableAutoAdjust(),
-                args.getSoftBaselineTimeout()
+                args.getSoftBaselineTimeout(),
+                args.getScaleUpEnableAutoAdjust(),
+                args.getScaleUpSoftBaselineTimeout(),
+                args.getScaleDownEnableAutoAdjust(),
+                args.getScaleDownSoftBaselineTimeout()
             );
         }
 
@@ -160,17 +176,46 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
         logger.info("Current topology version: " + res.getTopologyVersion());
 
         if (res.isAutoAdjustEnabled() != null && isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE)) {
-            logger.info("Baseline auto adjustment " + (TRUE.equals(res.isAutoAdjustEnabled()) ? "enabled" : "disabled") +
-                ": softTimeout=" + res.getAutoAdjustAwaitingTime()
-            );
+            if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+                logger.info("Baseline scale up auto adjustment " + (TRUE.equals(res.isScaleUpAutoAdjustEnabled()) ? "enabled" : "disabled") +
+                    ": softTimeout=" + res.getScaleUpAutoAdjustAwaitingTime()
+                );
 
-            if (res.isAutoAdjustEnabled()) {
-                if (res.isBaselineAdjustInProgress())
-                    logger.info("Baseline auto-adjust is in progress");
-                else if (res.getRemainingTimeToBaselineAdjust() < 0)
-                    logger.info("Baseline auto-adjust are not scheduled");
-                else
-                    logger.info("Baseline auto-adjust will happen in '" + res.getRemainingTimeToBaselineAdjust() + "' ms");
+                if (res.isScaleUpAutoAdjustEnabled()) {
+                    if (res.isBaselineScaleUpAdjustInProgress())
+                        logger.info("Baseline scale up auto-adjust is in progress");
+                    else if (res.getRemainingTimeToBaselineScaleUpAdjust() < 0)
+                        logger.info("Baseline scale up auto-adjust are not scheduled");
+                    else
+                        logger.info("Baseline scale up auto-adjust will happen in '" + res.getRemainingTimeToBaselineScaleUpAdjust() + "' ms");
+                }
+
+                logger.info("Baseline scale down auto adjustment " + (TRUE.equals(res.isScaleDownAutoAdjustEnabled()) ? "enabled" : "disabled") +
+                    ": softTimeout=" + res.getScaleDownAutoAdjustAwaitingTime()
+                );
+
+                if (res.isScaleDownAutoAdjustEnabled()) {
+                    if (res.isBaselineScaleDownAdjustInProgress())
+                        logger.info("Baseline scale down auto-adjust is in progress");
+                    else if (res.getRemainingTimeToBaselineScaleDownAdjust() < 0)
+                        logger.info("Baseline scale down auto-adjust are not scheduled");
+                    else
+                        logger.info("Baseline scale down auto-adjust will happen in '" + res.getRemainingTimeToBaselineScaleDownAdjust() + "' ms");
+                }
+            }
+            else {
+                logger.info("Baseline auto adjustment " + (TRUE.equals(res.isAutoAdjustEnabled()) ? "enabled" : "disabled") +
+                    ": softTimeout=" + res.getAutoAdjustAwaitingTime()
+                );
+
+                if (res.isAutoAdjustEnabled()) {
+                    if (res.isBaselineAdjustInProgress())
+                        logger.info("Baseline auto-adjust is in progress");
+                    else if (res.getRemainingTimeToBaselineAdjust() < 0)
+                        logger.info("Baseline auto-adjust are not scheduled");
+                    else
+                        logger.info("Baseline auto-adjust will happen in '" + res.getRemainingTimeToBaselineAdjust() + "' ms");
+                }
             }
         }
 
@@ -272,6 +317,10 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
         if (cmd == null || (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && cmd == AUTO_ADJUST))
             throw new IllegalArgumentException("Expected correct baseline action");
 
+        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE) &&
+            (cmd == SCALE_UP_AUTO_ADJUST || cmd == SCALE_DOWN_AUTO_ADJUST))
+            throw new IllegalArgumentException("Expected correct baseline action");
+
         BaselineArguments.Builder baselineArgs = new BaselineArguments.Builder(cmd);
 
         switch (cmd) {
@@ -293,6 +342,8 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
                 break;
 
             case AUTO_ADJUST:
+            case SCALE_UP_AUTO_ADJUST:
+            case SCALE_DOWN_AUTO_ADJUST:
                 do {
                     AutoAdjustCommandArg autoAdjustArg = CommandArgUtils.of(
                         argIter.nextArg("Expected one of auto-adjust arguments"), AutoAdjustCommandArg.class
@@ -301,11 +352,27 @@ public class BaselineCommand extends AbstractCommand<BaselineArguments> {
                     if (autoAdjustArg == null)
                         throw new IllegalArgumentException("Expected one of auto-adjust arguments");
 
-                    if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
-                        baselineArgs.withEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
+                    if (cmd == AUTO_ADJUST) {
+                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                            baselineArgs.withEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
 
-                    if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
-                        baselineArgs.withSoftBaselineTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                            baselineArgs.withSoftBaselineTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                    }
+                    else if (cmd == SCALE_UP_AUTO_ADJUST) {
+                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                            baselineArgs.withScaleUpEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
+
+                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                            baselineArgs.withSoftBaselineScaleUpTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                    }
+                    else if (cmd == SCALE_DOWN_AUTO_ADJUST) {
+                        if (autoAdjustArg == AutoAdjustCommandArg.ENABLE || autoAdjustArg == AutoAdjustCommandArg.DISABLE)
+                            baselineArgs.withScaleDownEnable(autoAdjustArg == AutoAdjustCommandArg.ENABLE);
+
+                        if (autoAdjustArg == AutoAdjustCommandArg.TIMEOUT)
+                            baselineArgs.withSoftBaselineScaleDownTimeout(argIter.nextNonNegativeLongArg("soft timeout"));
+                    }
                 }
                 while (argIter.hasNextSubArg());
 

@@ -24,7 +24,17 @@ import java.io.ObjectOutput;
 import java.io.ObjectStreamException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,6 +54,7 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteComponentType;
 import org.apache.ignite.internal.IgniteInternalFuture;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.visor.checkpoint.VisorCheckpointTask;
 import org.apache.ignite.internal.processors.cache.DynamicCacheDescriptor;
 import org.apache.ignite.internal.processors.cluster.BaselineTopology;
@@ -73,6 +84,7 @@ import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IPS;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_MACS;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.parseFile;
 import static org.apache.ignite.internal.util.nodestart.IgniteNodeStartUtils.specifications;
@@ -426,15 +438,19 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * baseline.
      *
      * @param topVer Topology version to set.
+     * @param scaleUp If {@code true} then the baseline topology will be scaled up, if {@code false}, the topology
+     *                will be scaled down.
+     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is {@code false},
+     *                then the flag will be ignored and the baseline topology will be adjusted to the topology for the
+     *                specified version.
      */
-    public void triggerBaselineAutoAdjust(long topVer) {
-        setBaselineTopology(topVer, true);
+    public void triggerBaselineAutoAdjust(long topVer, boolean scaleUp) {
+        setBaselineTopology(topVer, true, scaleUp);
     }
-
 
     /** {@inheritDoc} */
     @Override public void setBaselineTopology(long topVer) {
-        setBaselineTopology(topVer, false);
+        setBaselineTopology(topVer, false, false);
     }
 
     /**
@@ -442,8 +458,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      *
      * @param topVer Topology version.
      * @param isBaselineAutoAdjust Whether this is an automatic update or not.
+     * @param scaleUp Whether it's scale up {@code true} or scale down {@code false} scenario.
      */
-    private void setBaselineTopology(long topVer, boolean isBaselineAutoAdjust) {
+    private void setBaselineTopology(long topVer, boolean isBaselineAutoAdjust, boolean scaleUp) {
         guard();
 
         try {
@@ -452,12 +469,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
             if (top == null)
                 throw new IgniteException("Topology version does not exist: " + topVer);
 
-            Collection<BaselineNode> target = new ArrayList<>(top.size());
+            Collection<BaselineNode> target;
 
-            for (ClusterNode node : top) {
-                if (!node.isClient() && !node.isDaemon())
-                    target.add(node);
-            }
+            if (isBaselineAutoAdjust && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                target = getTargetTopology(scaleUp, top);
+            else
+                target = getTargetTopology(top);
 
             ctx.state().validateBeforeBaselineChange(target);
 
@@ -469,6 +486,57 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         finally {
             unguard();
         }
+    }
+
+    /**
+     * Returns the baseline topology for scale up/down scenario.
+     * If scaleUp {@code true}, then the set of nodes which are not in the current baseline, but in the provided topology
+     * will be added to the baseline.
+     * If scaleUp {@code false}, then the set of nodes which are in the current baseline, but not in the provided topology
+     * will be removed from the baseline.
+     */
+    private Collection<BaselineNode> getTargetTopology(boolean scaleUp, Collection<ClusterNode> topology) {
+        List<BaselineNode> curBlt = Optional.ofNullable(ctx.state().clusterState().baselineTopology()).
+            map(BaselineTopology::currentBaseline)
+            .orElse(Collections.emptyList());
+
+        Collection<BaselineNode> target = new HashSet<>(curBlt);
+        if (scaleUp) {
+            Set<Object> curBltConsistentIds = curBlt
+                .stream()
+                .map(BaselineNode::consistentId)
+                .collect(Collectors.toSet());
+
+            for (ClusterNode node : topology) {
+                if (!curBltConsistentIds.contains(node.consistentId()) && !node.isClient() && !node.isDaemon())
+                    target.add(node);
+            }
+        } else {
+            Set<Object> topConsistentIds = topology.stream()
+                .map(ClusterNode::consistentId)
+                .collect(Collectors.toSet());
+
+            for (BaselineNode node : curBlt) {
+                if (!topConsistentIds.contains(node.consistentId()))
+                    target.remove(node);
+            }
+        }
+
+        return target;
+    }
+
+    /**
+     * Returns the baseline topology based on the provided set of nodes.
+     */
+    private Collection<BaselineNode> getTargetTopology(Collection<ClusterNode> topology) {
+        Collection<BaselineNode> target = new ArrayList<>(topology.size());
+
+        for (ClusterNode node : topology) {
+            if (!node.isClient() && !node.isDaemon())
+                target.add(node);
+        }
+
+        return target;
     }
 
     /** {@inheritDoc} */
@@ -651,8 +719,23 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        return ctx.state().isBaselineAutoAdjustEnabled(scaleUp);
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) {
         baselineAutoAdjustEnabledAsync(baselineAutoAdjustEnabled).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) {
+        baselineScaleUpAutoAdjustEnabledAsync(baselineScaleUpAutoAdjustEnabled).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) {
+        baselineScaleDownAutoAdjustEnabledAsync(baselineScaleDownAutoAdjustEnabled).get();
     }
 
     /**
@@ -671,14 +754,61 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
     }
 
+    /**
+     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @return Future for await operation completion.
+     */
+    public IgniteFuture<?> baselineScaleUpAutoAdjustEnabledAsync(boolean baselineScaleUpAutoAdjustEnabled) {
+        guard();
+
+        try {
+            return ctx.state().baselineScaleUpAutoAdjustEnabledAsync(baselineScaleUpAutoAdjustEnabled);
+        }
+        finally {
+            unguard();
+        }
+    }
+
+    /**
+     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @return Future for await operation completion.
+     */
+    public IgniteFuture<?> baselineScaleDownAutoAdjustEnabledAsync(boolean baselineScaleDownAutoAdjustEnabled) {
+        guard();
+
+        try {
+            return ctx.state().baselineScaleDownAutoAdjustEnabledAsync(baselineScaleDownAutoAdjustEnabled);
+        }
+        finally {
+            unguard();
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public long baselineAutoAdjustTimeout() {
         return ctx.state().baselineAutoAdjustTimeout();
     }
 
     /** {@inheritDoc} */
+    @Override public long baselineAutoAdjustTimeout(boolean scaleUp) {
+        return ctx.state().baselineAutoAdjustTimeout(scaleUp);
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) {
         baselineAutoAdjustTimeoutAsync(baselineAutoAdjustTimeout).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) {
+        baselineScaleUpAutoAdjustTimeoutAsync(baselineScaleUpAutoAdjustTimeout).get();
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) {
+        baselineScaleDownAutoAdjustTimeoutAsync(baselineScaleDownAutoAdjustTimeout).get();
     }
 
     /**
@@ -699,9 +829,50 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
         }
     }
 
+    /**
+     * @param baselineScaleUpAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
+     * server topology change (node join).
+     * @return Future for await operation completion.
+     */
+    public IgniteFuture<?> baselineScaleUpAutoAdjustTimeoutAsync(long baselineScaleUpAutoAdjustTimeout) {
+        A.ensure(baselineScaleUpAutoAdjustTimeout >= 0, "timeout should be positive or zero");
+
+        guard();
+
+        try {
+            return ctx.state().baselineScaleUpAutoAdjustTimeoutAsync(baselineScaleUpAutoAdjustTimeout);
+        }
+        finally {
+            unguard();
+        }
+    }
+
+    /**
+     * @param baselineScaleDownAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
+     * server topology change (node left/fail).
+     * @return Future for await operation completion.
+     */
+    public IgniteFuture<?> baselineScaleDownAutoAdjustTimeoutAsync(long baselineScaleDownAutoAdjustTimeout) {
+        A.ensure(baselineScaleDownAutoAdjustTimeout >= 0, "timeout should be positive or zero");
+
+        guard();
+
+        try {
+            return ctx.state().baselineScaleDownAutoAdjustTimeoutAsync(baselineScaleDownAutoAdjustTimeout);
+        }
+        finally {
+            unguard();
+        }
+    }
+
     /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return ctx.state().baselineAutoAdjustStatus();
+    }
+
+    /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+        return ctx.state().baselineAutoAdjustStatus(scaleUp);
     }
 
     /** {@inheritDoc} */
