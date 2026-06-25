@@ -84,7 +84,6 @@ import org.apache.ignite.plugin.security.SecurityPermission;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceConfiguration;
-import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.services.ServiceDeploymentException;
 import org.apache.ignite.services.ServiceDescriptor;
 import org.apache.ignite.spi.IgniteNodeValidationResult;
@@ -647,8 +646,9 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
             if (err == null) {
                 try {
                     byte[] srvcBytes = U.marshal(marsh, cfg.getService());
+                    byte[] interceptorsBytes = U.marshal(marsh, cfg.getInterceptors());
 
-                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes));
+                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes, interceptorsBytes));
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to marshal service with configured marshaller " +
@@ -1325,18 +1325,19 @@ public class IgniteServiceProcessor extends ServiceProcessorAdapter implements I
      * @return Copy of service.
      * @throws IgniteCheckedException If failed.
      */
-    private Service copyAndInject(ServiceConfiguration cfg, ServiceContext svcCtx) throws IgniteCheckedException {
+    private Service copyAndInject(ServiceConfiguration cfg, ServiceContextImpl svcCtx) throws IgniteCheckedException {
         if (cfg instanceof LazyServiceConfiguration) {
             LazyServiceConfiguration srvcCfg = (LazyServiceConfiguration)cfg;
 
             GridDeployment srvcDep = ctx.deploy().getDeployment(srvcCfg.serviceClassName());
+            ClassLoader clsLdr = U.resolveClassLoader(srvcDep != null ? srvcDep.classLoader() : null, ctx.config());
+            byte[] bytes = srvcCfg.serviceBytes();
 
-            byte[] bytes = ((LazyServiceConfiguration)cfg).serviceBytes();
-
-            Service srvc = U.unmarshal(marsh, bytes,
-                U.resolveClassLoader(srvcDep != null ? srvcDep.classLoader() : null, ctx.config()));
+            Service srvc = U.unmarshal(marsh, bytes, clsLdr);
 
             ctx.resource().inject(srvc, svcCtx);
+
+            injectInterceptors(srvcCfg, svcCtx, marsh, clsLdr);
 
             return srvc;
         }

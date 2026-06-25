@@ -109,7 +109,6 @@ import org.apache.ignite.resources.LoggerResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
 import org.apache.ignite.services.ServiceConfiguration;
-import org.apache.ignite.services.ServiceContext;
 import org.apache.ignite.services.ServiceDeploymentException;
 import org.apache.ignite.services.ServiceDescriptor;
 import org.apache.ignite.thread.IgniteThreadFactory;
@@ -592,8 +591,9 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             if (err == null) {
                 try {
                     byte[] srvcBytes = U.marshal(marsh, cfg.getService());
+                    byte[] interceptorsBytes = U.marshal(marsh, cfg.getInterceptors());
 
-                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes));
+                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes, interceptorsBytes));
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to marshal service with configured marshaller [name=" + cfg.getName() +
@@ -1416,15 +1416,21 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
      * @return Copy of service.
      * @throws IgniteCheckedException If failed.
      */
-    private Service copyAndInject(ServiceConfiguration cfg, ServiceContext svcCtx) throws IgniteCheckedException {
+    private Service copyAndInject(ServiceConfiguration cfg, ServiceContextImpl svcCtx) throws IgniteCheckedException {
         Marshaller m = ctx.config().getMarshaller();
 
         if (cfg instanceof LazyServiceConfiguration) {
-            byte[] bytes = ((LazyServiceConfiguration)cfg).serviceBytes();
+            LazyServiceConfiguration srvcCfg = (LazyServiceConfiguration)cfg;
 
-            Service srvc = U.unmarshal(m, bytes, U.resolveClassLoader(null, ctx.config()));
+            ClassLoader clsLdr = U.resolveClassLoader(null, ctx.config());
+
+            byte[] bytes = srvcCfg.serviceBytes();
+
+            Service srvc = U.unmarshal(m, bytes, clsLdr);
 
             ctx.resource().inject(srvc, svcCtx);
+
+            injectInterceptors(srvcCfg, svcCtx, m, clsLdr);
 
             return srvc;
         }

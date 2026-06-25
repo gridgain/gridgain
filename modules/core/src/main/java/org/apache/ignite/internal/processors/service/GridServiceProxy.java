@@ -59,6 +59,7 @@ import org.apache.ignite.platform.PlatformServiceMethod;
 import org.apache.ignite.resources.IgniteInstanceResource;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
+import org.apache.ignite.services.ServiceCallInterceptor;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.events.EventType.EVT_SERVICE_METHOD_EXECUTION_FAILED;
@@ -236,7 +237,7 @@ public class GridServiceProxy<T> implements Serializable {
                             Service svc = svcCtx.service();
 
                             if (svc != null)
-                                return callServiceLocally(svc, mtd, args, callCtx, subjId, requestId);
+                                return callServiceLocally(svcCtx, mtd, args, callCtx, subjId, requestId);
                         }
                     }
                     else {
@@ -332,20 +333,22 @@ public class GridServiceProxy<T> implements Serializable {
     }
 
     /**
-     * @param svc Service to be called.
+     * @param svcCtx Service context.
      * @param mtd Method to call.
      * @param args Method args.
      * @param callCtx Service call context.
      * @return Invocation result.
      */
     private Object callServiceLocally(
-        Service svc,
+        ServiceContextImpl svcCtx,
         Method mtd,
         Object[] args,
         @Nullable ServiceCallContext callCtx,
         UUID subjId,
         UUID requestId
     ) throws Exception {
+        Service svc = svcCtx.service();
+
         String mtdName = methodName(mtd);
 
         recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_STARTED,
@@ -362,7 +365,7 @@ public class GridServiceProxy<T> implements Serializable {
                 res = ((PlatformService)svc).invokeMethod(mtdName, false, true, args, callAttrs);
             }
             else
-                res = callServiceMethod(svc, mtd, args, callCtx);
+                res = callServiceMethod(svcCtx, mtd, args, callCtx);
         }
         catch (Exception ex) {
             recordServiceEvent(ctx, EVT_SERVICE_METHOD_EXECUTION_FAILED,
@@ -378,27 +381,37 @@ public class GridServiceProxy<T> implements Serializable {
     }
 
     /**
-     * @param svc Service to be called.
+     * @param svcCtx Service context.
      * @param mtd Method to call.
      * @param args Method args.
      * @param callCtx Service call context.
      * @return Invocation result.
      */
     private static Object callServiceMethod(
-        Service svc,
+        ServiceContextImpl svcCtx,
         Method mtd,
         Object[] args,
         @Nullable ServiceCallContext callCtx
-    ) throws InvocationTargetException, IllegalAccessException {
-        if (callCtx != null)
+    ) throws Exception {
+        ServiceCallContext prevCtx = null;
+
+        if (callCtx != null) {
+            // One service can be called from another in the same thread.
+            prevCtx = ServiceCallContextHolder.current();
+
             ServiceCallContextHolder.current(callCtx);
+        }
 
         try {
-            return mtd.invoke(svc, args);
+            ServiceCallInterceptor interceptor = svcCtx.interceptor();
+
+            return interceptor == null ?
+                mtd.invoke(svcCtx.service(), args) :
+                interceptor.invoke(mtd.getName(), args, svcCtx, () -> mtd.invoke(svcCtx.service(), args));
         }
         finally {
             if (callCtx != null)
-                ServiceCallContextHolder.current(null);
+                ServiceCallContextHolder.current(prevCtx);
         }
     }
 
@@ -673,7 +686,7 @@ public class GridServiceProxy<T> implements Serializable {
                 if (ctx.service() instanceof PlatformService && mtd == null)
                     res = callPlatformService((PlatformService)ctx.service());
                 else
-                    res = callService(ctx.service(), mtd);
+                    res = callService(ctx, mtd);
             }
             catch (Exception ex) {
                 recordServiceEvent(ignite.context(), EVT_SERVICE_METHOD_EXECUTION_FAILED,
@@ -702,12 +715,12 @@ public class GridServiceProxy<T> implements Serializable {
         }
 
         /** */
-        private Object callService(Service srv, Method mtd) throws Exception {
+        private Object callService(ServiceContextImpl svcCtx, Method mtd) throws Exception {
             if (mtd == null)
                 throw new GridServiceMethodNotFoundException(svcName, mtdName, argTypes);
 
             try {
-                return callServiceMethod(srv, mtd, args, callCtx);
+                return callServiceMethod(svcCtx, mtd, args, callCtx);
             }
             catch (InvocationTargetException e) {
                 throw new ServiceProxyException(e.getCause());

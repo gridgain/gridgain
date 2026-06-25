@@ -26,6 +26,7 @@ import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
+import org.apache.ignite.services.ServiceCallInterceptor;
 import org.apache.ignite.services.ServiceContext;
 import org.jetbrains.annotations.Nullable;
 
@@ -62,6 +63,10 @@ public class ServiceContextImpl implements ServiceContext {
     /** Service. */
     @GridToStringExclude
     private volatile Service svc;
+
+    /** Service call interceptor. */
+    @GridToStringExclude
+    private volatile ServiceCallInterceptor interceptor;
 
     /** Cancelled flag. */
     private volatile boolean isCancelled;
@@ -122,6 +127,20 @@ public class ServiceContextImpl implements ServiceContext {
      */
     @Nullable Service service() {
         return svc;
+    }
+
+    /**
+     * @param interceptor Service call interceptor.
+     */
+    void interceptor(ServiceCallInterceptor interceptor) {
+        this.interceptor = interceptor;
+    }
+
+    /**
+     * @return Service call interceptor.
+     */
+    ServiceCallInterceptor interceptor() {
+        return interceptor;
     }
 
     /**
