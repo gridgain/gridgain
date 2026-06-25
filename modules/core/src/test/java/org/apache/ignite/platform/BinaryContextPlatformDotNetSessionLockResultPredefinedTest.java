@@ -18,6 +18,7 @@ package org.apache.ignite.platform;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.binary.BinaryClassDescriptor;
 import org.apache.ignite.internal.binary.BinaryContext;
@@ -31,36 +32,45 @@ import org.junit.Test;
  */
 public class BinaryContextPlatformDotNetSessionLockResultPredefinedTest {
 
+    /** Counts how many times {@link TrackedResult#TrackedResult()} is called. */
+    private static final AtomicInteger ctorInvocations = new AtomicInteger();
+
+    /**
+     * Subclass whose no-arg constructor increments {@link #ctorInvocations} so the test
+     * can verify registration does not eagerly instantiate the type.
+     */
+    public static class TrackedResult extends PlatformDotNetSessionLockResult {
+        /** */
+        public TrackedResult() {
+            ctorInvocations.incrementAndGet();
+        }
+    }
+
     /** */
     @Test
     public void testBinaryContextRegisterPredefinedTypes() throws Exception {
+        ctorInvocations.set(0);
+
         IgniteConfiguration igniteCfg = new IgniteConfiguration();
         igniteCfg.setIgniteInstanceName("test");
 
         BinaryContext binCtx = new BinaryContext(new TestCachingMetadataHandler(), igniteCfg, null);
 
-        BinaryClassDescriptor descriptorOne = binCtx.registerPredefinedType(PlatformDotNetSessionLockResult.class, 0);
+        BinaryClassDescriptor descriptorOne = binCtx.registerPredefinedType(TrackedResult.class, 0);
 
         binCtx = new BinaryContext(new TestCachingMetadataHandler(), igniteCfg, null);
 
-        BinaryClassDescriptor descriptorTwo = binCtx.registerPredefinedType(PlatformDotNetSessionLockResult.class, 0);
+        BinaryClassDescriptor descriptorTwo = binCtx.registerPredefinedType(TrackedResult.class, 0);
 
         Field f = BinaryClassDescriptor.class.getDeclaredField("ctor");
         f.setAccessible(true);
-
-        Field constructorAccessor = Constructor.class.getDeclaredField("constructorAccessor");
-        constructorAccessor.setAccessible(true);
 
         Constructor ctorOne = (Constructor) f.get(descriptorOne);
 
         Constructor ctorTwo = (Constructor) f.get(descriptorTwo);
 
-        Object ctorOneAccessor = constructorAccessor.get(ctorOne);
-
-        Object ctorTwoAccessor = constructorAccessor.get(ctorTwo);
-
         Assert.assertEquals(ctorOne, ctorTwo);
-        Assert.assertNull(ctorOneAccessor);
-        Assert.assertNull(ctorTwoAccessor);
+        // Registration must store the constructor, not call it.
+        Assert.assertEquals(0, ctorInvocations.get());
     }
 }

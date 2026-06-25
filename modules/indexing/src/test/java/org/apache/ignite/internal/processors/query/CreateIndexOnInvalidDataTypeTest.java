@@ -114,7 +114,7 @@ public class CreateIndexOnInvalidDataTypeTest extends AbstractIndexingCommonTest
 
                 return null;
             },
-            IgniteSQLException.class, "java.util.Date cannot be cast to java.sql.Date");
+            IgniteSQLException.class, "class java.util.Date cannot be cast to class java.sql.Date");
 
         // Wait for node stop if it is initiated by FailureHandler
         U.sleep(1000);
