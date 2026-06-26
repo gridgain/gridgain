@@ -1771,11 +1771,6 @@ public class CacheMetricsImpl implements CacheMetrics {
         idxBuildPartitionsLeftCnt.add(val);
     }
 
-    /** Reset number of local node partitions that remain to be processed to complete indexing. */
-    public void resetIndexBuildPartitionsLeftCount() {
-        idxBuildPartitionsLeftCnt.reset();
-    }
-
     /** {@inheritDoc} */
     @Override public int getIndexBuildPartitionsLeftCount() {
         return idxBuildPartitionsLeftCnt.value();

@@ -180,6 +180,7 @@ public class CacheGroupMetricsImpl {
     /** */
     public long getIndexBuildCountPartitionsLeft() {
         return ctx.caches().stream()
+            .filter(cctx -> cctx.cache() != null)
             .mapToLong(cctx -> cctx.cache().metrics0().getIndexBuildPartitionsLeftCount())
             .sum();
     }
