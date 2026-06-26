@@ -142,15 +142,10 @@ public class GridLuceneInputStreamTest extends GridCommonAbstractTest {
         assertFloatsEqual(viaBytes, viaReadFloats);
     }
 
-    /** Out-of-bounds (offset, len) must trip the bounds assert when assertions are enabled. */
+    /** Out-of-bounds (offset, len) must throw {@link IndexOutOfBoundsException} — a production bounds check
+     *  (via {@code Objects.checkFromIndexSize} in {@code readFloats}), not an {@code -ea}-only assert. */
     @Test
-    public void testBoundsAssert() throws IOException {
-        boolean assertionsOn = false;
-        assert assertionsOn = true;
-
-        if (!assertionsOn)
-            return; // -ea disabled: the Unsafe fast path has no bounds check to verify
-
+    public void testBoundsCheck() throws IOException {
         writeFloatsLittleEndian("b", randomFloats(16));
 
         try (IndexInput in = dir.openInput("b", IOContext.DEFAULT)) {
@@ -159,10 +154,10 @@ public class GridLuceneInputStreamTest extends GridCommonAbstractTest {
             try {
                 in.readFloats(dst, 4, 8); // 4 + 8 > 8
 
-                fail("Expected AssertionError for out-of-bounds (offset, len)");
+                fail("Expected IndexOutOfBoundsException for out-of-bounds (offset, len)");
             }
-            catch (AssertionError expected) {
-                // Expected.
+            catch (IndexOutOfBoundsException expected) {
+                // Expected — the bounds check is enforced in production, not gated by -ea.
             }
         }
     }
