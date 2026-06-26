@@ -493,6 +493,9 @@ public class GridCacheContext<K, V> implements Externalizable {
      */
     void initConflictResolver() {
         conflictRslvr = rslvrMgr.conflictResolver();
+
+        if (conflictRslvr != null)
+            cache().metrics0().registerResolverMetrics();
     }
 
     /**
@@ -1687,6 +1690,13 @@ public class GridCacheContext<K, V> implements Externalizable {
 
         GridCacheVersionConflictContext<K, V> ctx = conflictRslvr.resolve(cacheObjCtx, oldEntry, newEntry,
             atomicVerComp);
+
+        if (ctx.isUseNew())
+            cache().metrics0().incrementResolverAcceptedCount();
+        else if (ctx.isUseOld())
+            cache().metrics0().incrementResolverRejectedCount();
+        else
+            cache().metrics0().incrementResolverMergedCount();
 
         if (ctx.isManualResolve())
             drMgr.onReceiveCacheConflictResolved(ctx.isUseNew(), ctx.isUseOld(), ctx.isMerge());
