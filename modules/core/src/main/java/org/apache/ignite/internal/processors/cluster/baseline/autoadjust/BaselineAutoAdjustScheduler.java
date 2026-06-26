@@ -26,8 +26,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_LOG_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
-import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 
 /**
  * This class able to add task of set baseline with timeout to queue. In one time only one task can be in queue. Every
@@ -61,7 +59,7 @@ class BaselineAutoAdjustScheduler {
      * @param log Log object.
      */
     public BaselineAutoAdjustScheduler(GridTimeoutProcessor timeoutProcessor,
-        BaselineAutoAdjustExecutor baselineAutoAdjustExecutor, IgniteLogger log) {
+                                       BaselineAutoAdjustExecutor baselineAutoAdjustExecutor, IgniteLogger log) {
         this.timeoutProcessor = timeoutProcessor;
         this.baselineAutoAdjustExecutor = baselineAutoAdjustExecutor;
         this.log = log;
@@ -189,24 +187,35 @@ class BaselineAutoAdjustScheduler {
      * @return Time of last scheduled task or -1 if it doesn't exist.
      */
     public synchronized long lastScheduledTaskTime() {
-        long now = System.currentTimeMillis();
-
-        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
-            long lastScheduledTaskTime = Long.MAX_VALUE;
-
-            if (baselineScaleUpTimeoutObj != null)
-                lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
-
-            if (baselineScaleDownTimeoutObj != null)
-                lastScheduledTaskTime = Math.min(lastScheduledTaskTime, baselineScaleDownTimeoutObj.getTotalEndTime() - now);
-
-            return lastScheduledTaskTime == Long.MAX_VALUE || lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
-        }
-
         if (baselineTimeoutObj == null)
             return -1;
 
-        long lastScheduledTaskTime = baselineTimeoutObj.getTotalEndTime() - now;
+        long lastScheduledTaskTime = baselineTimeoutObj.getTotalEndTime() - System.currentTimeMillis();
+
+        return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
+    }
+
+    /**
+     * @param scaleUp If {@code true}, the time of last scheduled task for scale up will be return,
+     *                if {@code false} - for scale down.
+     * @return Time of last scheduled task or -1 if it doesn't exist.
+     */
+    public synchronized long lastScheduledTaskTime(boolean scaleUp) {
+        long now = System.currentTimeMillis();
+
+        long lastScheduledTaskTime;
+        if (scaleUp) {
+            if (baselineScaleUpTimeoutObj == null)
+                return -1;
+            else
+                lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
+        }
+        else {
+            if (baselineScaleDownTimeoutObj == null)
+                return -1;
+            else
+                lastScheduledTaskTime = baselineScaleDownTimeoutObj.getTotalEndTime() - now;
+        }
 
         return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
     }

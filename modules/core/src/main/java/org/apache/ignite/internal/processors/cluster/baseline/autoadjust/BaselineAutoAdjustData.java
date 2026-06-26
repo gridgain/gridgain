@@ -34,6 +34,12 @@ class BaselineAutoAdjustData {
     /** {@code true} If this data was adjusted. */
     private volatile boolean adjusted;
 
+    /** {@code true} If this data was adjusted for scale up. */
+    private volatile boolean scaleUpAdjusted;
+
+    /** {@code true} If this data was adjusted for scale down. */
+    private volatile boolean scaleDownAdjusted;
+
     /**
      * @param targetTopologyVersion Topology version nodes of which should be set by this task.
      */
@@ -49,6 +55,8 @@ class BaselineAutoAdjustData {
 
         data.onInvalidate();
         data.onAdjust();
+        data.onAdjust(true);
+        data.onAdjust(false);
 
         return data;
     }
@@ -65,6 +73,16 @@ class BaselineAutoAdjustData {
      */
     public void onAdjust() {
         adjusted = true;
+    }
+
+    /**
+     * @param scaleUp If {@code true} marks that this data for scale up was adjusted, if {@code false} - for scale down.
+     */
+    public void onAdjust(boolean scaleUp) {
+        if (scaleUp)
+            scaleUpAdjusted = true;
+        else
+            scaleDownAdjusted = true;
     }
 
     /**
@@ -86,6 +104,17 @@ class BaselineAutoAdjustData {
      */
     public boolean isAdjusted() {
         return adjusted;
+    }
+
+    /**
+     * @param scaleUp If {@code true}, the status will be return for scale up, if {@code false} - for scale down.
+     * @return {@code true} If this data already adjusted.
+     */
+    public boolean isAdjusted(boolean scaleUp) {
+        if (scaleUp)
+            return scaleUpAdjusted;
+        else
+            return scaleDownAdjusted;
     }
 
     /**

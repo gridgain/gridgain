@@ -92,9 +92,12 @@ public class BaselineTopologyUpdater {
      * @param topologyVersion version of topology
      */
     public void triggerBaselineUpdate(long topologyVersion, boolean scaleUp) {
+        // Only reset shared data when NEITHER direction is watching.
         if (!isTopologyWatcherEnabled(scaleUp)) {
-            synchronized (this) {
-                lastBaselineData = NULL_BASELINE_DATA;
+            if (!isTopologyWatcherEnabled(!scaleUp)) {
+                synchronized (this) {
+                    lastBaselineData = NULL_BASELINE_DATA;
+                }
             }
 
             return;
@@ -121,11 +124,11 @@ public class BaselineTopologyUpdater {
                         long timeout;
                         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
                             if (scaleUp) {
-                                timeout = baselineConfiguration.getBaselineScaleUpAutoAdjustTimeout();
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(true);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleUp(baselineData, timeout);
                             }
                             else {
-                                timeout = baselineConfiguration.getBaselineScaleDownAutoAdjustTimeout();
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(false);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleDown(baselineData, timeout);
                             }
                         }
@@ -163,13 +166,14 @@ public class BaselineTopologyUpdater {
             && stateProcessor.clusterState().active()
             && isBaselineAutoAdjustEnabled(scaleUp)
             && (CU.isPersistenceEnabled(cluster.ignite().configuration())
-                || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
+            || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
     }
 
+    /** Returns the baseline auto-adjust status. */
     private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return ((baselineConfiguration.isBaselineScaleUpAutoAdjustEnabled() && scaleUp)
-                || (baselineConfiguration.isBaselineScaleDownAutoAdjustEnabled() && !scaleUp));
+            return ((baselineConfiguration.isBaselineAutoAdjustEnabled(true) && scaleUp)
+                || (baselineConfiguration.isBaselineAutoAdjustEnabled(false) && !scaleUp));
 
         return baselineConfiguration.isBaselineAutoAdjustEnabled();
     }
@@ -190,12 +194,30 @@ public class BaselineTopologyUpdater {
      */
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted()
-                || (baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, true)
-                    && baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false)))
+            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
+
+            if (timeToLastTask <= 0)
+                return BaselineAutoAdjustStatus.inProgress();
+
+            return BaselineAutoAdjustStatus.scheduled(timeToLastTask);
+        }
+    }
+
+    /**
+     * @param scaleUp If {@code true}, the statistics of baseline scale up auto-adjust will be return,
+     *                if {@code false} - for scale down.
+     * @return Statistic of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
+        synchronized (this) {
+            if (lastBaselineData.isAdjusted(scaleUp) ||
+                baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, scaleUp))
+                return BaselineAutoAdjustStatus.notScheduled();
+
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(scaleUp);
 
             if (timeToLastTask <= 0)
                 return BaselineAutoAdjustStatus.inProgress();

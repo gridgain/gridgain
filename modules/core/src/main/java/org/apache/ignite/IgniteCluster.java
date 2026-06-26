@@ -139,7 +139,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public Collection<ClusterStartNodeResult> startNodes(File file, boolean restart, int timeout,
-        int maxConn) throws IgniteException;
+                                                         int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -166,7 +166,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart, int timeout,
-        int maxConn) throws IgniteException;
+                                                                            int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s).
@@ -267,7 +267,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+                                                         Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -365,7 +365,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(Collection<Map<String, Object>> hosts,
-        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+                                                                            Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Stops nodes satisfying optional set of predicates.
@@ -615,6 +615,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isBaselineAutoAdjustEnabled();
 
     /**
+     * @param scaleUp To get status for scale up {@code true}, for scale down {@code false}.
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manual.
      */
@@ -628,18 +629,12 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
-     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
      * cluster in auto-adjust for scale up. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
      */
-    public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException;
-
-    /**
-     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust for scale down. {@code False} If cluster in manuale.
-     * @throws IgniteException If operation failed.
-     */
-    public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) throws IgniteException;
+    public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
      * @return Number of milliseconds to wait before the actual topology change since last server topology change
@@ -666,23 +661,23 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
-     * @param baselineScaleUpAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
-     * server topology change (node join).
-     * @throws IgniteException If failed.
-     */
-    public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) throws IgniteException;
-
-    /**
-     * @param baselineScaleDownAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
      * server topology change (node left/fail).
      * @throws IgniteException If failed.
      */
-    public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) throws IgniteException;
+    public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @return Status of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp);
 
     /**
      * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}

@@ -232,23 +232,19 @@ public class DistributedBaselineConfiguration {
     }
 
     /** */
-    public void listenAutoAdjustScaleUpEnabled(DistributePropertyListener<? super Boolean> lsnr) {
-        baselineScaleUpAutoAdjustEnabled.addListener(lsnr);
+    public void listenAutoAdjustEnabled(boolean scaleUp, DistributePropertyListener<? super Boolean> lsnr) {
+        if (scaleUp)
+            baselineScaleUpAutoAdjustEnabled.addListener(lsnr);
+        else
+            baselineScaleDownAutoAdjustEnabled.addListener(lsnr);
     }
 
     /** */
-    public void listenAutoAdjustScaleUpTimeout(DistributePropertyListener<? super Long> lsnr) {
-        baselineScaleUpAutoAdjustTimeout.addListener(lsnr);
-    }
-
-    /** */
-    public void listenAutoAdjustScaleDownEnabled(DistributePropertyListener<? super Boolean> lsnr) {
-        baselineScaleDownAutoAdjustEnabled.addListener(lsnr);
-    }
-
-    /** */
-    public void listenAutoAdjustScaleDownTimeout(DistributePropertyListener<? super Long> lsnr) {
-        baselineScaleDownAutoAdjustTimeout.addListener(lsnr);
+    public void listenAutoAdjustTimeout(boolean scaleUp, DistributePropertyListener<? super Long> lsnr) {
+        if (scaleUp)
+            baselineScaleUpAutoAdjustTimeout.addListener(lsnr);
+        else
+            baselineScaleDownAutoAdjustTimeout.addListener(lsnr);
     }
 
     /**
@@ -257,10 +253,10 @@ public class DistributedBaselineConfiguration {
     public void onActivate() throws IgniteCheckedException {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE) && log.isInfoEnabled())
             log.info(format(SEPARATE_AUTO_ADJUST_CONFIGURED_MESSAGE,
-                (isBaselineScaleUpAutoAdjustEnabled() ? "enabled" : "disabled"),
-                getBaselineScaleUpAutoAdjustTimeout(),
-                (isBaselineScaleDownAutoAdjustEnabled() ? "enabled" : "disabled"),
-                getBaselineScaleDownAutoAdjustTimeout()
+                (isBaselineAutoAdjustEnabled(true) ? "enabled" : "disabled"),
+                getBaselineAutoAdjustTimeout(true),
+                (isBaselineAutoAdjustEnabled(false) ? "enabled" : "disabled"),
+                getBaselineAutoAdjustTimeout(false)
             ));
 
         if (isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE) && log.isInfoEnabled())
@@ -278,19 +274,17 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @return Value of manual baseline control or auto adjusting baseline on scale up.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust status will be returned,
+     *                if {@code false} - scale down's.
+     * @return Value of manual baseline control or auto adjusting baseline.
      */
-    public boolean isBaselineScaleUpAutoAdjustEnabled() {
-        return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
-            && baselineScaleUpAutoAdjustEnabled.getOrDefault(dfltScaleUpEnabled);
-    }
-
-    /**
-     * @return Value of manual baseline control or auto adjusting baseline on scale down.
-     */
-    public boolean isBaselineScaleDownAutoAdjustEnabled() {
-        return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
-            && baselineScaleDownAutoAdjustEnabled.getOrDefault(dfltScaleDownEnabled);
+    public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        if (scaleUp)
+            return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
+                && baselineScaleUpAutoAdjustEnabled.getOrDefault(dfltScaleUpEnabled);
+        else
+            return baselineAutoAdjustEnabled.getOrDefault(dfltEnabled)
+                && baselineScaleDownAutoAdjustEnabled.getOrDefault(dfltScaleDownEnabled);
     }
 
     /**
@@ -298,7 +292,7 @@ public class DistributedBaselineConfiguration {
      * @throws IgniteCheckedException if failed.
      */
     public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(GridKernalContext ctx,
-        boolean baselineAutoAdjustEnabled) throws IgniteCheckedException {
+                                                                     boolean baselineAutoAdjustEnabled) throws IgniteCheckedException {
         if (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
             return finishFuture();
 
@@ -309,57 +303,52 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline on scale up.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust enable flag will be updated,
+     *                if {@code false} - scale down's.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline.
      * @throws IgniteCheckedException if failed.
      */
-    public GridFutureAdapter<?> updateBaselineScaleUpAutoAdjustEnabledAsync(GridKernalContext ctx,
-        boolean baselineScaleUpAutoAdjustEnabled) throws IgniteCheckedException {
-        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return finishFuture();
+    public GridFutureAdapter<?> updateBaselineAutoAdjustEnabledAsync(boolean scaleUp, GridKernalContext ctx,
+                                                                     boolean baselineAutoAdjustEnabled) throws IgniteCheckedException {
+        if (scaleUp) {
+            if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                return finishFuture();
 
-        if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
-            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale up.");
+            if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
+                throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale up.");
 
-        return this.baselineScaleUpAutoAdjustEnabled.propagateAsync(!baselineScaleUpAutoAdjustEnabled, baselineScaleUpAutoAdjustEnabled);
-    }
+            return this.baselineScaleUpAutoAdjustEnabled.propagateAsync(!baselineAutoAdjustEnabled, baselineAutoAdjustEnabled);
+        }
+        else {
+            if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                return finishFuture();
 
-    /**
-     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline on scale down.
-     * @throws IgniteCheckedException if failed.
-     */
-    public GridFutureAdapter<?> updateBaselineScaleDownAutoAdjustEnabledAsync(GridKernalContext ctx,
-        boolean baselineScaleDownAutoAdjustEnabled) throws IgniteCheckedException {
-        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return finishFuture();
+            if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
+                throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale down.");
 
-        if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
-            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale down.");
-
-        return this.baselineScaleDownAutoAdjustEnabled.propagateAsync(!baselineScaleDownAutoAdjustEnabled, baselineScaleDownAutoAdjustEnabled);
+            return this.baselineScaleDownAutoAdjustEnabled.propagateAsync(!baselineAutoAdjustEnabled, baselineAutoAdjustEnabled);
+        }
     }
 
     /**
      * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * join/exit).
+     *         join/exit).
      */
     public long getBaselineAutoAdjustTimeout() {
         return baselineAutoAdjustTimeout.getOrDefault(dfltTimeout);
     }
 
     /**
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be returned,
+     *                if {@code false} - scale down's.
      * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * join).
+     *         join/exit).
      */
-    public long getBaselineScaleUpAutoAdjustTimeout() {
-        return baselineScaleUpAutoAdjustTimeout.getOrDefault(dfltScaleUpTimeout);
-    }
-
-    /**
-     * @return Value of time which we would wait before the actual topology change since last discovery event(node
-     * exit).
-     */
-    public long getBaselineScaleDownAutoAdjustTimeout() {
-        return baselineScaleDownAutoAdjustTimeout.getOrDefault(dfltScaleDownTimeout);
+    public long getBaselineAutoAdjustTimeout(boolean scaleUp) {
+        if (scaleUp)
+            return baselineScaleUpAutoAdjustTimeout.getOrDefault(dfltScaleUpTimeout);
+        else
+            return baselineScaleDownAutoAdjustTimeout.getOrDefault(dfltScaleDownTimeout);
     }
 
     /**
@@ -368,7 +357,7 @@ public class DistributedBaselineConfiguration {
      * @throws IgniteCheckedException If failed.
      */
     public GridFutureAdapter<?> updateBaselineAutoAdjustTimeoutAsync(GridKernalContext ctx,
-        long baselineAutoAdjustTimeout) throws IgniteCheckedException {
+                                                                     long baselineAutoAdjustTimeout) throws IgniteCheckedException {
         if (!isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
             return finishFuture();
 
@@ -379,35 +368,31 @@ public class DistributedBaselineConfiguration {
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * discovery event(node join).
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be updated, if {@code false} - scale down's.
+     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
+     *                                  discovery event(node join/exit).
      * @throws IgniteCheckedException If failed.
      */
-    public GridFutureAdapter<?> updateBaselineScaleUpAutoAdjustTimeoutAsync(GridKernalContext ctx,
-        long baselineScaleUpAutoAdjustTimeout) throws IgniteCheckedException {
-        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return finishFuture();
+    public GridFutureAdapter<?> updateBaselineAutoAdjustTimeoutAsync(boolean scaleUp, GridKernalContext ctx,
+                                                                     long baselineAutoAdjustTimeout) throws IgniteCheckedException {
+        if (scaleUp) {
+            if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                return finishFuture();
 
-        if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
-            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale up.");
+            if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
+                throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale up.");
 
-        return this.baselineScaleUpAutoAdjustTimeout.propagateAsync(baselineScaleUpAutoAdjustTimeout);
-    }
+            return this.baselineScaleUpAutoAdjustTimeout.propagateAsync(baselineAutoAdjustTimeout);
+        }
+        else {
+            if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                return finishFuture();
 
-    /**
-     * @param baselineScaleDownAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * discovery event(node exit).
-     * @throws IgniteCheckedException If failed.
-     */
-    public GridFutureAdapter<?> updateBaselineScaleDownAutoAdjustTimeoutAsync(GridKernalContext ctx,
-        long baselineScaleDownAutoAdjustTimeout) throws IgniteCheckedException {
-        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return finishFuture();
+            if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
+                throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale down.");
 
-        if (!allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT))
-            throw new IgniteCheckedException("Not all nodes in the cluster support baseline auto-adjust on scale down.");
-
-        return this.baselineScaleDownAutoAdjustTimeout.propagateAsync(baselineScaleDownAutoAdjustTimeout);
+            return this.baselineScaleDownAutoAdjustTimeout.propagateAsync(baselineAutoAdjustTimeout);
+        }
     }
 
     /**

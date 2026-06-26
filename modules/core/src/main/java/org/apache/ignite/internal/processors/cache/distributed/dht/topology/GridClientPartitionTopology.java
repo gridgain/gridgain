@@ -296,14 +296,14 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public boolean initPartitionsWhenAffinityReady(AffinityTopologyVersion affVer,
-        GridDhtPartitionsExchangeFuture exchFut) {
+                                                             GridDhtPartitionsExchangeFuture exchFut) {
         return false;
     }
 
     /** {@inheritDoc} */
     @Override public void beforeExchange(GridDhtPartitionsExchangeFuture exchFut,
-        boolean initParts,
-        boolean updateMoving)
+                                         boolean initParts,
+                                         boolean updateMoving)
         throws IgniteCheckedException
     {
         ClusterNode loc = cctx.localNode();
@@ -464,7 +464,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Nullable @Override public GridDhtLocalPartition localPartition(int p, AffinityTopologyVersion topVer,
-        boolean create, boolean showRenting) throws GridDhtInvalidPartitionException {
+                                                                    boolean create, boolean showRenting) throws GridDhtInvalidPartitionException {
         return localPartition(p, topVer, create);
     }
 
@@ -533,8 +533,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Nullable @Override public List<ClusterNode> nodes(int p,
-        AffinityAssignment affAssignment,
-        List<ClusterNode> affNodes) {
+                                                       AffinityAssignment affAssignment,
+                                                       List<ClusterNode> affNodes) {
         throw new UnsupportedOperationException();
     }
 
@@ -774,7 +774,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
                         if (log.isDebugEnabled())
                             log.debug("Overriding partition map in full update map [exchId=" + exchangeVer + ", curPart=" +
-                                    mapString(part) + ", newPart=" + mapString(newPart) + ']');
+                                mapString(part) + ", newPart=" + mapString(newPart) + ']');
                     }
                     else {
                         // If for some nodes current partition has a newer map,
@@ -808,7 +808,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             if (!fullMapUpdated) {
                 if (log.isDebugEnabled())
                     log.debug("No updates for full partition map (will ignore) [lastExch=" +
-                            lastExchangeVer + ", exch=" + exchangeVer + ", curMap=" + node2part + ", newMap=" + partMap + ']');
+                        lastExchangeVer + ", exch=" + exchangeVer + ", curMap=" + node2part + ", newMap=" + partMap + ']');
 
                 return false;
             }
@@ -951,7 +951,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             else if (isStaleUpdate(cur, parts)) {
                 if (log.isDebugEnabled())
                     log.debug("Stale update for single partition map update (will ignore) [exchId=" + exchId +
-                            ", curMap=" + cur + ", newMap=" + parts + ']');
+                        ", curMap=" + cur + ", newMap=" + parts + ']');
 
                 return false;
             }
@@ -1025,13 +1025,13 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             final GridClusterStateProcessor state = cctx.kernalContext().state();
 
             boolean isInMemoryCluster = CU.isInMemoryCluster(
-                    cctx.kernalContext().discovery().allNodes(),
-                    cctx.kernalContext().marshallerContext().jdkMarshaller(),
-                    U.resolveClassLoader(cctx.kernalContext().config())
+                cctx.kernalContext().discovery().allNodes(),
+                cctx.kernalContext().marshallerContext().jdkMarshaller(),
+                U.resolveClassLoader(cctx.kernalContext().config())
             );
 
             boolean compatibleWithIgnorePlc = isInMemoryCluster
-                    && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout() == 0L;
+                && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout(false) == 0L;
 
             // Calculate how loss data is handled.
             boolean safe = partLossPlc != PartitionLossPolicy.IGNORE || !compatibleWithIgnorePlc;
@@ -1433,7 +1433,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
      * @return Filter for owners of this partition.
      */
     private boolean hasState(final int p, @Nullable UUID nodeId, final GridDhtPartitionState match,
-        final GridDhtPartitionState... matches) {
+                             final GridDhtPartitionState... matches) {
         if (nodeId == null)
             return false;
 

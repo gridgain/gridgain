@@ -49,16 +49,16 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     @Override public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
         super.setBaselineAutoAdjustEnabled(ignite, enabled);
 
-        ignite.cluster().baselineScaleUpAutoAdjustEnabled(enabled);
-        ignite.cluster().baselineScaleDownAutoAdjustEnabled(enabled);
+        ignite.cluster().baselineAutoAdjustEnabled(true, enabled);
+        ignite.cluster().baselineAutoAdjustEnabled(false, enabled);
     }
 
     /** {@inheritDoc} */
     @Override public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
         super.setBaselineAutoAdjustTimeout(ignite, timeout);
 
-        ignite.cluster().baselineScaleUpAutoAdjustTimeout(timeout);
-        ignite.cluster().baselineScaleDownAutoAdjustTimeout(timeout);
+        ignite.cluster().baselineAutoAdjustTimeout(true, timeout);
+        ignite.cluster().baselineAutoAdjustTimeout(false, timeout);
     }
 
     /**
@@ -72,11 +72,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().baselineScaleUpAutoAdjustEnabled(true);
-        ignite0.cluster().baselineScaleUpAutoAdjustTimeout(scaleUpAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(true, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
 
-        ignite0.cluster().baselineScaleDownAutoAdjustEnabled(true);
-        ignite0.cluster().baselineScaleDownAutoAdjustTimeout(scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(false, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -106,11 +106,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
 
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
-        ignite0.cluster().baselineScaleUpAutoAdjustEnabled(true);
-        ignite0.cluster().baselineScaleUpAutoAdjustTimeout(scaleUpAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(true, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
 
-        ignite0.cluster().baselineScaleDownAutoAdjustEnabled(true);
-        ignite0.cluster().baselineScaleDownAutoAdjustTimeout(scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(false, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -139,11 +139,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         if (isPersistent())
-            ignite0.cluster().baselineScaleUpAutoAdjustEnabled(true);
+            ignite0.cluster().baselineAutoAdjustEnabled(true, true);
         else
-            ignite0.cluster().baselineScaleDownAutoAdjustEnabled(false);
+            ignite0.cluster().baselineAutoAdjustEnabled(false, false);
 
-        ignite0.cluster().baselineScaleUpAutoAdjustTimeout(scaleUpAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -167,11 +167,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         ignite0.cluster().baselineAutoAdjustEnabled(true);
 
         if (isPersistent())
-            ignite0.cluster().baselineScaleDownAutoAdjustEnabled(true);
+            ignite0.cluster().baselineAutoAdjustEnabled(false, true);
         else
-            ignite0.cluster().baselineScaleUpAutoAdjustEnabled(false);
+            ignite0.cluster().baselineAutoAdjustEnabled(true, false);
 
-        ignite0.cluster().baselineScaleDownAutoAdjustTimeout(scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 

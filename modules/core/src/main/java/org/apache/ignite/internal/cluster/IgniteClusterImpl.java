@@ -231,9 +231,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public Collection<ClusterStartNodeResult> startNodes(File file,
-        boolean restart,
-        int timeout,
-        int maxConn)
+                                                                   boolean restart,
+                                                                   int timeout,
+                                                                   int maxConn)
         throws IgniteException {
         try {
             return startNodesAsync0(file, restart, timeout, maxConn).get();
@@ -245,16 +245,16 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart,
-        int timeout, int maxConn) throws IgniteException {
+                                                                                      int timeout, int maxConn) throws IgniteException {
         return new IgniteFutureImpl<>(startNodesAsync0(file, restart, timeout, maxConn));
     }
 
     /** {@inheritDoc} */
     @Override public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-        @Nullable Map<String, Object> dflts,
-        boolean restart,
-        int timeout,
-        int maxConn)
+                                                                   @Nullable Map<String, Object> dflts,
+                                                                   boolean restart,
+                                                                   int timeout,
+                                                                   int maxConn)
         throws IgniteException {
         try {
             return startNodesAsync0(hosts, dflts, restart, timeout, maxConn).get();
@@ -729,13 +729,8 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) {
-        baselineScaleUpAutoAdjustEnabledAsync(baselineScaleUpAutoAdjustEnabled).get();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) {
-        baselineScaleDownAutoAdjustEnabledAsync(baselineScaleDownAutoAdjustEnabled).get();
+    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineScaleUpAutoAdjustEnabled) {
+        baselineAutoAdjustEnabledAsync(scaleUp, baselineScaleUpAutoAdjustEnabled).get();
     }
 
     /**
@@ -755,31 +750,16 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust enable flag will be updated,
+     *                if {@code false} - scale down's.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline.
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineScaleUpAutoAdjustEnabledAsync(boolean baselineScaleUpAutoAdjustEnabled) {
+    public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean scaleUp, boolean baselineAutoAdjustEnabled) {
         guard();
 
         try {
-            return ctx.state().baselineScaleUpAutoAdjustEnabledAsync(baselineScaleUpAutoAdjustEnabled);
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /**
-     * @param baselineScaleDownAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineScaleDownAutoAdjustEnabledAsync(boolean baselineScaleDownAutoAdjustEnabled) {
-        guard();
-
-        try {
-            return ctx.state().baselineScaleDownAutoAdjustEnabledAsync(baselineScaleDownAutoAdjustEnabled);
+            return ctx.state().baselineAutoAdjustEnabledAsync(scaleUp, baselineAutoAdjustEnabled);
         }
         finally {
             unguard();
@@ -802,13 +782,8 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) {
-        baselineScaleUpAutoAdjustTimeoutAsync(baselineScaleUpAutoAdjustTimeout).get();
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) {
-        baselineScaleDownAutoAdjustTimeoutAsync(baselineScaleDownAutoAdjustTimeout).get();
+    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) {
+        baselineAutoAdjustTimeoutAsync(scaleUp, baselineAutoAdjustTimeout).get();
     }
 
     /**
@@ -830,35 +805,19 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /**
-     * @param baselineScaleUpAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join).
+     * @param scaleUp If {@code true}, the scale up's baseline auto adjust timeout will be updated,
+     *                if {@code false} - scale down's.
+     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
+     * server topology change (node join/left/fail).
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineScaleUpAutoAdjustTimeoutAsync(long baselineScaleUpAutoAdjustTimeout) {
-        A.ensure(baselineScaleUpAutoAdjustTimeout >= 0, "timeout should be positive or zero");
+    public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(boolean scaleUp, long baselineAutoAdjustTimeout) {
+        A.ensure(baselineAutoAdjustTimeout >= 0, "timeout should be positive or zero");
 
         guard();
 
         try {
-            return ctx.state().baselineScaleUpAutoAdjustTimeoutAsync(baselineScaleUpAutoAdjustTimeout);
-        }
-        finally {
-            unguard();
-        }
-    }
-
-    /**
-     * @param baselineScaleDownAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node left/fail).
-     * @return Future for await operation completion.
-     */
-    public IgniteFuture<?> baselineScaleDownAutoAdjustTimeoutAsync(long baselineScaleDownAutoAdjustTimeout) {
-        A.ensure(baselineScaleDownAutoAdjustTimeout >= 0, "timeout should be positive or zero");
-
-        guard();
-
-        try {
-            return ctx.state().baselineScaleDownAutoAdjustTimeoutAsync(baselineScaleDownAutoAdjustTimeout);
+            return ctx.state().baselineAutoAdjustTimeoutAsync(scaleUp, baselineAutoAdjustTimeout);
         }
         finally {
             unguard();
@@ -868,6 +827,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return ctx.state().baselineAutoAdjustStatus();
+    }
+
+    /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+        return ctx.state().baselineAutoAdjustStatus(scaleUp);
     }
 
     /** {@inheritDoc} */
@@ -889,9 +853,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * @see IgniteCluster#startNodes(java.io.File, boolean, int, int)
      */
     IgniteInternalFuture<Collection<ClusterStartNodeResult>> startNodesAsync0(File file,
-        boolean restart,
-        int timeout,
-        int maxConn) {
+                                                                              boolean restart,
+                                                                              int timeout,
+                                                                              int maxConn) {
         A.notNull(file, "file");
         A.ensure(file.exists(), "file doesn't exist.");
         A.ensure(file.isFile(), "file is a directory.");
@@ -1049,9 +1013,9 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * @return {@code True} if task was started, {@code false} if queue was empty.
      */
     private boolean runNextNodeCallable(final ConcurrentLinkedQueue<StartNodeCallable> queue,
-        final GridCompoundFuture<ClusterStartNodeResult, Collection<ClusterStartNodeResult>>
-            comp,
-        final AtomicInteger cnt) {
+                                        final GridCompoundFuture<ClusterStartNodeResult, Collection<ClusterStartNodeResult>>
+                                            comp,
+                                        final AtomicInteger cnt) {
         StartNodeCallable call = queue.poll();
 
         if (call == null)

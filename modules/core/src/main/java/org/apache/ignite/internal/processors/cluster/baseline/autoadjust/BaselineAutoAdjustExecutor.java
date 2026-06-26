@@ -58,23 +58,23 @@ class BaselineAutoAdjustExecutor {
      * @param cluster Ignite cluster.
      * @param executorService Thread pool for changing baseline.
      * @param enabledSupplier Supplier return {@code true} if baseline auto-adjust enabled.
-     * @param scalUpEnabledSupplier Supplier return {@code true} if baseline scale up auto-adjust enabled.
-     * @param scalDownEnabledSupplier Supplier return {@code true} if baseline scale down auto-adjust enabled.
+     * @param scaleUpEnabledSupplier Supplier return {@code true} if baseline scale up auto-adjust enabled.
+     * @param scaleDownEnabledSupplier Supplier return {@code true} if baseline scale down auto-adjust enabled.
      */
     public BaselineAutoAdjustExecutor(
         IgniteLogger log,
         IgniteClusterImpl cluster,
         ExecutorService executorService,
         BooleanSupplier enabledSupplier,
-        BooleanSupplier scalUpEnabledSupplier,
-        BooleanSupplier scalDownEnabledSupplier
+        BooleanSupplier scaleUpEnabledSupplier,
+        BooleanSupplier scaleDownEnabledSupplier
     ) {
         this.log = log;
         this.cluster = cluster;
         this.executorService = executorService;
         isBaselineAutoAdjustEnabled = enabledSupplier;
-        isBaselineScaleUpAutoAdjustEnabled = scalUpEnabledSupplier;
-        isBaselineScaleDownAutoAdjustEnabled = scalDownEnabledSupplier;
+        isBaselineScaleUpAutoAdjustEnabled = scaleUpEnabledSupplier;
+        isBaselineScaleDownAutoAdjustEnabled = scaleDownEnabledSupplier;
     }
 
     /**
@@ -100,7 +100,10 @@ class BaselineAutoAdjustExecutor {
                     log.error("Error during baseline changing", e);
                 }
                 finally {
-                    data.onAdjust();
+                    if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+                        data.onAdjust(scaleUp);
+                    else
+                        data.onAdjust();
 
                     executionGuard.unlock();
                 }

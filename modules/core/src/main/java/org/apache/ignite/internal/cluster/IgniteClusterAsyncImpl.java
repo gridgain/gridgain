@@ -102,9 +102,9 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
 
     /** {@inheritDoc} */
     @Override public Collection<ClusterStartNodeResult> startNodes(File file,
-        boolean restart,
-        int timeout,
-        int maxConn)
+                                                                   boolean restart,
+                                                                   int timeout,
+                                                                   int maxConn)
     {
         try {
             return saveOrGet(cluster.startNodesAsync0(file, restart, timeout, maxConn));
@@ -116,7 +116,7 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
 
     /** {@inheritDoc} */
     @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart,
-        int timeout, int maxConn) throws IgniteException {
+                                                                                      int timeout, int maxConn) throws IgniteException {
         return cluster.startNodesAsync(file, restart, timeout, maxConn);
     }
 
@@ -419,28 +419,23 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustEnabled(boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException {
-        cluster.baselineScaleUpAutoAdjustEnabled(baselineScaleUpAutoAdjustEnabled);
+    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException {
+        cluster.baselineAutoAdjustEnabled(scaleUp, baselineAutoAdjustEnabled);
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineScaleUpAutoAdjustTimeout(long baselineScaleUpAutoAdjustTimeout) throws IgniteException {
-        cluster.baselineScaleUpAutoAdjustTimeout(baselineScaleUpAutoAdjustTimeout);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustEnabled(boolean baselineScaleDownAutoAdjustEnabled) throws IgniteException {
-        cluster.baselineScaleDownAutoAdjustEnabled(baselineScaleDownAutoAdjustEnabled);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void baselineScaleDownAutoAdjustTimeout(long baselineScaleDownAutoAdjustTimeout) throws IgniteException {
-        cluster.baselineScaleDownAutoAdjustTimeout(baselineScaleDownAutoAdjustTimeout);
+    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException {
+        cluster.baselineAutoAdjustTimeout(scaleUp, baselineAutoAdjustTimeout);
     }
 
     /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return cluster.baselineAutoAdjustStatus();
+    }
+
+    /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+        return cluster.baselineAutoAdjustStatus(scaleUp);
     }
 
     /** {@inheritDoc} */
