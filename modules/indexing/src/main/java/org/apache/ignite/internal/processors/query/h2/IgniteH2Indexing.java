@@ -2402,8 +2402,7 @@ public class IgniteH2Indexing implements GridQueryIndexing {
         // To avoid possible data race.
         GridFutureAdapter<Void> outRebuildCacheIdxFut = new GridFutureAdapter<>();
 
-        if (cctx.group().metrics() != null)
-            cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+        cctx.cache().metrics0().addIndexBuildPartitionsLeftCount(cctx.topology().localPartitions().size());
 
         // An internal future for the ability to cancel index rebuilding.
         SchemaIndexCacheFuture intRebFut = new SchemaIndexCacheFuture(new SchemaIndexOperationCancellationToken());

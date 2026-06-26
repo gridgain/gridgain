@@ -34,6 +34,7 @@ import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.AtomicLongMetric;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
+import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongGauge;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
@@ -219,6 +220,9 @@ public class CacheMetricsImpl implements CacheMetrics {
 
     /** Number of keys processed during index rebuilding. */
     private final LongAdderMetric idxRebuildKeyProcessed;
+
+    /** The number of local node partitions that remain to be processed to complete indexing. */
+    private final IntMetricImpl idxBuildPartitionsLeftCnt;
 
     /** Offheap entries count. */
     private final LongGauge offHeapEntriesCnt;
@@ -407,6 +411,9 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         idxRebuildKeyProcessed = mreg.longAdderMetric("IndexRebuildKeyProcessed",
             "Number of keys processed during index rebuilding.");
+
+        idxBuildPartitionsLeftCnt = mreg.intMetric("IndexBuildPartitionsLeftCount",
+            "The number of local node partitions that remain to be processed to complete indexing.");
 
         offHeapEntriesCnt = mreg.registerOrReplace("OffHeapEntriesCount",
             () -> getEntriesStat().offHeapEntriesCount(), "Offheap entries count.");
@@ -1667,6 +1674,30 @@ public class CacheMetricsImpl implements CacheMetrics {
      */
     public void addIndexRebuildKeyProcessed(long val) {
         idxRebuildKeyProcessed.add(val);
+    }
+
+    /** Decrement number of local node partitions that remain to be processed to complete indexing. */
+    public void decrementIndexBuildPartitionsLeftCount() {
+        idxBuildPartitionsLeftCnt.decrement();
+    }
+
+    /**
+     * Add number of local node partitions that remain to be processed to complete indexing.
+     *
+     * @param val Number of partitions to add.
+     */
+    public void addIndexBuildPartitionsLeftCount(int val) {
+        idxBuildPartitionsLeftCnt.add(val);
+    }
+
+    /** Reset number of local node partitions that remain to be processed to complete indexing. */
+    public void resetIndexBuildPartitionsLeftCount() {
+        idxBuildPartitionsLeftCnt.reset();
+    }
+
+    /** {@inheritDoc} */
+    @Override public int getIndexBuildPartitionsLeftCount() {
+        return idxBuildPartitionsLeftCnt.value();
     }
 
     /** {@inheritDoc} */

@@ -552,4 +552,9 @@ public class CacheLocalMetricsMXBeanImpl implements CacheMetricsMXBean {
     @Override public long getIndexRebuildKeysProcessed() {
         return cache.metrics0().getIndexRebuildKeysProcessed();
     }
+
+    /** {@inheritDoc} */
+    @Override public int getIndexBuildPartitionsLeftCount() {
+        return cache.metrics0().getIndexBuildPartitionsLeftCount();
+    }
 }

@@ -55,9 +55,6 @@ public class CacheGroupMetricsImpl {
     /** Cache group metrics prefix. */
     public static final String CACHE_GROUP_METRICS_PREFIX = "cacheGroups";
 
-    /** Number of partitions need processed for finished indexes create or rebuilding. */
-    private final AtomicLongMetric idxBuildCntPartitionsLeft;
-
     /** Cache group context. */
     private final CacheGroupContext ctx;
 
@@ -100,7 +97,8 @@ public class CacheGroupMetricsImpl {
             () -> persistenceEnabled ? database().forGroupPageStores(ctx, PageStore::getSparseSize) : 0,
             "Storage space allocated for group adjusted for possible sparsity, in bytes.");
 
-        idxBuildCntPartitionsLeft = mreg.longMetric("IndexBuildCountPartitionsLeft",
+        mreg.registerOrReplace("IndexBuildCountPartitionsLeft",
+            this::getIndexBuildCountPartitionsLeft,
             "Number of partitions need processed for finished indexes create or rebuilding.");
 
         initLocPartitionsNum = mreg.longMetric("InitializedLocalPartitionsNumber",
@@ -181,20 +179,9 @@ public class CacheGroupMetricsImpl {
 
     /** */
     public long getIndexBuildCountPartitionsLeft() {
-        return idxBuildCntPartitionsLeft.value();
-    }
-
-    /** Decrement number of partitions need processed for finished indexes create or rebuilding. */
-    public void decrementIndexBuildCountPartitionsLeft() {
-        idxBuildCntPartitionsLeft.decrement();
-    }
-
-    /**
-     * Add number of partitions before processed indexes create or rebuilding.
-     * @param partitions Count partition for add.
-     */
-    public void addIndexBuildCountPartitionsLeft(long partitions) {
-        idxBuildCntPartitionsLeft.add(partitions);
+        return ctx.caches().stream()
+            .mapToLong(cctx -> cctx.cache().metrics0().getIndexBuildPartitionsLeftCount())
+            .sum();
     }
 
     /** Increments number of local partitions initialized on current node. */

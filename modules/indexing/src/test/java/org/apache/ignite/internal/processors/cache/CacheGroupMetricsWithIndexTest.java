@@ -40,12 +40,15 @@ import org.apache.ignite.internal.processors.cache.index.AbstractIndexingCommonT
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.query.GridQueryProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.spi.metric.IntMetric;
 import org.apache.ignite.spi.metric.LongMetric;
+import org.apache.ignite.spi.metric.Metric;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.DFLT_STORE_DIR;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.cacheMetricsRegistryName;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -206,19 +209,41 @@ public class CacheGroupMetricsWithIndexTest extends CacheGroupMetricsTest {
 
         LongMetric indexBuildCountPartitionsLeft = grpMreg.findMetric("IndexBuildCountPartitionsLeft");
 
+        // Per-cache metric. The cache-group metric is the sum of the per-cache metrics.
+        IntMetric cache2PartitionsLeft = cacheMetric(ignite, cacheName2, "IndexBuildPartitionsLeftCount");
+        IntMetric cache3PartitionsLeft = cacheMetric(ignite, cacheName3, "IndexBuildPartitionsLeftCount");
+
         assertEquals(parts2 + parts3, indexBuildCountPartitionsLeft.value());
+        assertEquals(parts2, cache2PartitionsLeft.value());
+        assertEquals(parts3, cache3PartitionsLeft.value());
 
         ((BlockingIndexing)ignite.context().query().getIndexing()).stopBlock(cacheName2);
 
         ignite.cache(cacheName2).indexReadyFuture().get(30_000);
 
         assertEquals(parts3, indexBuildCountPartitionsLeft.value());
+        assertEquals(0, cache2PartitionsLeft.value());
+        assertEquals(parts3, cache3PartitionsLeft.value());
 
         ((BlockingIndexing)ignite.context().query().getIndexing()).stopBlock(cacheName3);
 
         ignite.cache(cacheName3).indexReadyFuture().get(30_000);
 
         assertEquals(0, indexBuildCountPartitionsLeft.value());
+        assertEquals(0, cache2PartitionsLeft.value());
+        assertEquals(0, cache3PartitionsLeft.value());
+    }
+
+    /**
+     * @param ignite Node.
+     * @param cacheName Cache name.
+     * @param name Metric name.
+     * @return Metric of the cache metric registry with the given name.
+     */
+    private <M extends Metric> M cacheMetric(IgniteEx ignite, String cacheName, String name) {
+        MetricRegistry mreg = ignite.context().metric().registry(cacheMetricsRegistryName(cacheName, false));
+
+        return mreg.findMetric(name);
     }
 
     /**
