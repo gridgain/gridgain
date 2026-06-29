@@ -25,32 +25,29 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assume.assumeTrue;
 
 /**
- * Unit test for {@link JdkForkResolver}: the version -> JDK cutoff rule and the
+ * Unit test for {@link JdkForkResolver}: the released-version -> JDK map and the
  * resolve/validate fail modes. Runs on any driver JDK.
  */
 public class JdkForkResolverSelfTest {
     /** Driver JDK major. */
     private static final int LOC_MAJOR = U.majorJavaVersion(System.getProperty("java.version"));
 
-    /** Versions older than the cutoff ({@code 8.10.0}) fork under JDK 8. */
+    /** Apache Ignite versions: JDK 8, JDK 11 from 2.17.0 on. */
     @Test
-    public void testRequiredMajorBelowCutoff() {
-        assertEquals(8, JdkForkResolver.requiredJdkMajor("2.14.0"));
-        assertEquals(8, JdkForkResolver.requiredJdkMajor("8.9.127"));
-    }
+    public void testRequiredMajorApacheLine() {
+        JdkForkResolver r = new JdkForkResolver();
 
-    /** Versions at or after the cutoff ({@code 8.10.0}) fork under JDK 17. */
-    @Test
-    public void testRequiredMajorAtOrAfterCutoff() {
-        assertEquals(17, JdkForkResolver.requiredJdkMajor("8.10.0"));
-        assertEquals(17, JdkForkResolver.requiredJdkMajor("8.10.1"));
-        assertEquals(17, JdkForkResolver.requiredJdkMajor("8.10.127"));
+        assertEquals(8, r.requiredJdkMajor("2.1.0"));
+        assertEquals(8, r.requiredJdkMajor("2.14.0"));
+        assertEquals(8, r.requiredJdkMajor("2.15.0"));
+        assertEquals(11, r.requiredJdkMajor("2.17.0"));
+        assertEquals(11, r.requiredJdkMajor("2.18.0"));
     }
 
     /** A fork requiring the driver's own major inherits it: no path, no property read. */
     @Test
     public void testResolveInheritsDriverJdk() {
-        assertNull(JdkForkResolver.resolveRemoteJavaHomeForVer("8.10.130", LOC_MAJOR));
+        assertNull(JdkForkResolver.resolveRemoteJavaHomeForVer("2.15.0", LOC_MAJOR));
     }
 
     /** Only the driver's JDK and legacy JDK 8 are supported fork targets. */
@@ -72,7 +69,7 @@ public class JdkForkResolverSelfTest {
 
         try {
             GridTestUtils.assertThrows(null,
-                () -> JdkForkResolver.resolveRemoteJavaHomeForVer("8.9.127", 8),
+                () -> JdkForkResolver.resolveRemoteJavaHomeForVer("2.15.0", 8),
                 AssertionError.class, "Set -D" + JdkForkResolver.TEST_MULTIJVM_JAVA_HOME);
         }
         finally {

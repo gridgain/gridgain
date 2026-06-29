@@ -165,7 +165,7 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
             }
 
             @Override protected String resolveRemoteJavaHome() {
-                return JdkForkResolver.resolveRemoteJavaHomeForVer(ver);
+                return new JdkForkResolver().resolveRemoteJavaHome(ver);
             }
 
             @Override protected boolean acceptLegacyJdk8Remote() {

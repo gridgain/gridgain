@@ -17,9 +17,16 @@ pre-JDK-17 releases must run on. Point the property at a JDK 8 install:
 
   mvn test -pl modules/compatibility -Pcompatibility -Dtest.multijvm.java.home=/path/to/jdk8
 
-Per-version mapping lives in JdkForkResolver.requiredJdkMajor and defaults to JDK 8
-for pre-JDK-17 GridGain 8.x version. Tests against the port-JDK-17 releases line inherit
-the driver's JDK instead of requiring a JDK 8 path.
+Per-version JDK mapping
+-----------------------
+
+The required fork JDK is resolved by JdkForkResolver, which owns the released-version ->
+JDK map and floor-looks-up the version. Currently all released versions fork under JDK 8,
+JDK 11 from 2.17.0 on. The map holds the first version of each new JDK tier; to add a
+tier, append one entry.
+
+JDK 11 is expressible in the map, but the JDK 11 fork launcher is not yet wired. A JDK 11
+fork requirement fails fast with a clear message rather than silently misbehaving.
 
 If a JDK 8 fork is required but the property is unset, the test FAILS with a message
 naming the version and the property to set. If the property points at
