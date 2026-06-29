@@ -32,6 +32,7 @@ import org.apache.ignite.cluster.ClusterMetrics;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.cluster.ClusterState;
+import org.apache.ignite.internal.cluster.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.ClusterGroupEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
@@ -395,7 +396,7 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+    @Override public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
@@ -410,7 +411,7 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
-    @Override public long baselineAutoAdjustTimeout(boolean scaleUp) {
+    @Override public long baselineAutoAdjustTimeout(AutoAdjustMode mode) {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
@@ -420,12 +421,12 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineScaleUpAutoAdjustTimeout) throws IgniteException {
+    @Override public void baselineAutoAdjustTimeout(AutoAdjustMode mode, long baselineScaleUpAutoAdjustTimeout) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException {
+    @Override public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
@@ -435,7 +436,7 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
-    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode) {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 

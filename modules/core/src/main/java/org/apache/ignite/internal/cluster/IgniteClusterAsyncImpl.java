@@ -394,8 +394,8 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
-        return cluster.isBaselineAutoAdjustEnabled(scaleUp);
+    @Override public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
+        return cluster.isBaselineAutoAdjustEnabled(mode);
     }
 
     /** {@inheritDoc} */
@@ -409,8 +409,8 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public long baselineAutoAdjustTimeout(boolean scaleUp) {
-        return cluster.baselineAutoAdjustTimeout(scaleUp);
+    @Override public long baselineAutoAdjustTimeout(AutoAdjustMode mode) {
+        return cluster.baselineAutoAdjustTimeout(mode);
     }
 
     /** {@inheritDoc} */
@@ -419,13 +419,13 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException {
-        cluster.baselineAutoAdjustEnabled(scaleUp, baselineAutoAdjustEnabled);
+    @Override public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) throws IgniteException {
+        cluster.baselineAutoAdjustEnabled(mode, baselineAutoAdjustEnabled);
     }
 
     /** {@inheritDoc} */
-    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException {
-        cluster.baselineAutoAdjustTimeout(scaleUp, baselineAutoAdjustTimeout);
+    @Override public void baselineAutoAdjustTimeout(AutoAdjustMode mode, long baselineAutoAdjustTimeout) throws IgniteException {
+        cluster.baselineAutoAdjustTimeout(mode, baselineAutoAdjustTimeout);
     }
 
     /** {@inheritDoc} */
@@ -434,8 +434,8 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
-        return cluster.baselineAutoAdjustStatus(scaleUp);
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode) {
+        return cluster.baselineAutoAdjustStatus(mode);
     }
 
     /** {@inheritDoc} */

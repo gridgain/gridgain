@@ -172,6 +172,8 @@ import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SECURITY_COMP
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_SHUTDOWN_POLICY;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_USER_NAME;
 import static org.apache.ignite.internal.IgniteVersionUtils.VER;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.events.DiscoveryCustomEvent.EVT_DISCOVERY_CUSTOM_EVT;
 import static org.apache.ignite.internal.processors.security.SecurityUtils.isSecurityCompatibilityMode;
 import static org.apache.ignite.plugin.segmentation.SegmentationPolicy.NOOP;
@@ -728,7 +730,7 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
                             discoCache,
                             topVer,
                             minorTopVer,
-                            type == EVT_NODE_JOINED
+                            type == EVT_NODE_JOINED ? SCALE_UP : SCALE_DOWN
                         );
 
                         if (discoCacheRecalculationRequired) {

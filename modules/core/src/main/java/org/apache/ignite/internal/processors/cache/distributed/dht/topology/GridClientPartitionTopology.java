@@ -61,6 +61,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -1031,7 +1032,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             );
 
             boolean compatibleWithIgnorePlc = isInMemoryCluster
-                && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout(false) == 0L;
+                && state.isBaselineAutoAdjustEnabled(SCALE_DOWN) && state.baselineAutoAdjustTimeout(SCALE_DOWN) == 0L;
 
             // Calculate how loss data is handled.
             boolean safe = partLossPlc != PartitionLossPolicy.IGNORE || !compatibleWithIgnorePlc;

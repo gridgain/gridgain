@@ -17,6 +17,7 @@
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
 
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.internal.cluster.AutoAdjustMode;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -26,6 +27,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJUST_LOG_INTERVAL;
 import static org.apache.ignite.IgniteSystemProperties.getLong;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.GENERAL;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
 
 /**
  * This class able to add task of set baseline with timeout to queue. In one time only one task can be in queue. Every
@@ -74,8 +80,9 @@ class BaselineAutoAdjustScheduler {
      * @param delay Delay after which set baseline should be started.
      * @return {@code true} If a new task was successfully scheduled.
      */
+    @Deprecated
     public boolean schedule(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
-        return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.DEFAULT);
+        return schedule(baselineAutoAdjustData, delay, GENERAL);
     }
 
     /**
@@ -88,7 +95,7 @@ class BaselineAutoAdjustScheduler {
      * @return {@code true} If a new task was successfully scheduled.
      */
     public boolean scheduleScaleUp(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
-        return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.SCALE_UP);
+        return schedule(baselineAutoAdjustData, delay, SCALE_UP);
     }
 
     /**
@@ -101,18 +108,21 @@ class BaselineAutoAdjustScheduler {
      * @return {@code true} If a new task was successfully scheduled.
      */
     public boolean scheduleScaleDown(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
-        return schedule(baselineAutoAdjustData, delay, BaselineAutoAdjustType.SCALE_DOWN);
+        return schedule(baselineAutoAdjustData, delay, SCALE_DOWN);
     }
 
-    private synchronized boolean schedule(BaselineAutoAdjustData baselineAutoAdjustData, long delay, BaselineAutoAdjustType type) {
-        if (baselineAutoAdjustExecutor.isExecutionExpired(baselineAutoAdjustData, type.scaleUp)) {
+    /**
+     * Schedule baseline auto adjustment in the specified direction {@link AutoAdjustMode}.
+     */
+    private synchronized boolean schedule(BaselineAutoAdjustData baselineAutoAdjustData, long delay, AutoAdjustMode mode) {
+        if (baselineAutoAdjustExecutor.isExecutionExpired(baselineAutoAdjustData, mode)) {
             if (log.isDebugEnabled())
-                log.debug(type.label + " auto adjust data is expired (will not be scheduled) [data=" + baselineAutoAdjustData + ']');
+                log.debug("Baseline " + mode.getLabel() + " auto adjust data is expired (will not be scheduled) [data=" + baselineAutoAdjustData + ']');
 
             return false;
         }
 
-        BaselineMultiplyUseTimeoutObject timeoutObject = currentTimeoutObj(type);
+        BaselineMultiplyUseTimeoutObject timeoutObject = currentTimeoutObj(mode);
 
         if (timeoutObject != null) {
             long targetVer = baselineAutoAdjustData.getTargetTopologyVersion();
@@ -120,7 +130,7 @@ class BaselineAutoAdjustScheduler {
 
             if (alreadyScheduledVer > targetVer) {
                 if (log.isDebugEnabled()) {
-                    log.debug(type.label + " auto adjust data is targeted to obsolete version (will not be scheduled) " +
+                    log.debug("Baseline" + mode.getLabel() + " auto adjust data is targeted to obsolete version (will not be scheduled) " +
                         "[data=" + baselineAutoAdjustData + ", scheduled=" + timeoutObject.baselineAutoAdjustData.get() + ']');
                 }
 
@@ -141,15 +151,15 @@ class BaselineAutoAdjustScheduler {
             delay, baselineAutoAdjustExecutor,
             timeoutProcessor,
             log,
-            type.scaleUp
+            mode
         );
 
-        setTimeoutObj(timeoutObject, type);
+        setTimeoutObj(timeoutObject, mode);
 
         boolean added = timeoutProcessor.addTimeoutObject(timeoutObject);
 
         if (log.isDebugEnabled()) {
-            log.info("New " + type.label.toLowerCase() + " timeout object was " + (added ? "successfully scheduled " : " rejected ") +
+            log.info("New baseline " + mode.getLabel() + " timeout object was " + (added ? "successfully scheduled " : " rejected ") +
                 " [data=" + timeoutObject.baselineAutoAdjustData.get() + ']');
         }
 
@@ -157,8 +167,8 @@ class BaselineAutoAdjustScheduler {
     }
 
     /** Returns the corresponding timeout object. */
-    private BaselineMultiplyUseTimeoutObject currentTimeoutObj(BaselineAutoAdjustType type) {
-        switch (type) {
+    private BaselineMultiplyUseTimeoutObject currentTimeoutObj(AutoAdjustMode mode) {
+        switch (mode) {
             case SCALE_UP:
                 return baselineScaleUpTimeoutObj;
             case SCALE_DOWN:
@@ -169,8 +179,8 @@ class BaselineAutoAdjustScheduler {
     }
 
     /** Sets the corresponding timeout object. */
-    private void setTimeoutObj(BaselineMultiplyUseTimeoutObject timeoutObj, BaselineAutoAdjustType type) {
-        switch (type) {
+    private void setTimeoutObj(BaselineMultiplyUseTimeoutObject timeoutObj, AutoAdjustMode mode) {
+        switch (mode) {
             case SCALE_UP:
                 baselineScaleUpTimeoutObj = timeoutObj;
                 break;
@@ -186,35 +196,43 @@ class BaselineAutoAdjustScheduler {
     /**
      * @return Time of last scheduled task or -1 if it doesn't exist.
      */
+    @Deprecated
     public synchronized long lastScheduledTaskTime() {
-        if (baselineTimeoutObj == null)
-            return -1;
-
-        long lastScheduledTaskTime = baselineTimeoutObj.getTotalEndTime() - System.currentTimeMillis();
-
-        return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
+        return Math.min(lastScheduledTaskTime(SCALE_UP), lastScheduledTaskTime(SCALE_DOWN));
     }
 
     /**
-     * @param scaleUp If {@code true}, the time of last scheduled task for scale up will be return,
-     *                if {@code false} - for scale down.
+     * @param mode The baseline scale direction {@link AutoAdjustMode}.
      * @return Time of last scheduled task or -1 if it doesn't exist.
      */
-    public synchronized long lastScheduledTaskTime(boolean scaleUp) {
+    public synchronized long lastScheduledTaskTime(AutoAdjustMode mode) {
+        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            if (baselineTimeoutObj == null)
+                return -1;
+
+            long lastScheduledTaskTime = baselineTimeoutObj.getTotalEndTime() - System.currentTimeMillis();
+
+            return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
+        }
+
         long now = System.currentTimeMillis();
 
-        long lastScheduledTaskTime;
-        if (scaleUp) {
-            if (baselineScaleUpTimeoutObj == null)
-                return -1;
-            else
-                lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
-        }
-        else {
-            if (baselineScaleDownTimeoutObj == null)
-                return -1;
-            else
-                lastScheduledTaskTime = baselineScaleDownTimeoutObj.getTotalEndTime() - now;
+        long lastScheduledTaskTime = -1;
+        switch (mode) {
+            case SCALE_UP:
+                if (baselineScaleUpTimeoutObj == null)
+                    return -1;
+                else
+                    lastScheduledTaskTime = baselineScaleUpTimeoutObj.getTotalEndTime() - now;
+
+                break;
+            case SCALE_DOWN:
+                if (baselineScaleDownTimeoutObj == null)
+                    return -1;
+                else
+                    lastScheduledTaskTime = baselineScaleDownTimeoutObj.getTotalEndTime() - now;
+
+                break;
         }
 
         return lastScheduledTaskTime < 0 ? -1 : lastScheduledTaskTime;
@@ -224,8 +242,8 @@ class BaselineAutoAdjustScheduler {
      * @param data Baseline data for adjust.
      * @return {@code true} If baseline auto-adjust shouldn't be executed for given data.
      */
-    boolean isExecutionExpired(BaselineAutoAdjustData data, boolean scaleUp) {
-        return baselineAutoAdjustExecutor.isExecutionExpired(data, scaleUp);
+    boolean isExecutionExpired(BaselineAutoAdjustData data, AutoAdjustMode mode) {
+        return baselineAutoAdjustExecutor.isExecutionExpired(data, mode);
     }
 
     /**
@@ -255,10 +273,28 @@ class BaselineAutoAdjustScheduler {
         /** Timeout ID. */
         private final IgniteUuid id = IgniteUuid.randomUuid();
 
-        private final boolean scaleUp;
+        /** The baseline scale direction {@link AutoAdjustMode}. */
+        private final AutoAdjustMode mode;
 
         /** End time of one iteration of this timeout object. */
         private long endTime;
+
+        protected BaselineMultiplyUseTimeoutObject(
+            AtomicReference<BaselineAutoAdjustData> baselineAutoAdjustData,
+            long executionTimeout,
+            BaselineAutoAdjustExecutor executor,
+            GridTimeoutProcessor processor,
+            IgniteLogger log
+        ) {
+            this(
+                baselineAutoAdjustData,
+                executionTimeout,
+                executor,
+                processor,
+                log,
+                SCALE_UP
+            );
+        }
 
         /**
          * @param baselineAutoAdjustData Data for changing baseline.
@@ -266,7 +302,7 @@ class BaselineAutoAdjustScheduler {
          * @param executor Executor of set baseline operation.
          * @param processor Timeout processor.
          * @param log Log object.
-         * @param scaleUp The flag that indicates whether it's the scale up {@code true} or scale down {@code false} scenario.
+         * @param mode The baseline auto-adjust mode.
          */
         protected BaselineMultiplyUseTimeoutObject(
             AtomicReference<BaselineAutoAdjustData> baselineAutoAdjustData,
@@ -274,7 +310,7 @@ class BaselineAutoAdjustScheduler {
             BaselineAutoAdjustExecutor executor,
             GridTimeoutProcessor processor,
             IgniteLogger log,
-            boolean scaleUp
+            AutoAdjustMode mode
         ) {
             this.baselineAutoAdjustData = baselineAutoAdjustData;
             baselineAutoAdjustExecutor = executor;
@@ -282,7 +318,7 @@ class BaselineAutoAdjustScheduler {
             this.log = log;
             endTime = calculateEndTime(executionTimeout);
             this.totalEndTime = U.currentTimeMillis() + executionTimeout;
-            this.scaleUp = scaleUp;
+            this.mode = mode;
         }
 
         /**
@@ -305,7 +341,7 @@ class BaselineAutoAdjustScheduler {
 
         /** {@inheritDoc}. */
         @Override public void onTimeout() {
-            if (baselineAutoAdjustExecutor.isExecutionExpired(baselineAutoAdjustData.get(), scaleUp))
+            if (baselineAutoAdjustExecutor.isExecutionExpired(baselineAutoAdjustData.get(), mode))
                 return;
 
             long lastScheduledTaskTime = totalEndTime - System.currentTimeMillis();
@@ -314,7 +350,7 @@ class BaselineAutoAdjustScheduler {
                 if (log.isInfoEnabled())
                     log.info("Baseline auto-adjust will be executed right now.");
 
-                baselineAutoAdjustExecutor.execute(baselineAutoAdjustData.get(), scaleUp);
+                baselineAutoAdjustExecutor.execute(baselineAutoAdjustData.get(), mode);
             }
             else {
                 if (log.isInfoEnabled())
@@ -331,35 +367,6 @@ class BaselineAutoAdjustScheduler {
          */
         public long getTotalEndTime() {
             return totalEndTime;
-        }
-    }
-
-    /**
-     * Helps to handle different baseline auto adjust scenarios.
-     */
-    private enum BaselineAutoAdjustType {
-        /** The default scenario when the separate auto adjustment is disabled, the {@code true} flag will be ignored. */
-        DEFAULT(true, "Baseline"),
-
-        /** Scale up auto adjustment. */
-        SCALE_UP(true, "Baseline scale up"),
-
-        /** Scale down auto adjustment. */
-        SCALE_DOWN(false, "Baseline scale down");
-
-        /** */
-        private final boolean scaleUp;
-
-        /** */
-        private final String label;
-
-        /**
-         * @param scaleUp The flag that indicates whether it's the scale up {@code true} or scale down {@code false} scenario.
-         * @param label The log message label.
-         */
-        BaselineAutoAdjustType(boolean scaleUp, String label) {
-            this.scaleUp = scaleUp;
-            this.label = label;
         }
     }
 }

@@ -16,7 +16,11 @@
 
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
 
+import org.apache.ignite.internal.cluster.AutoAdjustMode;
 import org.apache.ignite.internal.util.typedef.internal.S;
+
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
 
 /**
  * Container of required data for changing baseline.
@@ -55,8 +59,8 @@ class BaselineAutoAdjustData {
 
         data.onInvalidate();
         data.onAdjust();
-        data.onAdjust(true);
-        data.onAdjust(false);
+        data.onAdjust(SCALE_UP);
+        data.onAdjust(SCALE_DOWN);
 
         return data;
     }
@@ -71,6 +75,7 @@ class BaselineAutoAdjustData {
     /**
      * Mark that this data was adjusted.
      */
+    @Deprecated
     public void onAdjust() {
         adjusted = true;
     }
@@ -78,11 +83,15 @@ class BaselineAutoAdjustData {
     /**
      * @param scaleUp If {@code true} marks that this data for scale up was adjusted, if {@code false} - for scale down.
      */
-    public void onAdjust(boolean scaleUp) {
-        if (scaleUp)
-            scaleUpAdjusted = true;
-        else
-            scaleDownAdjusted = true;
+    public void onAdjust(AutoAdjustMode mode) {
+        switch (mode) {
+            case SCALE_UP:
+                scaleUpAdjusted = true;
+                break;
+            case SCALE_DOWN:
+                scaleDownAdjusted = true;
+                break;
+        }
     }
 
     /**
@@ -102,19 +111,24 @@ class BaselineAutoAdjustData {
     /**
      * @return {@code true} If this data already adjusted.
      */
+    @Deprecated
     public boolean isAdjusted() {
         return adjusted;
     }
 
     /**
-     * @param scaleUp If {@code true}, the status will be return for scale up, if {@code false} - for scale down.
+     * @param mode {@link AutoAdjustMode}.
      * @return {@code true} If this data already adjusted.
      */
-    public boolean isAdjusted(boolean scaleUp) {
-        if (scaleUp)
-            return scaleUpAdjusted;
-        else
-            return scaleDownAdjusted;
+    public boolean isAdjusted(AutoAdjustMode mode) {
+        switch (mode) {
+            case SCALE_UP:
+                return scaleUpAdjusted;
+            case SCALE_DOWN:
+                return scaleDownAdjusted;
+            default:
+                return adjusted;
+        }
     }
 
     /**

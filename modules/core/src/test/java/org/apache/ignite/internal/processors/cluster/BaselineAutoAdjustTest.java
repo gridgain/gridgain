@@ -72,6 +72,7 @@ import static org.junit.Assume.assumeTrue;
  *
  */
 @GridCommonTest(group = "Kernal Self")
+@WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "false")
 public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     /** */
     private static final String TEST_NAME = "TEST_NAME";

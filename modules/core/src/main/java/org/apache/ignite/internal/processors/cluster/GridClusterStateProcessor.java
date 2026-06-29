@@ -56,6 +56,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.SupportFeaturesUtils;
+import org.apache.ignite.internal.cluster.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
@@ -131,6 +132,8 @@ import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -302,7 +305,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             );
         }
 
-        if (!isBaselineAutoAdjustEnabled(true) || baselineAutoAdjustTimeout(true) != 0)
+        if (!isBaselineAutoAdjustEnabled(SCALE_UP) || baselineAutoAdjustTimeout(SCALE_UP) != 0)
             return null;
 
         Collection<ClusterNode> nodes = ctx.discovery().aliveServerNodes();
@@ -538,31 +541,31 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 if (discoEvt.eventNode().isClient() || discoEvt.eventNode().isDaemon())
                     return;
 
-                boolean scaleUp = discoEvt.type() == EVT_NODE_JOINED;
+                AutoAdjustMode mode = discoEvt.type() == EVT_NODE_JOINED ? SCALE_UP : SCALE_DOWN;
 
-                baselineTopologyUpdater.triggerBaselineUpdate(discoEvt.topologyVersion(), scaleUp);
+                baselineTopologyUpdater.triggerBaselineUpdate(discoEvt.topologyVersion(), mode);
             },
             EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED
         );
 
         distributedBaselineConfiguration.listenAutoAdjustEnabled((name, oldVal, newVal) -> {
-            if (newVal != null && newVal && !isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            if (newVal != null && newVal) {
                 long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer, false);
+                baselineTopologyUpdater.triggerBaselineUpdate(topVer);
             }
         });
 
-        distributedBaselineConfiguration.listenAutoAdjustEnabled(true, (name, oldVal, newVal) -> {
-            if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+        distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_UP, (name, oldVal, newVal) -> {
+            if (newVal != null && newVal) {
                 long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer, true);
+                baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_UP);
             }
         });
 
-        distributedBaselineConfiguration.listenAutoAdjustEnabled(false, (name, oldVal, newVal) -> {
-            if (newVal != null && newVal && isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+        distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_DOWN, (name, oldVal, newVal) -> {
+            if (newVal != null && newVal) {
                 long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer, false);
+                baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_DOWN);
             }
         });
     }
@@ -1910,7 +1913,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         DiscoCache discoCache,
         long topVer,
         int minorTopVer,
-        boolean scaleUp
+        AutoAdjustMode mode
     ) {
         IgniteClusterImpl cluster = ctx.cluster().get();
 
@@ -1925,8 +1928,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         boolean autoAdjustBaseline = isInMemoryCluster()
             && ClusterState.active(oldState.state())
             && !oldState.transition()
-            && cluster.isBaselineAutoAdjustEnabled(scaleUp)
-            && cluster.baselineAutoAdjustTimeout(scaleUp) == 0L;
+            && cluster.isBaselineAutoAdjustEnabled(mode)
+            && cluster.baselineAutoAdjustTimeout(mode) == 0L;
 
         if (autoAdjustBaseline) {
             BaselineTopology oldBlt = oldState.baselineTopology();
@@ -2031,6 +2034,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manuale.
      */
+    @Deprecated
     public boolean isBaselineAutoAdjustEnabled() {
         return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled();
     }
@@ -2042,12 +2046,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
      * {@code False} If cluster in manuale.
      */
-    public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
-        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return scaleUp ? distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(true)
-                : distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(false);
-
-        return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled();
+    public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
+        return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(mode);
     }
 
     /**
@@ -2055,6 +2055,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
      */
+    @Deprecated
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) {
         baselineAutoAdjustEnabledAsync(baselineAutoAdjustEnabled).get();
     }
@@ -2064,10 +2065,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
      */
+    @Deprecated
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled) {
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(ctx, baselineAutoAdjustEnabled));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(ctx, baselineAutoAdjustEnabled)
+            );
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -2080,10 +2083,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean scaleUp, boolean baselineAutoAdjustEnabled) {
+    public IgniteFuture<?> baselineAutoAdjustEnabledAsync(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) {
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(scaleUp, ctx, baselineAutoAdjustEnabled));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustEnabledAsync(mode, ctx, baselineAutoAdjustEnabled)
+            );
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -2095,6 +2099,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * (node join/left/fail).
      * @throws IgniteException If operation failed.
      */
+    @Deprecated
     public long baselineAutoAdjustTimeout() {
         return distributedBaselineConfiguration.getBaselineAutoAdjustTimeout();
     }
@@ -2107,12 +2112,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * (node join/left/fail).
      * @throws IgniteException If operation failed.
      */
-    public long baselineAutoAdjustTimeout(boolean scaleUp) {
-        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return scaleUp ? distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(true)
-                : distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(false);
-
-        return distributedBaselineConfiguration.getBaselineAutoAdjustTimeout();
+    public long baselineAutoAdjustTimeout(AutoAdjustMode mode) {
+        return distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(mode);
     }
 
     /**
@@ -2120,6 +2121,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * server topology change (node join/left/fail).
      * @throws IgniteException If failed.
      */
+    @Deprecated
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) {
         baselineAutoAdjustTimeoutAsync(baselineAutoAdjustTimeout).get();
     }
@@ -2129,6 +2131,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * server topology change (node join/left/fail).
      * @return Future for await operation completion.
      */
+    @Deprecated
     public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(long baselineAutoAdjustTimeout) {
         A.ensure(baselineAutoAdjustTimeout >= 0, "timeout should be positive or zero");
 
@@ -2147,12 +2150,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * server topology change (node join/left/fail).
      * @return Future for await operation completion.
      */
-    public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(boolean scaleUp, long baselineAutoAdjustTimeout) {
+    public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(AutoAdjustMode mode, long baselineAutoAdjustTimeout) {
         A.ensure(baselineAutoAdjustTimeout >= 0, "timeout should be positive or zero");
 
         try {
             return new IgniteFutureImpl<>(
-                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(scaleUp, ctx, baselineAutoAdjustTimeout));
+                distributedBaselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(mode, ctx, baselineAutoAdjustTimeout));
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
@@ -2169,6 +2172,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * @return Status of baseline auto-adjust.
      */
+    @Deprecated
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return baselineTopologyUpdater.getStatus();
     }
@@ -2177,8 +2181,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param scaleUp To get scale up's status {@code true}, to get scale down's status {@code false}.
      * @return Status of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
-        return baselineTopologyUpdater.getStatus(scaleUp);
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode) {
+        return baselineTopologyUpdater.getStatus(mode);
     }
 
     /**
