@@ -40,6 +40,10 @@
         <tag>HEAD</tag>
     </scm>
 
+    <properties>
+        <gg8.examples.dir>../gg8-examples</gg8.examples.dir>
+    </properties>
+
     <modules>
         <module>modules/apache-license-gen</module>
         <module>parent</module>
@@ -132,8 +136,10 @@
         <profile>
             <id>all-java</id> <!-- used to update project versions and check all modules compilation -->
             <modules> <!-- sorted alphabetically -->
-                <module>examples</module>
-                <module>examples-ml</module>
+                <!-- these modules moved to gg8-examples repo -->
+                <!-- packaging will work when gg8-examples is cloned next to this repo -->
+                <!--module>examples</module-->
+                <!--module>examples-ml</module-->
                 <module>modules/benchmarks</module>
                 <module>modules/compatibility</module>
                 <module>modules/geospatial</module>
@@ -532,12 +538,12 @@
                                             </fileset>
                                         </replaceregexp>
 
-                                        <replaceregexp file="${release.dir}/examples/pom.xml" byline="true">
+                                        <replaceregexp file="${gg8.examples.dir}/examples/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
 
-                                        <replaceregexp file="${release.dir}/examples-ml/pom.xml" byline="true">
+                                        <replaceregexp file="${gg8.examples.dir}/examples-ml/pom.xml" byline="true">
                                             <regexp pattern="to_be_replaced_by_ignite_version" />
                                             <substitution expression="${project.version}" />
                                         </replaceregexp>
@@ -705,8 +711,8 @@
         <profile>
             <id>examples</id>
             <modules>
-                <module>examples</module>
-                <module>examples-ml</module>
+                <!--module>examples</module-->
+                <!--module>examples-ml</module-->
             </modules>
         </profile>
 
