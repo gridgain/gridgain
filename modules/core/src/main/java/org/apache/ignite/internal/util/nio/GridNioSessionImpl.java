@@ -45,7 +45,7 @@ public class GridNioSessionImpl implements GridNioSession {
     private final InetSocketAddress rmtAddr;
 
     /** Session create timestamp. */
-    private long createTime;
+    private final long createTime;
 
     /** Session close timestamp. */
     private final AtomicLong closeTime = new AtomicLong();
@@ -75,7 +75,7 @@ public class GridNioSessionImpl implements GridNioSession {
     private volatile boolean readsPaused;
 
     /** Filter chain that will handle write and close requests. */
-    private GridNioFilterChain filterChain;
+    private final GridNioFilterChain filterChain;
 
     /** Accepted flag. */
     private final boolean accepted;
@@ -237,6 +237,11 @@ public class GridNioSessionImpl implements GridNioSession {
     /** {@inheritDoc} */
     @Override public long lastSendScheduleTime() {
         return sndSchedTime;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int messagesQueueSize() {
+        return 0;
     }
 
     /** {@inheritDoc} */

@@ -704,6 +704,16 @@ class ZookeeperDiscoverySpiTestBase extends GridCommonAbstractTest {
             }
 
             /** {@inheritDoc} */
+            @Override public long creationTime() {
+                return delegate.creationTime();
+            }
+
+            /** {@inheritDoc} */
+            @Override public int messagesQueueSize() {
+                return delegate.messagesQueueSize();
+            }
+
+            /** {@inheritDoc} */
             @Override public void sendMessage(ByteBuffer data) throws IgniteCheckedException {
                 if (failure && !matrix.hasConnection(locNode, remoteNode))
                     throw new IgniteCheckedException("Test", new SocketTimeoutException());
