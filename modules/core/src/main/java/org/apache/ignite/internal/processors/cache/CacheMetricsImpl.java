@@ -257,18 +257,6 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** Number of touch misses. */
     private final AtomicLongMetric cacheTouchMisses;
 
-    /** Cache metric registry. */
-    private final MetricRegistry mreg;
-
-    /** Conflict resolver accepted entries count. */
-    private LongAdderMetric rslvrAcceptedCnt;
-
-    /** Conflict resolver rejected entries count. */
-    private LongAdderMetric rslvrRejectedCnt;
-
-    /** Conflict resolver merged entries count. */
-    private LongAdderMetric rslvrMergedCnt;
-
     /**
      * Creates cache metrics.
      *
@@ -297,7 +285,7 @@ public class CacheMetricsImpl implements CacheMetrics {
 
         delegate = null;
 
-        mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
+        MetricRegistry mreg = cctx.kernalContext().metric().registry(cacheMetricsRegistryName(cctx.name(), isNear));
 
         cacheTouches = mreg.longMetric("CacheTouches", "Total number of touch requests to the cache.");
         cacheTouchHits = mreg.longMetric("CacheTouchHits", "Number of touch requests that were satisfied by the cache.");
@@ -837,15 +825,6 @@ public class CacheMetricsImpl implements CacheMetrics {
         txKeyCollisionInfo = null;
 
         idxRebuildKeyProcessed.reset();
-
-        if (rslvrAcceptedCnt != null)
-            rslvrAcceptedCnt.reset();
-
-        if (rslvrRejectedCnt != null)
-            rslvrRejectedCnt.reset();
-
-        if (rslvrMergedCnt != null)
-            rslvrMergedCnt.reset();
     }
 
     /** {@inheritDoc} */
@@ -1780,33 +1759,6 @@ public class CacheMetricsImpl implements CacheMetrics {
     /** {@inheritDoc} */
     @Override public int getIndexBuildPartitionsLeftCount() {
         return idxBuildPartitionsLeftCnt.value();
-    }
-
-    /** */
-    public void incrementResolverAcceptedCount() {
-        rslvrAcceptedCnt.increment();
-    }
-
-    /** */
-    public void incrementResolverRejectedCount() {
-        rslvrRejectedCnt.increment();
-    }
-
-    /** */
-    public void incrementResolverMergedCount() {
-        rslvrMergedCnt.increment();
-    }
-
-    /** Registers metrics for conflict resolver. */
-    public void registerResolverMetrics() {
-        rslvrAcceptedCnt = mreg.longAdderMetric("ConflictResolverAcceptedCount",
-            "Conflict resolver accepted entries count");
-
-        rslvrRejectedCnt = mreg.longAdderMetric("ConflictResolverRejectedCount",
-            "Conflict resolver rejected entries count");
-
-        rslvrMergedCnt = mreg.longAdderMetric("ConflictResolverMergedCount",
-            "Conflict resolver merged entries count");
     }
 
     /** {@inheritDoc} */
