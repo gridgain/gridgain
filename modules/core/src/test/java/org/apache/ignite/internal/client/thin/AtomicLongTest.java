@@ -21,6 +21,7 @@ import org.apache.ignite.client.ClientAtomicConfiguration;
 import org.apache.ignite.client.ClientAtomicLong;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.IgniteClient;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.processors.cache.IgniteInternalCache;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
@@ -29,6 +30,7 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertContains;
@@ -77,6 +79,24 @@ public class AtomicLongTest extends AbstractThinClientTest {
     }
 
     /**
+     * Tests initial value setting (async factory).
+     */
+    @Test
+    public void testAsyncCreateSetsInitialValue() throws Exception {
+        String name = "testAsyncCreateSetsInitialValue";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLongAsync(name, 42, true).get();
+
+            ClientAtomicLong atomicLongWithGroup = client.atomicLongAsync(
+                    name, new ClientAtomicConfiguration().setGroupName("grp"), 43, true).get();
+
+            assertEquals(42, atomicLong.get());
+            assertEquals(43, atomicLongWithGroup.get());
+        }
+    }
+
+    /**
      * Tests that initial value is ignored when atomic long already exists.
      */
     @Test
@@ -118,6 +138,48 @@ public class AtomicLongTest extends AbstractThinClientTest {
     }
 
     /**
+     * Tests that async operations complete exceptionally when the atomic long does not exist.
+     */
+    @Test
+    public void testAsyncOperationsThrowExceptionWhenAtomicLongDoesNotExist() throws Exception {
+        String name = "testAsyncOperationsThrowExceptionWhenAtomicLongDoesNotExist";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLong(name, 0, true);
+            atomicLong.close();
+
+            assertAsyncDoesNotExistError(name, atomicLong::getAsync);
+
+            assertAsyncDoesNotExistError(name, atomicLong::incrementAndGetAsync);
+            assertAsyncDoesNotExistError(name, atomicLong::getAndIncrementAsync);
+            assertAsyncDoesNotExistError(name, atomicLong::decrementAndGetAsync);
+            assertAsyncDoesNotExistError(name, atomicLong::getAndDecrementAsync);
+
+            assertAsyncDoesNotExistError(name, () -> atomicLong.addAndGetAsync(1));
+            assertAsyncDoesNotExistError(name, () -> atomicLong.getAndAddAsync(1));
+
+            assertAsyncDoesNotExistError(name, () -> atomicLong.getAndSetAsync(1));
+            assertAsyncDoesNotExistError(name, () -> atomicLong.compareAndSetAsync(1, 2));
+        }
+    }
+
+    /**
+     * Tests that initial value is ignored when atomic long already exists (async factory).
+     */
+    @Test
+    public void testAsyncCreateIgnoresInitialValueWhenAlreadyExists() throws Exception {
+        String name = "testAsyncCreateIgnoresInitialValueWhenAlreadyExists";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLongAsync(name, 42, true).get();
+            ClientAtomicLong atomicLong2 = client.atomicLongAsync(name, -42, true).get();
+
+            assertEquals(42, atomicLong.get());
+            assertEquals(42, atomicLong2.get());
+        }
+    }
+
+    /**
      * Tests removed property.
      */
     @Test
@@ -134,6 +196,26 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
             atomicLong.close();
             assertTrue(atomicLong.removed());
+        }
+    }
+
+    /**
+     * Tests removed property (async factory).
+     */
+    @Test
+    public void testAsyncRemoved() throws Exception {
+        String name = "testAsyncRemoved";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLongAsync(name, 0, false).get();
+            assertNull(atomicLong);
+
+            atomicLong = client.atomicLongAsync(name, 1, true).get();
+            assertFalse(atomicLong.removedAsync().get());
+            assertEquals(1, atomicLong.get());
+
+            atomicLong.close();
+            assertTrue(atomicLong.removedAsync().get());
         }
     }
 
@@ -165,6 +247,33 @@ public class AtomicLongTest extends AbstractThinClientTest {
     }
 
     /**
+     * Tests async increment, decrement, and add operations.
+     */
+    @Test
+    public void testIncrementDecrementAddAsync() throws Exception {
+        String name = "testIncrementDecrementAddAsync";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong a = client.atomicLong(name, 1, true);
+
+            assertEquals(2L, (long) a.incrementAndGetAsync().get());
+            assertEquals(2L, (long) a.getAndIncrementAsync().get()); // returns old (2), increments to 3
+
+            assertEquals(3L, a.get());
+
+            assertEquals(2L, (long) a.decrementAndGetAsync().get());
+            assertEquals(2L, (long) a.getAndDecrementAsync().get()); // returns old (2), decrements to 1
+
+            assertEquals(1L, a.get());
+
+            assertEquals(101L, (long) a.addAndGetAsync(100).get());
+            assertEquals(101L, (long) a.getAndAddAsync(-50).get()); // returns old (101), adds -50 to get 51
+
+            assertEquals(51L, a.get());
+        }
+    }
+
+    /**
      * Tests getAndSet.
      */
     @Test
@@ -176,6 +285,21 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
             assertEquals(1, atomicLong.getAndSet(100));
             assertEquals(100, atomicLong.get());
+        }
+    }
+
+    /**
+     * Tests {@link ClientAtomicLong#getAndSetAsync(long)}.
+     */
+    @Test
+    public void testGetAndSetAsync() throws Exception {
+        String name = "testGetAndSetAsync";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLong(name, 1, true);
+
+            assertEquals(1L, (long) atomicLong.getAndSetAsync(100).get());
+            assertEquals(100L, atomicLong.get());
         }
     }
 
@@ -194,6 +318,24 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
             assertTrue(atomicLong.compareAndSet(1, 4));
             assertEquals(4, atomicLong.get());
+        }
+    }
+
+    /**
+     * Tests {@link ClientAtomicLong#compareAndSetAsync(long, long)}.
+     */
+    @Test
+    public void testCompareAndSetAsync() throws Exception {
+        String name = "testCompareAndSetAsync";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong atomicLong = client.atomicLong(name, 1, true);
+
+            assertFalse(atomicLong.compareAndSetAsync(2, 3).get());
+            assertEquals(1L, atomicLong.get());
+
+            assertTrue(atomicLong.compareAndSetAsync(1, 4).get());
+            assertEquals(4L, atomicLong.get());
         }
     }
 
@@ -239,6 +381,45 @@ public class AtomicLongTest extends AbstractThinClientTest {
     }
 
     /**
+     * Tests atomic long with custom configuration (async factory).
+     */
+    @Test
+    public void testAsyncCustomConfigurationPropagatesToServer() throws Exception {
+        ClientAtomicConfiguration cfg1 = new ClientAtomicConfiguration()
+                .setAtomicSequenceReserveSize(64)
+                .setBackups(2)
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setGroupName("async-al-group-partitioned");
+
+        ClientAtomicConfiguration cfg2 = new ClientAtomicConfiguration()
+                .setAtomicSequenceReserveSize(32)
+                .setBackups(3)
+                .setCacheMode(CacheMode.REPLICATED)
+                .setGroupName("async-al-group-replicated");
+
+        String name = "testAsyncCustomConfiguration";
+
+        try (IgniteClient client = startClient(0)) {
+            client.atomicLongAsync(name, cfg1, 1, true).get();
+            client.atomicLongAsync(name, cfg2, 2, true).get();
+        }
+
+        IgniteInternalCache<?, ?> partitionedCache = grid(0).cachesx().stream()
+                .filter(c -> c.name().equals("ignite-sys-atomic-cache@async-al-group-partitioned"))
+                .findFirst().orElse(null);
+
+        IgniteInternalCache<?, ?> replicatedCache = grid(0).cachesx().stream()
+                .filter(c -> c.name().equals("ignite-sys-atomic-cache@async-al-group-replicated"))
+                .findFirst().orElse(null);
+
+        assertNotNull(partitionedCache);
+        assertNotNull(replicatedCache);
+
+        assertEquals(2, partitionedCache.configuration().getBackups());
+        assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
+    }
+
+    /**
      * Tests atomic long with same name and group name, but different cache modes.
      */
     @Test
@@ -277,6 +458,45 @@ public class AtomicLongTest extends AbstractThinClientTest {
         assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
     }
 
+    /**
+     * Tests atomic long with same name and group name, but different cache modes (async factory).
+     */
+    @Test
+    public void testAsyncSameNameDifferentOptionsDoesNotCreateSecondAtomic() throws Exception {
+        String groupName = "testAsyncSameNameDifferentOptions";
+
+        ClientAtomicConfiguration cfg1 = new ClientAtomicConfiguration()
+                .setCacheMode(CacheMode.REPLICATED)
+                .setGroupName(groupName);
+
+        ClientAtomicConfiguration cfg2 = new ClientAtomicConfiguration()
+                .setCacheMode(CacheMode.PARTITIONED)
+                .setGroupName(groupName);
+
+        String name = "testAsyncSameNameDifferentOptionsDoesNotCreateSecondAtomic";
+
+        try (IgniteClient client = startClient(0)) {
+            ClientAtomicLong al1 = client.atomicLongAsync(name, cfg1, 1, true).get();
+            ClientAtomicLong al2 = client.atomicLongAsync(name, cfg2, 2, true).get();
+            ClientAtomicLong al3 = client.atomicLongAsync(name, 3, true).get();
+
+            assertEquals(1, al1.get());
+            assertEquals(1, al2.get());
+            assertEquals(3, al3.get());
+        }
+
+        List<IgniteInternalCache<?, ?>> caches = grid(0).cachesx().stream()
+                .filter(c -> c.name().contains(groupName))
+                .collect(Collectors.toList());
+
+        assertEquals(1, caches.size());
+
+        IgniteInternalCache<?, ?> replicatedCache = caches.get(0);
+
+        assertEquals("ignite-sys-atomic-cache@testAsyncSameNameDifferentOptions", replicatedCache.name());
+        assertEquals(Integer.MAX_VALUE, replicatedCache.configuration().getBackups());
+    }
+
     @Test
     public void testToString() {
         String name = "testToString";
@@ -302,5 +522,22 @@ public class AtomicLongTest extends AbstractThinClientTest {
 
         assertContains(null, ex.getMessage(), "AtomicLong with name '" + name + "' does not exist.");
         assertEquals(ClientStatus.RESOURCE_DOES_NOT_EXIST, ((ClientServerError)ex.getCause()).getCode());
+    }
+
+    /**
+     * Asserts that "does not exist" error is the cause of the {@link ExecutionException} thrown by an async operation.
+     *
+     * @param name Atomic long name.
+     * @param futureCallable Callable returning an {@link IgniteClientFuture}.
+     */
+    private void assertAsyncDoesNotExistError(String name, Callable<? extends IgniteClientFuture<?>> futureCallable) {
+        assertDoesNotExistError(name, () -> {
+            try {
+                return futureCallable.call().get();
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                throw cause instanceof RuntimeException ? (RuntimeException) cause : new RuntimeException(e);
+            }
+        });
     }
 }

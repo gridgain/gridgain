@@ -241,12 +241,35 @@ public interface IgniteClient extends AutoCloseable {
      * is {@code true}.
      *
      * @param name Name of atomic long.
+     * @param initVal Initial value for atomic long. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return a Future representing pending completion of the operation, which wraps the atomic long.
+     */
+    public IgniteClientFuture<ClientAtomicLong> atomicLongAsync(String name, long initVal, boolean create);
+
+    /**
+     * Gets an atomic long from cache and creates one if it has not been created yet and {@code create} flag
+     * is {@code true}.
+     *
+     * @param name Name of atomic long.
      * @param cfg Configuration.
      * @param initVal Initial value for atomic long. Ignored if {@code create} flag is {@code false}.
      * @param create Boolean flag indicating whether data structure should be created if it does not exist.
      * @return Atomic long.
      */
     public ClientAtomicLong atomicLong(String name, ClientAtomicConfiguration cfg, long initVal, boolean create);
+
+    /**
+     * Gets an atomic long from cache and creates one if it has not been created yet and {@code create} flag
+     * is {@code true}.
+     *
+     * @param name Name of atomic long.
+     * @param cfg Configuration.
+     * @param initVal Initial value for atomic long. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return a Future representing pending completion of the operation, which wraps the atomic long.
+     */
+    public IgniteClientFuture<ClientAtomicLong> atomicLongAsync(String name, ClientAtomicConfiguration cfg, long initVal, boolean create);
 
     /**
      * Gets a distributed set from cache. Creates one if it has not been created yet and {@code cfg} is not {@code null}.
