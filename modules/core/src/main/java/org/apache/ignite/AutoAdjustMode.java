@@ -20,9 +20,13 @@ package org.apache.ignite;
  * Baseline auto-adjustment mode.
  */
 public enum AutoAdjustMode {
-    /** Old behavior - scale up and scale down auto adjust simultaneously. */
+    /**
+     * It's the old option. It corresponds to the baseline scale up and down simultaneously.
+     *
+     * @deprecated Use {@link #SCALE_UP} or {@link #SCALE_DOWN} instead.
+     */
     @Deprecated
-    GENERAL(""),
+    SCALE_UP_DOWN(""),
 
     /** Scale up auto adjustment. */
     SCALE_UP("scale up"),

@@ -29,7 +29,7 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJU
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
-import static org.apache.ignite.AutoAdjustMode.GENERAL;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP_DOWN;
 import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
 import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 
@@ -82,7 +82,7 @@ class BaselineAutoAdjustScheduler {
      */
     @Deprecated
     public boolean schedule(BaselineAutoAdjustData baselineAutoAdjustData, long delay) {
-        return schedule(baselineAutoAdjustData, delay, GENERAL);
+        return schedule(baselineAutoAdjustData, delay, SCALE_UP_DOWN);
     }
 
     /**

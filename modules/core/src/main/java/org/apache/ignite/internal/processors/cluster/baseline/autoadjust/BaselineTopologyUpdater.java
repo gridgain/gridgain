@@ -30,7 +30,7 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
-import static org.apache.ignite.AutoAdjustMode.GENERAL;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP_DOWN;
 import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
 import static org.apache.ignite.internal.IgniteFeatures.SEPARATE_BASELINE_AUTO_ADJUSTMENT;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
@@ -247,7 +247,7 @@ public class BaselineTopologyUpdater {
     @Deprecated
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, GENERAL))
+            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, SCALE_UP_DOWN))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
