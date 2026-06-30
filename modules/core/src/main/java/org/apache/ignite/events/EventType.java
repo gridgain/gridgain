@@ -19,6 +19,8 @@ package org.apache.ignite.events;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.IgniteCluster;
 import org.apache.ignite.IgniteEvents;
 import org.apache.ignite.compute.ComputeTaskSession;
@@ -904,6 +906,62 @@ public interface EventType {
      * @see IgniteCluster#id(UUID)
      */
     public static final int EVT_CLUSTER_ID_UPDATED = 149;
+
+    /**
+     * Built-in event type: baseline scale up auto-adjust "enabled" flag has been changed by user request.
+     * Event includes the following information: auto-adjust enabled flag, auto-adjust timeout.
+     *
+     * <p>
+     * Fired when new tag is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#baselineAutoAdjustEnabled(AutoAdjustMode, boolean).
+     */
+    public static final int EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED = 150;
+
+    /**
+     * Built-in event type: baseline scale up auto-adjust timeout has been changed by user request.
+     * Event includes the following information: auto-adjust "enabled" flag, auto-adjust timeout.
+     *
+     * <p>
+     * Fired when new tag is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#baselineAutoAdjustTimeout(AutoAdjustMode, long).
+     */
+    public static final int EVT_BASELINE_SCALE_UP_AUTO_ADJUST_AWAITING_TIME_CHANGED = 151;
+
+    /**
+     * Built-in event type: baseline scale down auto-adjust "enabled" flag has been changed by user request.
+     * Event includes the following information: auto-adjust enabled flag, auto-adjust timeout.
+     *
+     * <p>
+     * Fired when new tag is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#baselineAutoAdjustEnabled(AutoAdjustMode, boolean).
+     */
+    public static final int EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED = 152;
+
+    /**
+     * Built-in event type: baseline scale down auto-adjust timeout has been changed by user request.
+     * Event includes the following information: auto-adjust "enabled" flag, auto-adjust timeout.
+     *
+     * <p>
+     * Fired when new tag is successfully set on all nodes.
+     * </p>
+     * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
+     * internal Ignite events and should not be used by user-defined events.
+     *
+     * @see IgniteCluster#baselineAutoAdjustTimeout(AutoAdjustMode, long).
+     */
+    public static final int EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_AWAITING_TIME_CHANGED = 153;
 
     /**
      * Built-in event type: is raised right before a service method execution started.

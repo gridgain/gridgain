@@ -55,7 +55,6 @@ import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
-import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -120,6 +119,10 @@ import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.configuration.IgniteConfiguration.DFLT_STATE_ON_START;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_AWAITING_TIME_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_SCALE_UP_AUTO_ADJUST_AWAITING_TIME_CHANGED;
+import static org.apache.ignite.events.EventType.EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
@@ -258,13 +261,32 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             ctx.log(DistributedBaselineConfiguration.class)
         );
 
-        distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
-            EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
-        ));
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+                EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED
+            ));
 
-        distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
-            EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED
-        ));
+            distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+                EVT_BASELINE_SCALE_UP_AUTO_ADJUST_AWAITING_TIME_CHANGED
+            ));
+
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+                EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED
+            ));
+
+            distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+                EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_AWAITING_TIME_CHANGED
+            ));
+        }
+        else {
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+                EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
+            ));
+
+            distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+                EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED
+            ));
+        }
 
         ctx.systemView().registerFiltrableView(
             BASELINE_NODE_ATTRIBUTES_SYS_VIEW,
@@ -281,14 +303,44 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         return (name, oldVal, newVal) -> {
             ctx.pools().getStripedExecutorService().execute(CLUSTER_ACTIVATION_EVT_STRIPE_ID, () -> {
                 if (ctx.event().isRecordable(evtType)) {
+                    String msg;
+                    boolean enabled;
+                    long timeout;
+                    switch (evtType) {
+                        case EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED:
+                        case EVT_BASELINE_SCALE_UP_AUTO_ADJUST_AWAITING_TIME_CHANGED:
+                            msg = evtType == EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED
+                                ? "Baseline scale up auto-adjust \"enabled\" flag has been changed"
+                                : "Baseline scale up auto-adjust timeout has been changed";
+                            enabled = distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(SCALE_UP);
+                            timeout = distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(SCALE_UP);
+                            break;
+                        case EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED:
+                        case EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_AWAITING_TIME_CHANGED:
+                            msg = evtType == EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED
+                                ? "Baseline scale down auto-adjust \"enabled\" flag has been changed"
+                                : "Baseline scale down auto-adjust timeout has been changed";
+                            enabled = distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(SCALE_DOWN);
+                            timeout = distributedBaselineConfiguration.getBaselineAutoAdjustTimeout(SCALE_DOWN);
+                            break;
+                        case EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED:
+                        case EVT_BASELINE_AUTO_ADJUST_AWAITING_TIME_CHANGED:
+                            msg = evtType == EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
+                                ? "Baseline auto-adjust \"enabled\" flag has been changed"
+                                : "Baseline auto-adjust timeout has been changed";
+                            enabled = distributedBaselineConfiguration.isBaselineAutoAdjustEnabled();
+                            timeout = distributedBaselineConfiguration.getBaselineAutoAdjustTimeout();
+                            break;
+                        default:
+                            throw new IgniteException("Unsupported event type: " + evtType);
+                    }
+
                     ctx.event().record(new BaselineConfigurationChangedEvent(
                         ctx.discovery().localNode(),
-                        evtType == EVT_BASELINE_AUTO_ADJUST_ENABLED_CHANGED
-                            ? "Baseline auto-adjust \"enabled\" flag has been changed"
-                            : "Baseline auto-adjust timeout has been changed",
+                        msg,
                         evtType,
-                        distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(),
-                        distributedBaselineConfiguration.getBaselineAutoAdjustTimeout()
+                        enabled,
+                        timeout
                     ));
                 }
             });
@@ -1267,7 +1319,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
             );
         }
 
-        boolean isBaselineAutoAdjustEnabled = isBaselineAutoAdjustEnabled();
+        boolean isBaselineAutoAdjustEnabled = isBaselineAutoAdjustEnabled(SCALE_UP) || isBaselineAutoAdjustEnabled(SCALE_DOWN);
 
         if (forceChangeBaselineTop && isBaselineAutoAdjustEnabled != isAutoAdjust)
             throw new BaselineAdjustForbiddenException(isBaselineAutoAdjustEnabled);
@@ -1907,7 +1959,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * @param discoCache Discovery cache from the discovery manager.
      * @param topVer Topology version.
      * @param minorTopVer Minor topology version.
-     * @param scaleUp The flag which indicates whether it's scale up {@code true} or scale down {@code false} adjustment.
+     * @param mode The baseline scale direction.
      * @return {@code true} if baseline was changed and discovery cache recalculation is required.
      */
     public boolean autoAdjustInMemoryClusterState(
@@ -2051,6 +2103,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * Returns the value of the manual baseline control or the baseline auto-adjust. The value corresponds to the provided
      * auto-adjust mode {@link AutoAdjustMode}.
+     *
      * @param mode The baseline scale direction.
      * @return {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      */
@@ -2059,9 +2112,15 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * Updates the value of manual baseline control or auto adjusting baseline.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * baseline auto-adjust enbaled flags.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline auto-adjust
+     * flag, which corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustEnabled V {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
+     * @deprecated Use {@link #baselineAutoAdjustEnabled(AutoAdjustMode, boolean)} instead.
      */
     @Deprecated
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) {
@@ -2069,9 +2128,25 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * Updates the value of manual baseline control or auto adjusting baseline.
+     *
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @throws IgniteException If operation failed.
+     */
+    public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) {
+        baselineAutoAdjustEnabledAsync(mode, baselineAutoAdjustEnabled).get();
+    }
+
+    /**
+     * Updates the value of manual baseline control or auto adjusting baseline.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * baseline auto-adjust enbaled flags.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline auto-adjust
+     * flag, which corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustEnabled  {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
+     * @deprecated Use {@link #baselineAutoAdjustEnabledAsync(AutoAdjustMode, boolean)} instead.
      */
     @Deprecated
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(boolean baselineAutoAdjustEnabled) {
@@ -2086,9 +2161,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param scaleUp The baseline is adjusted for scale up {@code true}, or scale down {@code false}.
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * Updates the value of manual baseline control or auto adjusting baseline. The value corresponds to the provided
+     * auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
      * @return Future for await operation completion.
      */
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) {
@@ -2103,9 +2180,12 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @return Value of time which we would wait before the actual topology change since last server topology change
+     * Returns the value of time which we would wait before the actual topology change since last server topology change
      * (node join/left/fail).
+     *
+     * @return The baseline auto-adjust timeout in milliseconds.
      * @throws IgniteException If operation failed.
+     * @deprecated Use {@link #baselineAutoAdjustTimeout(AutoAdjustMode)} instead.
      */
     @Deprecated
     public long baselineAutoAdjustTimeout() {
@@ -2113,11 +2193,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param scaleUp If {@code true}, the timeout for scaleUp will be return, if {@code false} - for scale down.
-     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
-     *                the flag will be ignored.
-     * @return Value of time which we would wait before the actual topology change since last server topology change
-     * (node join/left/fail).
+     * Returns the value of time which we would wait before the actual topology change since last server topology change
+     * (node join/left/fail). The value corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @return The baseline auto-adjust timeout in milliseconds.
      * @throws IgniteException If operation failed.
      */
     public long baselineAutoAdjustTimeout(AutoAdjustMode mode) {
@@ -2125,9 +2205,16 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join/left/fail).
+     * Updates the value of time which we would wait before the actual topology change since last server topology change
+     * (node join/left/fail).
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * baseline auto-adjust timeouts.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline
+     * auto-adjust timeout, which corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
      * @throws IgniteException If failed.
+     * @deprecated Use {@link #baselineAutoAdjustTimeout(AutoAdjustMode, long)} instead.
      */
     @Deprecated
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) {
@@ -2135,9 +2222,27 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join/left/fail).
+     * Updates the value of time which we would wait before the actual topology change since last server topology change
+     * (node join/left/fail). The value corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
+     */
+    public void baselineAutoAdjustTimeout(AutoAdjustMode mode, long baselineAutoAdjustTimeout) {
+        baselineAutoAdjustTimeoutAsync(mode, baselineAutoAdjustTimeout).get();
+    }
+
+    /**
+     * Updates the value of time which we would wait before the actual topology change since last server topology change
+     * (node join/left/fail).
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * baseline auto-adjust timeouts.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline
+     * auto-adjust timeout, which corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
      * @return Future for await operation completion.
+     * @deprecated Use {@link #baselineAutoAdjustTimeoutAsync(AutoAdjustMode, long)} instead.
      */
     @Deprecated
     public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(long baselineAutoAdjustTimeout) {
@@ -2153,9 +2258,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param scaleUp The timout is adjusted for scale up {@code true}, or scale down {@code false}.
-     * @param baselineAutoAdjustTimeout Value of time which we would wait before the actual topology change since last
-     * server topology change (node join/left/fail).
+     * Updates the value of time which we would wait before the actual topology change since last server topology change
+     * (node join/left/fail). The value corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
      * @return Future for await operation completion.
      */
     public IgniteFuture<?> baselineAutoAdjustTimeoutAsync(AutoAdjustMode mode, long baselineAutoAdjustTimeout) {
@@ -2178,7 +2285,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
+     * Returns the baseline auto-adjust status.
+     *
      * @return Status of baseline auto-adjust.
+     * @deprecated Use {@link #baselineAutoAdjustStatus(AutoAdjustMode)} instead.
      */
     @Deprecated
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
@@ -2186,7 +2296,9 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param scaleUp To get scale up's status {@code true}, to get scale down's status {@code false}.
+     * Returns the baseline auto-adjust status. The status corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode) {
