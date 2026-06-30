@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.GridKernalContext;
@@ -61,8 +62,8 @@ public class TestSecurityProcessor extends GridProcessorAdapter implements GridS
     /** Global authentication. */
     private final boolean globalAuth;
 
-    /** Authorize records. */
-    private final List<AuthorizeRecord> authorizeRecords = new ArrayList<>();
+    /** Authorize records. {@code authorize()} is invoked concurrently by compute-job threads. */
+    private final List<AuthorizeRecord> authorizeRecords = new CopyOnWriteArrayList<>();
 
     /**
      *

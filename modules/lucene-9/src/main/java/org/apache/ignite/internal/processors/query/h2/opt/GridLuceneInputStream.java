@@ -18,12 +18,14 @@ package org.apache.ignite.internal.processors.query.h2.opt;
 
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneFile;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream;
+import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.IndexInput;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.util.Objects;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
 
@@ -154,6 +156,66 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             len -= bytesToCp;
 
             bufPosition += bytesToCp;
+        }
+    }
+
+    /**
+     * Bulk float read. Fast path: when the whole vector is contiguous in the current off-heap buffer, copy
+     * native memory straight into the destination {@code float[]} — no heap {@code byte[]} staging and no
+     * scalar decode loop. When a vector straddles a page-buffer boundary, walk the buffers copying each run
+     * straight into {@code dst} (still no staging). The copied bytes are in Lucene's little-endian order, so
+     * on a little-endian JVM (the common case) {@code dst} is already correct; on big-endian we reverse each
+     * 4-byte word in place. Replaces the default per-{@code readByte} scalar loop that dominated vector-search CPU.
+     */
+    @Override public void readFloats(float[] dst, int offset, int len) throws IOException {
+        // Bounds-check the destination in production: the copyMemory writes below are unchecked native
+        // stores, so enforce offset >= 0, len >= 0, offset + len <= dst.length here (not just under -ea).
+        Objects.checkFromIndexSize(offset, len, dst.length);
+
+        int n = len << 2;
+
+        if (bufPosition >= bufLength) {
+            currBufIdx++;
+
+            switchCurrentBuffer(true);
+        }
+
+        long dstAddr = GridUnsafe.FLOAT_ARR_OFF + ((long)offset << 2);
+
+        if (bufPosition + n <= bufLength) {
+            // Fast path: the whole vector is contiguous in the current off-heap buffer — one native copy.
+            GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, dstAddr, n);
+
+            bufPosition += n;
+        }
+        else {
+            // Slow path: the vector straddles a page-buffer boundary, so it can't be copied in one shot.
+            // Walk the buffers, copying each contiguous run straight into dst's native memory (still no
+            // heap byte[] staging); switchCurrentBuffer() advances to the next page between runs.
+            int rem = n;
+
+            while (rem > 0) {
+                if (bufPosition >= bufLength) {
+                    currBufIdx++;
+
+                    switchCurrentBuffer(true);
+                }
+
+                int chunk = Math.min(rem, bufLength - bufPosition);
+
+                GridUnsafe.copyMemory(null, currBuf + bufPosition, dst, dstAddr, chunk);
+
+                bufPosition += chunk;
+                dstAddr += chunk;
+                rem -= chunk;
+            }
+        }
+
+        // The bytes copied above are in Lucene's little-endian order. That already matches the native float
+        // layout on a little-endian JVM; on big-endian, reverse each 4-byte word in place to fix it up.
+        if (GridUnsafe.BIG_ENDIAN) {
+            for (int i = 0; i < len; i++)
+                dst[offset + i] = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(dst[offset + i])));
         }
     }
 
