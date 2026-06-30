@@ -912,7 +912,7 @@ public interface EventType {
      * Event includes the following information: auto-adjust enabled flag, auto-adjust timeout.
      *
      * <p>
-     * Fired when new tag is successfully set on all nodes.
+     * Fired when new baseline scale up auto-adjust enabled value is successfully set on all nodes.
      * </p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
@@ -926,7 +926,7 @@ public interface EventType {
      * Event includes the following information: auto-adjust "enabled" flag, auto-adjust timeout.
      *
      * <p>
-     * Fired when new tag is successfully set on all nodes.
+     * Fired when new baseline scale up auto-adjust timeout value is successfully set on all nodes.
      * </p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
@@ -940,7 +940,7 @@ public interface EventType {
      * Event includes the following information: auto-adjust enabled flag, auto-adjust timeout.
      *
      * <p>
-     * Fired when new tag is successfully set on all nodes.
+     * Fired when new baseline scale down auto-adjust enabled value is successfully set on all nodes.
      * </p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.
@@ -954,7 +954,7 @@ public interface EventType {
      * Event includes the following information: auto-adjust "enabled" flag, auto-adjust timeout.
      *
      * <p>
-     * Fired when new tag is successfully set on all nodes.
+     * Fired when new baseline scale down auto-adjust timeout value is successfully set on all nodes.
      * </p>
      * NOTE: all types in range <b>from 1 to 1000 are reserved</b> for
      * internal Ignite events and should not be used by user-defined events.

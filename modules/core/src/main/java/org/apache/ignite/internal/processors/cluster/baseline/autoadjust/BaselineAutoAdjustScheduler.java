@@ -53,7 +53,9 @@ class BaselineAutoAdjustScheduler {
     /** Last scheduled task for scale down adjustment. It needed for removing from queue. */
     private BaselineMultiplyUseTimeoutObject baselineScaleDownTimeoutObj;
 
-    /** Last data for set new baseline. */
+    /**
+     * Keeps the most recent data so any pending task of EITHER direction reconciles against the latest topology.
+     */
     private final AtomicReference<BaselineAutoAdjustData> lastBaselineData = new AtomicReference<>();
 
     /** */
@@ -130,7 +132,7 @@ class BaselineAutoAdjustScheduler {
 
             if (alreadyScheduledVer > targetVer) {
                 if (log.isDebugEnabled()) {
-                    log.debug("Baseline" + mode.getLabel() + " auto adjust data is targeted to obsolete version (will not be scheduled) " +
+                    log.debug("Baseline " + mode.getLabel() + " auto adjust data is targeted to obsolete version (will not be scheduled) " +
                         "[data=" + baselineAutoAdjustData + ", scheduled=" + timeoutObject.baselineAutoAdjustData.get() + ']');
                 }
 
@@ -278,23 +280,6 @@ class BaselineAutoAdjustScheduler {
 
         /** End time of one iteration of this timeout object. */
         private long endTime;
-
-        protected BaselineMultiplyUseTimeoutObject(
-            AtomicReference<BaselineAutoAdjustData> baselineAutoAdjustData,
-            long executionTimeout,
-            BaselineAutoAdjustExecutor executor,
-            GridTimeoutProcessor processor,
-            IgniteLogger log
-        ) {
-            this(
-                baselineAutoAdjustData,
-                executionTimeout,
-                executor,
-                processor,
-                log,
-                SCALE_UP
-            );
-        }
 
         /**
          * @param baselineAutoAdjustData Data for changing baseline.

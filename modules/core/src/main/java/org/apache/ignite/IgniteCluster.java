@@ -636,7 +636,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general value, which
      * corresponds the old behavior.
      *
-     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      * @throws IgniteException If operation failed.
      * @deprecated Use {@link #baselineAutoAdjustEnabled(AutoAdjustMode, boolean)} instead.
      */
@@ -646,7 +646,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      * @param mode The baseline scale direction {@link AutoAdjustMode}.
      * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust for scale up. {@code False} If cluster in manuale.
+     * cluster in auto-adjust for scale up. {@code False} If cluster in manual.
      * @throws IgniteException If operation failed.
      */
     public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) throws IgniteException;

@@ -98,6 +98,9 @@ class BaselineAutoAdjustData {
                 break;
             case SCALE_UP_DOWN:
                 adjusted = true;
+                break;
+            default:
+                throw new IgniteException("Unsupported auto-adjust: " + mode + ". Use SCALE_UP or SCALE_DOWN.");
         }
     }
 

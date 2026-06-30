@@ -346,6 +346,9 @@ public class DistributedBaselineConfiguration {
      * @return The value of the manual baseline control or the baseline auto-adjust.
      */
     public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
+        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return isBaselineAutoAdjustEnabled();
+
         switch (mode) {
             case SCALE_UP:
                 return baselineScaleUpAutoAdjustEnabled.getOrDefault(dfltScaleUpEnabled);
@@ -359,7 +362,7 @@ public class DistributedBaselineConfiguration {
     /**
      * Updates the baseline auto-adjust enabled flag.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
-     * baseline auto-adjust enbaled flags.
+     * baseline auto-adjust enabled flags.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline auto-adjust
      * flag, which corresponds the old behavior.
      *
@@ -445,6 +448,9 @@ public class DistributedBaselineConfiguration {
      * @return The value of the timeout.
      */
     public long getBaselineAutoAdjustTimeout(AutoAdjustMode mode) {
+        if (!isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
+            return getBaselineAutoAdjustTimeout();
+
         switch (mode) {
             case SCALE_UP:
                 return baselineScaleUpAutoAdjustTimeout.getOrDefault(dfltScaleUpTimeout);

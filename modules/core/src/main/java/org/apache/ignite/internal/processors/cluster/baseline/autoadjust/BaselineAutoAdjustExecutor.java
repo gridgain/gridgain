@@ -26,6 +26,7 @@ import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP_DOWN;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
 import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
@@ -120,8 +121,9 @@ class BaselineAutoAdjustExecutor {
      */
     public boolean isExecutionExpired(BaselineAutoAdjustData data, AutoAdjustMode mode) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return data.isInvalidated() || (!isBaselineScaleUpAutoAdjustEnabled.getAsBoolean() && mode == SCALE_UP) ||
-                (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && mode == SCALE_DOWN);
+            return data.isInvalidated() || (!isBaselineScaleUpAutoAdjustEnabled.getAsBoolean() && mode == SCALE_UP)
+                || (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && mode == SCALE_DOWN)
+                || (!isBaselineAutoAdjustEnabled.getAsBoolean() && mode == SCALE_UP_DOWN);
 
         return data.isInvalidated() || !isBaselineAutoAdjustEnabled.getAsBoolean();
     }

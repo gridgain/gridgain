@@ -111,6 +111,8 @@ public class BaselineTopologyUpdater {
             synchronized (this) {
                 lastBaselineData = NULL_BASELINE_DATA;
             }
+
+            return;
         }
 
         synchronized (this) {
@@ -157,6 +159,10 @@ public class BaselineTopologyUpdater {
 
             return;
         }
+
+        if ((!isTopologyWatcherEnabled(SCALE_UP) && mode == SCALE_UP)
+            || (!isTopologyWatcherEnabled(SCALE_DOWN) && mode == SCALE_DOWN))
+            return;
 
         synchronized (this) {
             lastBaselineData = lastBaselineData.next(topologyVersion);
@@ -247,7 +253,7 @@ public class BaselineTopologyUpdater {
     @Deprecated
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, SCALE_UP_DOWN))
+            if (lastBaselineData.isAdjusted(SCALE_UP_DOWN) || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, SCALE_UP_DOWN))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();

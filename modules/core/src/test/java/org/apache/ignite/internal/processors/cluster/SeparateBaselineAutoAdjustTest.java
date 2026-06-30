@@ -33,8 +33,10 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
 public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
+    /** */
     private int scaleUpAutoAdjustTimeout;
 
+    /** */
     private int scaleDownAutoAdjustTimeout;
 
     /** {@inheritDoc} */

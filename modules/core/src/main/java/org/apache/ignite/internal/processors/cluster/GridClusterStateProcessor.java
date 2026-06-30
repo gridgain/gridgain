@@ -262,19 +262,19 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         );
 
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
-            distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_UP, makeEventListener(
                 EVT_BASELINE_SCALE_UP_AUTO_ADJUST_ENABLED_CHANGED
             ));
 
-            distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+            distributedBaselineConfiguration.listenAutoAdjustTimeout(SCALE_UP, makeEventListener(
                 EVT_BASELINE_SCALE_UP_AUTO_ADJUST_AWAITING_TIME_CHANGED
             ));
 
-            distributedBaselineConfiguration.listenAutoAdjustEnabled(makeEventListener(
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_DOWN, makeEventListener(
                 EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_ENABLED_CHANGED
             ));
 
-            distributedBaselineConfiguration.listenAutoAdjustTimeout(makeEventListener(
+            distributedBaselineConfiguration.listenAutoAdjustTimeout(SCALE_DOWN, makeEventListener(
                 EVT_BASELINE_SCALE_DOWN_AUTO_ADJUST_AWAITING_TIME_CHANGED
             ));
         }
@@ -2114,11 +2114,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * Updates the value of manual baseline control or auto adjusting baseline.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
-     * baseline auto-adjust enbaled flags.
+     * baseline auto-adjust enabled flags.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline auto-adjust
      * flag, which corresponds the old behavior.
      *
-     * @param baselineAutoAdjustEnabled V {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param baselineAutoAdjustEnabled V {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      * @throws IgniteException If operation failed.
      * @deprecated Use {@link #baselineAutoAdjustEnabled(AutoAdjustMode, boolean)} instead.
      */
@@ -2130,7 +2130,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * Updates the value of manual baseline control or auto adjusting baseline.
      *
-     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      * @throws IgniteException If operation failed.
      */
     public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) {
@@ -2140,11 +2140,11 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     /**
      * Updates the value of manual baseline control or auto adjusting baseline.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
-     * baseline auto-adjust enbaled flags.
+     * baseline auto-adjust enabled flags.
      * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline auto-adjust
      * flag, which corresponds the old behavior.
      *
-     * @param baselineAutoAdjustEnabled  {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param baselineAutoAdjustEnabled  {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      * @return Future for await operation completion.
      * @deprecated Use {@link #baselineAutoAdjustEnabledAsync(AutoAdjustMode, boolean)} instead.
      */
@@ -2165,7 +2165,7 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
      * auto-adjust mode {@link AutoAdjustMode}.
      *
      * @param mode The baseline scale direction.
-     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      * @return Future for await operation completion.
      */
     public IgniteFuture<?> baselineAutoAdjustEnabledAsync(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) {
