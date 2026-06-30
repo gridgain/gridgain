@@ -1137,10 +1137,12 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                 MetricRegistry mreg = cctx.shared().kernalContext().metric().registry(
                     metricName(INDEX_METRIC_PREFIX, schemaName, tblName, idxName));
 
-                LongAdderMetric cnt = mreg.longAdderMetric(hnd.getClass().getSimpleName() + "Count",
-                    "Count of " + hnd.getClass().getSimpleName() + " operations");
-                LongAdderMetric time = mreg.longAdderMetric(hnd.getClass().getSimpleName() + "Time",
-                    "Total time of " + hnd.getClass().getSimpleName() + " operations (nanoseconds)");
+                String opName = hnd.getClass().getSimpleName();
+
+                LongAdderMetric cnt = mreg.longAdderMetric( opName + "Count",
+                    "Count of " + opName + " operations");
+                LongAdderMetric time = mreg.longAdderMetric(opName + "Time",
+                    "Total time of " + opName + " operations (nanoseconds)");
 
                 return new PageHandler<Object, Result>() {
                     @Override public Result run(
