@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.internal.cluster;
+package org.apache.ignite;
 
 /**
  * Baseline auto-adjustment mode.

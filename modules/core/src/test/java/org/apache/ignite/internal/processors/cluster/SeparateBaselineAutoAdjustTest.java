@@ -24,8 +24,8 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**

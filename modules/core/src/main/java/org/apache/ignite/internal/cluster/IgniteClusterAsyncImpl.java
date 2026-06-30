@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
@@ -101,11 +103,12 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ClusterStartNodeResult> startNodes(File file,
-                                                                   boolean restart,
-                                                                   int timeout,
-                                                                   int maxConn)
-    {
+    @Override public Collection<ClusterStartNodeResult> startNodes(
+        File file,
+        boolean restart,
+        int timeout,
+        int maxConn
+    ) {
         try {
             return saveOrGet(cluster.startNodesAsync0(file, restart, timeout, maxConn));
         }
@@ -115,8 +118,11 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart,
-                                                                                      int timeout, int maxConn) throws IgniteException {
+    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(
+        File file, boolean restart,
+        int timeout,
+        int maxConn
+    ) throws IgniteException {
         return cluster.startNodesAsync(file, restart, timeout, maxConn);
     }
 

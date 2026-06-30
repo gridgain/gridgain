@@ -17,7 +17,7 @@
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
 
 import org.apache.ignite.IgniteLogger;
-import org.apache.ignite.internal.cluster.AutoAdjustMode;
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutObject;
 import org.apache.ignite.internal.processors.timeout.GridTimeoutProcessor;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -29,9 +29,9 @@ import static org.apache.ignite.IgniteSystemProperties.IGNITE_BASELINE_AUTO_ADJU
 import static org.apache.ignite.IgniteSystemProperties.getLong;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.GENERAL;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
+import static org.apache.ignite.AutoAdjustMode.GENERAL;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 
 /**
  * This class able to add task of set baseline with timeout to queue. In one time only one task can be in queue. Every

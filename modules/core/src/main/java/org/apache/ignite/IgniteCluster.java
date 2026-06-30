@@ -27,8 +27,6 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
-import org.apache.ignite.internal.SupportFeaturesUtils;
-import org.apache.ignite.internal.cluster.AutoAdjustMode;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -610,23 +608,37 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void tag(String tag) throws IgniteCheckedException;
 
     /**
-     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manual.
+     * Returns the value of the manual baseline control or the baseline auto-adjust.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it returns {@code true} if any of scale
+     * directions is enabled.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it returns {@code true} if general auto-adjust
+     * is enabled, which corresponds to the old behavior.
+     *
+     * @return {@code True} if cluster in auto-adjust. {@code False} if cluster in manual.
+     * @deprecated Use {@link #isBaselineAutoAdjustEnabled(AutoAdjustMode)} instead.
      */
     @Deprecated
     public boolean isBaselineAutoAdjustEnabled();
 
     /**
-     * @param mode The baseline scale direction {@link AutoAdjustMode}.
-     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manual.
+     * Returns the value of the manual baseline control or the baseline auto-adjust, which corresponds to the provided
+     * auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @return {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      */
     public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode);
 
     /**
-     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
-     * cluster in auto-adjust. {@code False} If cluster in manuale.
+     * Updates the value of the manual baseline control or the baseline auto-adjust.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * values.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general value, which
+     * corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustEnabled {@code True} If cluster in auto-adjust. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
+     * @deprecated Use {@link #baselineAutoAdjustEnabled(AutoAdjustMode, boolean)} instead.
      */
     @Deprecated
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException;
@@ -640,47 +652,68 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
-     * @return Number of milliseconds to wait before the actual topology change since last server topology change
+     * Returns the number of milliseconds to wait before the actual topology change since last server topology change
      * (node join/left/fail).
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it returns the SCALE_UP timeout, as the default
+     * SCALE_DOWN timeout is {@link Long#MAX_VALUE}.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it returns the general timeout, which
+     * corresponds the old behavior.
+     *
+     * @return The baseline auto-adjust timeout.
      * @throws IgniteException If operation failed.
+     * @deprecated Use {@link #baselineAutoAdjustTimeout(AutoAdjustMode)} instead.
      */
     @Deprecated
     public long baselineAutoAdjustTimeout();
 
     /**
-     * @param mode The baseline scale direction {@link AutoAdjustMode}.
-     *             If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
-     *             the parameter will be ignored.
-     * @return Number of milliseconds to wait before the actual topology change since last server topology change
-     * (node join/left/fail).
+     * Returns the number of milliseconds to wait before the actual topology change since last server topology change
+     * (node join/left/fail). It corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @return The baseline auto-adjust timeout.
      * @throws IgniteException If operation failed.
      */
     public long baselineAutoAdjustTimeout(AutoAdjustMode mode);
 
     /**
-     * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
-     * server topology change (node join/left/fail).
+     * Updates the value of the timeout to wait before the actual topology change since last server topology change
+     * (node join/left/fail).
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it updates both SCALE_UP and SCALE_DOWN
+     * baseline auto-adjust timeouts.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it updates only general baseline
+     * auto-adjust timeout, which corresponds the old behavior.
+     *
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
      * @throws IgniteException If failed.
+     * @deprecated Use {@link #baselineAutoAdjustTimeout(AutoAdjustMode, long)} instead.
      */
     @Deprecated
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
-     * @param mode The baseline scale direction {@link AutoAdjustMode}.
-     * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
-     * server topology change (node left/fail).
+     * Updates the value of the timeout to wait before the actual topology change since last server topology change
+     * (node join/left/fail). The timeout corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
+     * @param baselineAutoAdjustTimeout The baseline auto-adjust timeout in milliseconds.
      * @throws IgniteException If failed.
      */
     public void baselineAutoAdjustTimeout(AutoAdjustMode mode, long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
+     * Returns the status of the baseline auto-adjust.
+     *
      * @return Status of baseline auto-adjust.
+     * @deprecated Use {@link #baselineAutoAdjustStatus(AutoAdjustMode)} instead.
      */
     @Deprecated
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
 
     /**
-     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * Returns the status of the baseline auto-adjust, which corresponds to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode);

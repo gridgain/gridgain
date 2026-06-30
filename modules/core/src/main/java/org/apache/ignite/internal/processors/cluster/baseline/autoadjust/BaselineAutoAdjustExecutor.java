@@ -23,14 +23,14 @@ import java.util.function.BooleanSupplier;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.SupportFeaturesUtils;
-import org.apache.ignite.internal.cluster.AutoAdjustMode;
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.GENERAL;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
+import static org.apache.ignite.AutoAdjustMode.GENERAL;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 
 /**
  * This executor try to set new baseline by given data.
@@ -104,10 +104,7 @@ class BaselineAutoAdjustExecutor {
                     log.error("Error during baseline changing", e);
                 }
                 finally {
-                    if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-                        data.onAdjust(mode);
-                    else
-                        data.onAdjust();
+                    data.onAdjust(mode);
 
                     executionGuard.unlock();
                 }
@@ -125,8 +122,7 @@ class BaselineAutoAdjustExecutor {
     public boolean isExecutionExpired(BaselineAutoAdjustData data, AutoAdjustMode mode) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
             return data.isInvalidated() || (!isBaselineScaleUpAutoAdjustEnabled.getAsBoolean() && mode == SCALE_UP) ||
-                (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && mode == SCALE_DOWN) ||
-                (!isBaselineAutoAdjustEnabled.getAsBoolean() && mode == GENERAL);
+                (!isBaselineScaleDownAutoAdjustEnabled.getAsBoolean() && mode == SCALE_DOWN);
 
         return data.isInvalidated() || !isBaselineAutoAdjustEnabled.getAsBoolean();
     }

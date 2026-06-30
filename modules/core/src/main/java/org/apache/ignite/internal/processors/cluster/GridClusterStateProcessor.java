@@ -56,7 +56,7 @@ import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteNodeAttributes;
 import org.apache.ignite.internal.NodeStoppingException;
 import org.apache.ignite.internal.SupportFeaturesUtils;
-import org.apache.ignite.internal.cluster.AutoAdjustMode;
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.ClusterGroupAdapter;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
@@ -130,10 +130,10 @@ import static org.apache.ignite.internal.IgniteFeatures.SAFE_CLUSTER_DEACTIVATIO
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupport;
 import static org.apache.ignite.internal.IgniteFeatures.nodeSupports;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_IGNITE_FEATURES;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_DOWN;
-import static org.apache.ignite.internal.cluster.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.managers.communication.GridIoPolicy.SYSTEM_POOL;
 import static org.apache.ignite.internal.processors.cache.GridCacheUtils.extractDataStorage;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
@@ -541,33 +541,36 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
                 if (discoEvt.eventNode().isClient() || discoEvt.eventNode().isDaemon())
                     return;
 
-                AutoAdjustMode mode = discoEvt.type() == EVT_NODE_JOINED ? SCALE_UP : SCALE_DOWN;
-
-                baselineTopologyUpdater.triggerBaselineUpdate(discoEvt.topologyVersion(), mode);
+                baselineTopologyUpdater.triggerBaselineUpdate(
+                    discoEvt.topologyVersion(),
+                    discoEvt.type() == EVT_NODE_JOINED ? SCALE_UP : SCALE_DOWN
+                );
             },
             EVT_NODE_FAILED, EVT_NODE_LEFT, EVT_NODE_JOINED
         );
 
-        distributedBaselineConfiguration.listenAutoAdjustEnabled((name, oldVal, newVal) -> {
-            if (newVal != null && newVal) {
-                long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer);
-            }
-        });
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_UP, (name, oldVal, newVal) -> {
+                if (newVal != null && newVal && newVal != oldVal) {
+                    long topVer = ctx.discovery().topologyVersion();
+                    baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_UP);
+                }
+            });
 
-        distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_UP, (name, oldVal, newVal) -> {
-            if (newVal != null && newVal) {
-                long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_UP);
-            }
-        });
-
-        distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_DOWN, (name, oldVal, newVal) -> {
-            if (newVal != null && newVal) {
-                long topVer = ctx.discovery().topologyVersion();
-                baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_DOWN);
-            }
-        });
+            distributedBaselineConfiguration.listenAutoAdjustEnabled(SCALE_DOWN, (name, oldVal, newVal) -> {
+                if (newVal != null && newVal && newVal != oldVal) {
+                    long topVer = ctx.discovery().topologyVersion();
+                    baselineTopologyUpdater.triggerBaselineUpdate(topVer, SCALE_DOWN);
+                }
+            });
+        }
+        else
+            distributedBaselineConfiguration.listenAutoAdjustEnabled((name, oldVal, newVal) -> {
+                if (newVal != null && newVal && newVal != oldVal) {
+                    long topVer = ctx.discovery().topologyVersion();
+                    baselineTopologyUpdater.triggerBaselineUpdate(topVer);
+                }
+            });
     }
 
     /** {@inheritDoc} */
@@ -2031,8 +2034,14 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manuale.
+     * Returns the value of the manual baseline control or the baseline auto-adjust.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code true}, it returns {@code true} if any of scale
+     * directions is enabled.
+     * If the IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE is {@code false}, it returns {@code true} if general auto-adjust
+     * is enabled, which corresponds to the old behavior.
+     *
+     * @return {@code True} If cluster in the auto-adjust. {@code False} If cluster in the manual.
+     * @deprecated Use {@link #isBaselineAutoAdjustEnabled(AutoAdjustMode)} instead.
      */
     @Deprecated
     public boolean isBaselineAutoAdjustEnabled() {
@@ -2040,11 +2049,10 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
     }
 
     /**
-     * @param scaleUp Whether the baseline is adjusted for scale up {@code true}, or scale down {@code false}.
-     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
-     *                the flag will be ignored.
-     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
-     * {@code False} If cluster in manuale.
+     * Returns the value of the manual baseline control or the baseline auto-adjust. The value corresponds to the provided
+     * auto-adjust mode {@link AutoAdjustMode}.
+     * @param mode The baseline scale direction.
+     * @return {@code True} If cluster in auto-adjust. {@code False} If cluster in manual.
      */
     public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
         return distributedBaselineConfiguration.isBaselineAutoAdjustEnabled(mode);
