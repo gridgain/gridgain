@@ -146,7 +146,7 @@
         <profile>
             <id>java-11+</id>
             <activation>
-                <jdk>[11,)</jdk>
+                <jdk>[11,21)</jdk>
             </activation>
 
             <dependencies>
@@ -161,13 +161,28 @@
         <profile>
             <id>java-15+</id>
             <activation>
-                <jdk>[15,)</jdk>
+                <jdk>[15,21)</jdk>
             </activation>
 
             <dependencies>
                 <dependency>
                     <groupId>org.gridgain</groupId>
                     <artifactId>ignite-lucene-9</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <profile>
+            <id>java-21+</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>org.gridgain</groupId>
+                    <artifactId>ignite-lucene-10</artifactId>
                     <version>${project.version}</version>
                 </dependency>
             </dependencies>
