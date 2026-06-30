@@ -18,6 +18,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
@@ -72,6 +73,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
         {
             return _socket.DoOutInOp(_getPageOp, ctx => ctx.Stream.WriteLong(_cursorId),
                 ctx => ConvertGetBatch(ctx.Stream));
+        }
+
+        /** <inheritdoc /> */
+        protected override async ValueTask<T[]> GetBatchAsync(CancellationToken cancellationToken)
+        {
+            // The thin client protocol has no way to abort an in-flight request, so cancellation is honored
+            // only before the page request is sent.
+            cancellationToken.ThrowIfCancellationRequested();
+
+            return await _socket.DoOutInOpAsync(_getPageOp, ctx => ctx.Stream.WriteLong(_cursorId),
+                ctx => ConvertGetBatch(ctx.Stream)).ConfigureAwait(false);
         }
 
         /** <inheritdoc /> */

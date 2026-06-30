@@ -28,8 +28,12 @@ import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.managers.discovery.DiscoCache;
 import org.apache.ignite.internal.processors.GridProcessorAdapter;
+import org.apache.ignite.internal.util.typedef.F;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.marshaller.Marshaller;
 import org.apache.ignite.services.Service;
 import org.apache.ignite.services.ServiceCallContext;
+import org.apache.ignite.services.ServiceCallInterceptor;
 import org.apache.ignite.services.ServiceConfiguration;
 import org.apache.ignite.services.ServiceDescriptor;
 import org.jetbrains.annotations.Nullable;
@@ -43,6 +47,33 @@ public abstract class ServiceProcessorAdapter extends GridProcessorAdapter {
      */
     protected ServiceProcessorAdapter(GridKernalContext ctx) {
         super(ctx);
+    }
+
+    /**
+     * Unmarshals service call interceptors, injects resources into them and attaches them to the service context.
+     *
+     * @param srvcCfg Lazy service configuration.
+     * @param svcCtx Service context.
+     * @param marsh Marshaller.
+     * @param clsLdr Class loader.
+     * @throws IgniteCheckedException If failed.
+     */
+    protected void injectInterceptors(
+        LazyServiceConfiguration srvcCfg,
+        ServiceContextImpl svcCtx,
+        Marshaller marsh,
+        ClassLoader clsLdr
+    ) throws IgniteCheckedException {
+        ServiceCallInterceptor[] interceptors = U.unmarshal(marsh, srvcCfg.interceptorBytes(), clsLdr);
+
+        if (F.isEmpty(interceptors))
+            return;
+
+        for (int i = 0; i < interceptors.length; i++)
+            ctx.resource().injectGeneric(interceptors[i]);
+
+        svcCtx.interceptor(interceptors.length == 1 ?
+            interceptors[0] : new CompositeServiceCallInterceptor(interceptors));
     }
 
     /**

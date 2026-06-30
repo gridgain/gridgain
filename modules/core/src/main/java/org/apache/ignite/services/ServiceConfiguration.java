@@ -17,9 +17,11 @@
 package org.apache.ignite.services;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.lang.IgniteExperimental;
 import org.apache.ignite.lang.IgnitePredicate;
 
 /**
@@ -75,6 +77,10 @@ public class ServiceConfiguration implements Serializable {
     /** Node filter. */
     @GridToStringExclude
     protected IgnitePredicate<ClusterNode> nodeFilter;
+
+    /** Interceptor. */
+    @GridToStringExclude
+    protected ServiceCallInterceptor[] interceptors;
 
     /**
      * Gets service name.
@@ -255,6 +261,29 @@ public class ServiceConfiguration implements Serializable {
         return this;
     }
 
+    /**
+     * Gets service call interceptors.
+     *
+     * @return Service call interceptors.
+     */
+    @IgniteExperimental
+    public ServiceCallInterceptor[] getInterceptors() {
+        return interceptors;
+    }
+
+    /**
+     * Sets service call interceptors.
+     *
+     * @param interceptors Service call interceptors.
+     * @return {@code this} for chaining.
+     */
+    @IgniteExperimental
+    public ServiceConfiguration setInterceptors(ServiceCallInterceptor... interceptors) {
+        this.interceptors = interceptors;
+
+        return this;
+    }
+
     /** {@inheritDoc} */
     @Override public boolean equals(Object o) {
         if (!equalsIgnoreNodeFilter(o))
@@ -307,7 +336,7 @@ public class ServiceConfiguration implements Serializable {
         if (svc != null ? !svc.getClass().equals(that.svc.getClass()) : that.svc != null)
             return false;
 
-        return true;
+        return Arrays.deepEquals(interceptors, that.interceptors);
     }
 
     /** {@inheritDoc} */

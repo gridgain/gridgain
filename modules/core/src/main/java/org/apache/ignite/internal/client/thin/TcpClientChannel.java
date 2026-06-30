@@ -164,8 +164,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
     /** Executor for async operation listeners. */
     private final Executor asyncContinuationExecutor;
 
-    /** Send/receive timeout in milliseconds. */
-    private final int timeout;
+    /** Handshake timeout in milliseconds. */
+    private final int handshakeTimeout;
+
+    /** Request timeout in milliseconds. */
+    private final int reqTimeout;
 
     /** Heartbeat and timeout scheduler. */
     private final ScheduledExecutorService scheduler =
@@ -202,7 +205,8 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         Executor cfgExec = cfg.getAsyncContinuationExecutor();
         asyncContinuationExecutor = cfgExec != null ? cfgExec : ForkJoinPool.commonPool();
 
-        timeout = cfg.getTimeout();
+        handshakeTimeout = cfg.getHandshakeTimeout();
+        reqTimeout = cfg.getRequestTimeout();
 
         List<InetSocketAddress> addrs = cfg.getAddresses();
 
@@ -412,7 +416,7 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         long startTimeNanos = pendingReq.startTimeNanos;
 
         try {
-            ByteBuffer payload = timeout > 0 ? pendingReq.get(timeout) : pendingReq.get();
+            ByteBuffer payload = reqTimeout > 0 ? pendingReq.get(reqTimeout) : pendingReq.get();
 
             T res = null;
             if (payload != null && payloadReader != null)
@@ -447,11 +451,11 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         long startTimeNanos = pendingReq.startTimeNanos;
 
         // Can't use orTimeout() - requires Java 9.
-        final ScheduledFuture<Boolean> timeoutFut = timeout <= 0
+        final ScheduledFuture<Boolean> timeoutFut = reqTimeout <= 0
                 ? null
                 : scheduler.schedule(
                     () -> fut.completeExceptionally(new TimeoutException("Operation timed out")),
-                    timeout,
+                    reqTimeout,
                     TimeUnit.MILLISECONDS);
 
         pendingReq.listen(payloadFut -> asyncContinuationExecutor.execute(() -> {
@@ -720,9 +724,6 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
         long requestId = -1L;
         long startTime = System.nanoTime();
 
-        eventListener.onHandshakeStart(new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
-                new ProtocolContext(ver).toString(), null));
-
         while (true) {
             ClientRequestFuture fut;
 
@@ -740,10 +741,13 @@ class TcpClientChannel implements ClientChannel, ClientMessageHandler, ClientCon
                 pendingReqsLock.readLock().unlock();
             }
 
+            eventListener.onHandshakeStart(new ConnectionDescription(sock.localAddress(), sock.remoteAddress(),
+                    new ProtocolContext(ver).toString(), null));
+
             handshakeReq(ver, user, pwd, userAttrs);
 
             try {
-                ByteBuffer buf = timeout > 0 ? fut.get(timeout) : fut.get();
+                ByteBuffer buf = handshakeTimeout > 0 ? fut.get(handshakeTimeout) : fut.get();
 
                 BinaryInputStream res = BinaryByteBufferInputStream.create(buf);
 

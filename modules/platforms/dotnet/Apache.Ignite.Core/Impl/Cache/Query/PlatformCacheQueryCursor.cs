@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
@@ -158,6 +159,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     _dispose();
                 }
+            }
+        }
+
+        /** <inheritdoc /> */
+        public async IAsyncEnumerator<ICacheEntry<TK, TV>> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default)
+        {
+            // Platform cache iteration is local, so iterate synchronously within an async iterator.
+            await Task.CompletedTask.ConfigureAwait(false);
+
+            foreach (var entry in GetEnumerable())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                yield return entry;
             }
         }
 

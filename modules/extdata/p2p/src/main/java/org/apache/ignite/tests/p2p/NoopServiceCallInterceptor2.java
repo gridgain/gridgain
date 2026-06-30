@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,18 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.testsuites;
+package org.apache.ignite.tests.p2p;
 
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneDirectoryTest;
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneInputStreamTest;
-import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneTextIndex;
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import java.util.concurrent.Callable;
+import org.apache.ignite.services.ServiceCallInterceptor;
+import org.apache.ignite.services.ServiceContext;
 
 /**
- * Suite with tests for {@link GridLuceneTextIndex}.
+ * No-op service call interceptor.
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-        GridLuceneDirectoryTest.class,
-        GridLuceneInputStreamTest.class
-})
-public class GridLuceneTestSuite {
+public class NoopServiceCallInterceptor2 implements ServiceCallInterceptor {
+    /** {@inheritDoc} */
+    @Override public Object invoke(String mtd, Object[] args, ServiceContext ctx, Callable<Object> next) throws Exception {
+        return next.call();
+    }
 }

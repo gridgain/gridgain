@@ -17,6 +17,7 @@
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
@@ -340,6 +341,28 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             // Cursor is disposed: further iteration throws.
             Assert.Throws<ObjectDisposedException>(() => enumerator.MoveNext());
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a fields query cursor (<c>ClientFieldsQueryCursor</c>) returns all
+        /// rows, fetching multiple pages asynchronously from the server.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitForeachFieldsQueryReturnsAllRows()
+        {
+            var cache = GetClientCache<Person>();
+
+            // Small page size forces multiple async page requests during enumeration.
+            var qry = new SqlFieldsQuery("select Id from Person order by Id") { PageSize = 1 };
+
+            var ids = new List<int>();
+
+            await foreach (var row in await cache.QueryAsync(qry))
+            {
+                ids.Add((int)row[0]);
+            }
+
+            CollectionAssert.AreEqual(Enumerable.Range(1, Count), ids);
         }
 #endif
     }

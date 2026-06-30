@@ -98,6 +98,37 @@ public interface IgniteClient extends AutoCloseable {
     public IgniteClientFuture<Void> destroyCacheAsync(String name) throws ClientException;
 
     /**
+     * Destroys caches with the given names and cleans data that was written to the caches. The call will
+     * deallocate all resources associated with the given caches on all nodes in the cluster. There is no way
+     * to undo the action and recover destroyed data.
+     * <p>
+     * If the specified collection contains {@code null} or an empty value,
+     * this method will throw {@link IllegalArgumentException} and the caches will not be destroyed.
+     * <p>
+     * Throws {@link ClientException} if any of the caches does not exist.
+     *
+     * @param names Collection of cache names to destroy.
+     * @throws ClientException If error occurs.
+     */
+    public void destroyCaches(Collection<String> names) throws ClientException;
+
+    /**
+     * Destroys caches with the given names and cleans data that was written to the caches. The call will
+     * deallocate all resources associated with the given caches on all nodes in the cluster. There is no way
+     * to undo the action and recover destroyed data.
+     * <p>
+     * If the specified collection contains {@code null} or an empty value,
+     * this method will throw {@link IllegalArgumentException} and the caches will not be destroyed.
+     * <p>
+     * Throws {@link ClientException} if any of the caches does not exist.
+     *
+     * @param names Collection of cache names to destroy.
+     * @return a Future representing pending completion of the operation.
+     * @throws ClientException If error occurs.
+     */
+    public IgniteClientFuture<Void> destroyCachesAsync(Collection<String> names) throws ClientException;
+
+    /**
      * Creates a cache with a default configuration.
      *
      * @param name Cache name.

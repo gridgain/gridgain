@@ -44,7 +44,6 @@ import org.apache.ignite.transactions.TransactionState;
  * <p>
  * Provided implementations may be used for test purposes:
  * <ul>
- *     <li>{@ignitelink org.apache.ignite.cache.store.hibernate.CacheHibernateBlobStore}</li>
  *     <li>{@link CacheJdbcBlobStore}</li>
  * </ul>
  * <p>

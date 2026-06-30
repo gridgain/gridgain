@@ -149,6 +149,9 @@ public class FunctionalTest extends GridCommonAbstractTest {
             assertEquals(1, cache.size());
             assertEquals(2, cache.size(CachePeekMode.ALL));
 
+            assertEquals(1L, cache.sizeLong());
+            assertEquals(2L, cache.sizeLong(CachePeekMode.ALL));
+
             cache = client.cache(CACHE_NAME);
 
             Person cachedVal = cache.get(key);
@@ -180,6 +183,51 @@ public class FunctionalTest extends GridCommonAbstractTest {
             assertFalse(cache.containsKey(key));
 
             assertArrayEquals(new TreeSet<>(Arrays.asList(Config.DEFAULT_CACHE_NAME, CACHE_NAME)).toArray(), cacheNames);
+        }
+    }
+
+    /**
+     * Tested API:
+     * <ul>
+     * <li>{@link IgniteClient#destroyCaches(java.util.Collection)}</li>
+     * <li>{@link IgniteClient#destroyCachesAsync(java.util.Collection)}</li>
+     * </ul>
+     */
+    @Test
+    public void testDestroyCaches() throws Exception {
+        try (LocalIgniteCluster ignored = LocalIgniteCluster.start(2);
+             IgniteClient client = Ignition.startClient(getClientConfiguration())
+        ) {
+            client.createCache("cache1");
+            client.createCache("cache2");
+            client.createCache("cache3");
+            client.createCache("cache4");
+
+            // Sync.
+            client.destroyCaches(Arrays.asList("cache1", "cache2"));
+
+            assertArrayEquals(new TreeSet<>(Arrays.asList(Config.DEFAULT_CACHE_NAME, "cache3", "cache4")).toArray(),
+                new TreeSet<>(client.cacheNames()).toArray());
+
+            // Async.
+            client.destroyCachesAsync(Arrays.asList("cache3", "cache4")).get();
+
+            assertArrayEquals(new Object[] {Config.DEFAULT_CACHE_NAME}, new TreeSet<>(client.cacheNames()).toArray());
+
+            // Invalid names cause IllegalArgumentException and no caches are destroyed.
+            client.createCache("cache1");
+
+            GridTestUtils.assertThrows(null, () -> client.destroyCaches(Arrays.asList("cache1", null)),
+                IllegalArgumentException.class, null);
+
+            GridTestUtils.assertThrows(null, () -> client.destroyCaches(Arrays.asList("cache1", "")),
+                IllegalArgumentException.class, null);
+
+            GridTestUtils.assertThrows(null, () -> client.destroyCaches(null),
+                IllegalArgumentException.class, null);
+
+            assertArrayEquals(new TreeSet<>(Arrays.asList(Config.DEFAULT_CACHE_NAME, "cache1")).toArray(),
+                new TreeSet<>(client.cacheNames()).toArray());
         }
     }
 

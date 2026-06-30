@@ -79,6 +79,9 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
     /** */
     private static final int ITERS = 10;
 
+    /** Time to wait for the NIO session set to settle after a forced reconnect (see waitForSessionsCount). */
+    private static final long SESSIONS_SETTLE_TIMEOUT = 60_000;
+
     /** */
     protected static int port = 30_000;
 
@@ -631,17 +634,36 @@ public class GridTcpCommunicationSpiRecoverySelfTest<T extends CommunicationSpi<
     }
 
     /**
-     * @param spi Spi.
+     * Waits for the NIO session set of the given SPI to settle on the expected count.
+     * <p>
+     * After a forced reconnect (write timeout / unacknowledged-messages overflow) the
+     * reconnect storm leaves superseded sessions that are cleaned up asynchronously - either
+     * when a newer connection from the same node supersedes them, or via the idle-connection
+     * timeout. Under CI load this cleanup can lag well past {@link #awaitForSocketWriteTimeout()},
+     * so a dedicated, more generous timeout is used here. {@link GridTestUtils#waitForCondition}
+     * returns as soon as the count matches, so the larger ceiling only affects the failing path.
      *
+     * @param spi Spi.
+     * @param cnt Expected sessions count.
      * @return {@code true} if sessions count was achieved, {@code false} otherwise.
      */
     private boolean waitForSessionsCount(TcpCommunicationSpi spi, int cnt) throws IgniteInterruptedCheckedException {
-        return GridTestUtils.waitForCondition(() -> {
+        boolean res = GridTestUtils.waitForCondition(() -> {
             Collection<? extends GridNioSession> sessions =
                 GridTestUtils.getFieldValue(spi, "nioSrvWrapper", "nioSrv", "sessions");
 
             return sessions.size() == cnt;
-        }, awaitForSocketWriteTimeout());
+        }, SESSIONS_SETTLE_TIMEOUT);
+
+        if (!res) {
+            Collection<? extends GridNioSession> sessions =
+                GridTestUtils.getFieldValue(spi, "nioSrvWrapper", "nioSrv", "sessions");
+
+            log.error("Failed to wait for expected sessions count [expected=" + cnt +
+                ", actual=" + sessions.size() + ", sessions=" + sessions + ']');
+        }
+
+        return res;
     }
 
     /**
