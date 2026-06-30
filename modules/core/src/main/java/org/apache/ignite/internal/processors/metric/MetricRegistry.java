@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntGauge;
+import org.apache.ignite.internal.processors.metric.impl.MaxValueMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderWithDelegateMetric;
@@ -452,6 +453,24 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * @return {@link HitRateMetric}
      * @see HitRateMetric
      */
+    /**
+     * Creates and registers a max value metric.
+     *
+     * It accumulates approximate maximum value statistics.
+     * Calculates maximum value in last timeInterval milliseconds.
+     *
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * @param name Name.
+     * @param desc Description.
+     * @param timeInterval Time interval in milliseconds.
+     * @param size Array size for underlying calculations.
+     * @return {@link MaxValueMetric}
+     */
+    public MaxValueMetric maxValueMetric(String name, @Nullable String desc, long timeInterval, int size) {
+        return addMetric(name, new MaxValueMetric(metricName(regName, name), desc, timeInterval, size));
+    }
+
     public HitRateMetric hitRateMetric(String name, @Nullable String desc, long rateTimeInterval, int size) {
         String fullName = metricName(regName, name);
 
