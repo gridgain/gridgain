@@ -18,6 +18,7 @@ package org.apache.ignite.internal.client.thin;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -27,8 +28,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -39,6 +43,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteBinary;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.client.ClientAddressFinder;
 import org.apache.ignite.client.ClientAuthenticationException;
 import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
@@ -46,6 +51,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientOperationType;
 import org.apache.ignite.client.ClientRetryPolicy;
 import org.apache.ignite.client.ClientRetryPolicyContext;
+import org.apache.ignite.client.DnsClientAddressFinder;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
@@ -116,6 +122,10 @@ final class ReliableChannel implements AutoCloseable {
     /** Open channels counter. */
     private final AtomicInteger channelsCnt = new AtomicInteger();
 
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    private final AtomicBoolean scheduledAddressReload = new AtomicBoolean(false);
+
     /**
      * Constructor.
      */
@@ -152,6 +162,8 @@ final class ReliableChannel implements AutoCloseable {
             log.debug("ReliableChannel stopping");
 
         closed = true;
+
+        scheduler.shutdown();
 
         connMgr.stop();
 
@@ -689,6 +701,20 @@ final class ReliableChannel implements AutoCloseable {
      */
     void channelsInit() {
         channelsInit(null);
+
+        // Currently, this logic is only applied for the dns finder.
+        if (clientCfg.getAddressesFinder() instanceof DnsClientAddressFinder
+                && clientCfg.getBackgroundReResolveAddressesInterval() > 0
+                && scheduledAddressReload.compareAndSet(false, true)) {
+
+            ClientAddressReloader task = new ClientAddressReloader(clientCfg.getAddressesFinder());
+            scheduler.scheduleAtFixedRate(
+                    task,
+                    clientCfg.getBackgroundReResolveAddressesInterval(),
+                    clientCfg.getBackgroundReResolveAddressesInterval(),
+                    TimeUnit.MILLISECONDS
+            );
+        }
     }
 
     /**
@@ -1104,5 +1130,31 @@ final class ReliableChannel implements AutoCloseable {
      */
     AtomicBoolean getScheduledChannelsReinit() {
         return scheduledChannelsReinit;
+    }
+
+    private class ClientAddressReloader implements Runnable {
+        private final ClientAddressFinder finder;
+
+        // Not threadsafe.
+        private int currHash;
+
+        public ClientAddressReloader(ClientAddressFinder finder) {
+            this.finder = finder;
+            reload();
+        }
+
+        private void reload() {
+            String[] curr = finder.getAddresses();
+            currHash = Arrays.hashCode(curr);
+        }
+
+        @Override public void run() {
+            int prevHash = currHash;
+            reload();
+
+            if (prevHash != currHash) {
+                channelsInit(null);
+            }
+        }
     }
 }

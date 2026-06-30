@@ -36,6 +36,7 @@ import org.apache.ignite.client.ClientAddressFinder;
 import org.apache.ignite.client.ClientAuthorizationException;
 import org.apache.ignite.client.ClientConnectionException;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.DnsClientAddressFinder;
 import org.apache.ignite.configuration.ClientConfiguration;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.client.thin.io.ClientConnectionMultiplexer;
@@ -46,6 +47,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -381,6 +383,126 @@ public class ReliableChannelTest {
     }
 
     /**
+     * Checks that background DNS address reload triggers channel re-initialization when one address is
+     * removed and one is added, and that operations remain available after the reload.
+     */
+    @Test
+    public void testBackgroundAddressReloadAddsAndRemovesAddress() throws Exception {
+        TestDnsClientAddressFinder finder = new TestDnsClientAddressFinder(
+                "127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10802");
+
+        ClientConfiguration ccfg = new ClientConfiguration()
+                .setAddressesFinder(finder)
+                .setBackgroundReResolveAddressesInterval(100);
+
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+
+        ClientBinaryMarshaller marsh = mock(ClientBinaryMarshaller.class);
+        TcpClientTransactions txs = mock(TcpClientTransactions.class);
+        TcpClientCache<Integer, String> cache = new TcpClientCache<>("test", rc, marsh, txs, null, false, null);
+
+        try {
+            rc.channelsInit();
+
+            assertEquals(3, rc.getChannelHolders().size());
+
+            ReliableChannel.ClientChannelHolder removedHolder = rc.getChannelHolders().stream()
+                    .filter(h -> F.first(h.getAddresses()).toString().contains(":10802"))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("10802 holder not found"));
+
+            // Cache operations must work before the address change.
+            assertNull(cache.get(0));
+
+            // Remove 10802, add 10803.
+            finder.setAddresses("127.0.0.1:10800", "127.0.0.1:10801", "127.0.0.1:10803");
+
+            boolean reinitDone = GridTestUtils.waitForCondition(
+                    () -> rc.getChannelHolders().stream()
+                            .map(h -> F.first(h.getAddresses()).toString())
+                            .anyMatch(a -> a.contains(":10803")),
+                    5_000);
+
+            assertTrue("Channel re-initialization did not happen within 5s.", reinitDone);
+            assertTrue("Removed address holder should be closed.", removedHolder.isClosed());
+
+            // Cache operations must still work after the reload.
+            assertNull(cache.get(0));
+        }
+        finally {
+            rc.close();
+        }
+    }
+
+    /**
+     * Checks that background DNS address reload does NOT trigger re-initialization when addresses are unchanged.
+     */
+    @Test
+    public void testBackgroundAddressReloadSkipsReinitWhenAddressesUnchanged() throws Exception {
+        TestDnsClientAddressFinder finder = new TestDnsClientAddressFinder(dfltAddrs);
+
+        ClientConfiguration ccfg = new ClientConfiguration()
+                .setAddressesFinder(finder)
+                .setBackgroundReResolveAddressesInterval(100);
+
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+
+        try {
+            rc.channelsInit();
+
+            List<ReliableChannel.ClientChannelHolder> originalChannels = rc.getChannelHolders();
+
+            int initialCallCount = finder.getCallCount();
+
+            // Wait until the background reload has fired at least 3 times, confirming it ran.
+            assertTrue(GridTestUtils.waitForCondition(
+                    () -> finder.getCallCount() >= initialCallCount + 3, 5_000));
+
+            // The same list instance must be retained — no re-initialization should have occurred.
+            assertSame(originalChannels, rc.getChannelHolders());
+            originalChannels.forEach(h -> assertFalse(h.isClosed()));
+        }
+        finally {
+            rc.close();
+        }
+    }
+
+    /**
+     * Checks that background address reload is not scheduled when the interval is 0,
+     * so address changes are never picked up automatically.
+     */
+    @Test
+    public void testBackgroundAddressReloadNotScheduledWhenIntervalIsZero() throws Exception {
+        TestDnsClientAddressFinder finder = new TestDnsClientAddressFinder(dfltAddrs);
+
+        ClientConfiguration ccfg = new ClientConfiguration()
+                .setAddressesFinder(finder)
+                .setBackgroundReResolveAddressesInterval(0);
+
+        ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
+
+        try {
+            rc.channelsInit();
+
+            List<ReliableChannel.ClientChannelHolder> originalChannels = rc.getChannelHolders();
+
+            int callCountAfterInit = finder.getCallCount();
+
+            // Change addresses — no background task is running so this must not be picked up.
+            finder.setAddresses("127.0.0.1:10803", "127.0.0.1:10804", "127.0.0.1:10805");
+
+            Thread.sleep(500);
+
+            // getAddresses() must not have been called again — no background task was scheduled.
+            assertEquals(callCountAfterInit, finder.getCallCount());
+            assertSame(originalChannels, rc.getChannelHolders());
+        }
+        finally {
+            rc.close();
+        }
+    }
+
+    /**
      * Mock for client channel.
      */
     private static class TestClientChannel implements ClientChannel {
@@ -503,6 +625,34 @@ public class ReliableChannelTest {
                 throw new IllegalStateException("Server address request is not expected.");
 
             return addrResQueue.poll();
+        }
+    }
+
+    /**
+     * {@link DnsClientAddressFinder} stub with a mutable address list, used to test background reload
+     * without real DNS resolution. Overrides {@link #getAddresses()} so the superclass DNS logic is bypassed.
+     */
+    private static class TestDnsClientAddressFinder extends DnsClientAddressFinder {
+        private volatile String[] addresses;
+
+        private final AtomicInteger callCount = new AtomicInteger();
+
+        TestDnsClientAddressFinder(String... initialAddresses) {
+            super(null); // addrs unused — getAddresses() is overridden
+            addresses = initialAddresses;
+        }
+
+        void setAddresses(String... newAddresses) {
+            addresses = newAddresses;
+        }
+
+        int getCallCount() {
+            return callCount.get();
+        }
+
+        @Override public String[] getAddresses() {
+            callCount.incrementAndGet();
+            return Arrays.copyOf(addresses, addresses.length);
         }
     }
 }

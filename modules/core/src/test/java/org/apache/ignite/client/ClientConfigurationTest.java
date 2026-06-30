@@ -108,7 +108,8 @@ public class ClientConfigurationTest {
             .setSslKeyAlgorithm(DFLT_KEY_ALGORITHM)
             .setHeartbeatInterval(3000)
             .setAutoBinaryConfigurationEnabled(false)
-            .setHeartbeatEnabled(true);
+            .setHeartbeatEnabled(true)
+            .setBackgroundReResolveAddressesInterval(12345);
 
         ByteArrayOutputStream outBytes = new ByteArrayOutputStream();
 
