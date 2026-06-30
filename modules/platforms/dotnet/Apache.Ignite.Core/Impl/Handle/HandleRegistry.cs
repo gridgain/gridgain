@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Handle
 {
     using System;
@@ -132,11 +134,11 @@ namespace Apache.Ignite.Core.Impl.Handle
 
                     if (fastIdx < _fastCap)
                     {
-                        Thread.VolatileWrite(ref _fast[fastIdx], target);
+                        Volatile.Write(ref _fast[fastIdx], target);
 
                         if (safe && Closed)
                         {
-                            Thread.VolatileWrite(ref _fast[fastIdx], null);
+                            Volatile.Write(ref _fast[fastIdx], null);
 
                             Release0(target, true);
 
@@ -175,11 +177,11 @@ namespace Apache.Ignite.Core.Impl.Handle
         {
             if (id < _fastCap)
             {
-                object target = Thread.VolatileRead(ref _fast[id]);
+                object target = Volatile.Read(ref _fast[id]);
 
                 if (target != null)
                 {
-                    Thread.VolatileWrite(ref _fast[id], null);
+                    Volatile.Write(ref _fast[id], null);
 
                     Release0(target, quiet);
                 }
@@ -245,7 +247,7 @@ namespace Apache.Ignite.Core.Impl.Handle
 
             if (id < _fastCap)
             {
-                target = Thread.VolatileRead(ref _fast[id]);
+                target = Volatile.Read(ref _fast[id]);
 
                 if (target != null)
                     return (T)target;
@@ -273,11 +275,11 @@ namespace Apache.Ignite.Core.Impl.Handle
                 // Cleanup on fast-path.
                 for (int i = 0; i < _fastCap; i++)
                 {
-                    object target = Thread.VolatileRead(ref _fast[i]);
+                    object target = Volatile.Read(ref _fast[i]);
 
                     if (target != null)
                     {
-                        Thread.VolatileWrite(ref _fast[i], null);
+                        Volatile.Write(ref _fast[i], null);
 
                         Release0(target, true);
                     }
@@ -301,7 +303,7 @@ namespace Apache.Ignite.Core.Impl.Handle
         /// </summary>
         public bool Closed
         {
-            get { return Thread.VolatileRead(ref _closed) == 1; }
+            get { return Volatile.Read(ref _closed) == 1; }
         }
 
         /// <summary>

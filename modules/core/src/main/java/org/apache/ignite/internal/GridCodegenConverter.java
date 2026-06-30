@@ -42,6 +42,13 @@ public @interface GridCodegenConverter {
     String set() default "";
 
     /**
+     * Allows to specify a default value that is used by reading operation.
+     *
+     * @return Default value.
+     */
+    String defaultValueOnRead() default "";
+
+    /**
      * @return Result type. Use this type to read / write the converted value.
      */
     Class<?> type() default Default.class;

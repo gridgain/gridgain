@@ -587,7 +587,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     /**
      * User-defined tag describing the cluster.
      *
-     * @return Current tag value same across all nodes of the cluster..
+     * @return Current tag value same across all nodes of the cluster.
      */
     public String tag();
 

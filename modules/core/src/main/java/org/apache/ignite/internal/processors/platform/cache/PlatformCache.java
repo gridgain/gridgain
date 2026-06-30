@@ -1496,6 +1496,7 @@ public class PlatformCache extends PlatformAbstractTarget {
         String schema = reader.readString();
         int[] partitions = reader.readIntArray();
         int updateBatchSize = reader.readInt();
+        String label = reader.readString();
 
         SqlFieldsQuery qry = QueryUtils.withQueryTimeout(new SqlFieldsQuery(sql), timeout, TimeUnit.MILLISECONDS)
                 .setPageSize(pageSize)
@@ -1508,7 +1509,8 @@ public class PlatformCache extends PlatformAbstractTarget {
                 .setCollocated(collocated)
                 .setSchema(schema)
                 .setPartitions(partitions)
-                .setUpdateBatchSize(updateBatchSize);
+                .setUpdateBatchSize(updateBatchSize)
+                .setLabel(label);
 
         return qry;
     }

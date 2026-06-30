@@ -58,16 +58,25 @@ namespace Apache.Ignite.Core.Impl.Unmanaged
         /// <summary>
         /// Windows.
         /// </summary>
+#if NET6_0_OR_GREATER
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("windows")]
+#endif
         public static bool IsWindows { get; private set; }
 
         /// <summary>
         /// Linux.
         /// </summary>
+#if NET6_0_OR_GREATER
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("linux")]
+#endif
         public static bool IsLinux { get; private set; }
 
         /// <summary>
         /// MacOs.
         /// </summary>
+#if NET6_0_OR_GREATER
+        [System.Runtime.Versioning.SupportedOSPlatformGuard("macos")]
+#endif
         public static bool IsMacOs { get; private set; }
     }
 }

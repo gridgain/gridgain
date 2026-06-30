@@ -62,12 +62,12 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly ClientProtocolVersion _protocolVersion;
 
         /** */
-        private readonly BitArray _features;
+        private readonly BitArray? _features;
 
         /// <summary>
         /// Initializes a new instance of <see cref="ClientFeatures"/>.
         /// </summary>
-        public ClientFeatures(ClientProtocolVersion protocolVersion, BitArray features)
+        public ClientFeatures(ClientProtocolVersion protocolVersion, BitArray? features)
         {
             _protocolVersion = protocolVersion;
             _features = features;

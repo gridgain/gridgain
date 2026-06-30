@@ -32,7 +32,7 @@ namespace Apache.Ignite.Core.Impl.Common
         private readonly bool _keepBinary;
 
         /** Converting function. */
-        private readonly Func<BinaryReader, T> _func;
+        private readonly Func<BinaryReader?, T> _func;
 
         /** Register same java type flag. */
         private readonly bool _registerSameJavaType;
@@ -43,18 +43,18 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <param name="marsh">Marshaller.</param>
         /// <param name="keepBinary">Keep binary flag.</param>
         /// <param name="func">Converting function.</param>
-        public FutureConverter(Marshaller marsh, bool keepBinary, Func<BinaryReader, T> func = null)
+        public FutureConverter(Marshaller marsh, bool keepBinary, Func<BinaryReader?, T>? func = null)
         {
             _marsh = marsh;
             _keepBinary = keepBinary;
-            _func = func ?? (reader => reader == null ? default(T) : reader.ReadObject<T>());
+            _func = func ?? (reader => reader == null ? default! : reader.ReadObject<T>());
             _registerSameJavaType = marsh.RegisterSameJavaType;
         }
 
         /// <summary>
         /// Read and convert a value.
         /// </summary>
-        public T Convert(IBinaryStream stream)
+        public T Convert(IBinaryStream? stream)
         {
             bool locRegisterSameJavaType = Marshaller.RegisterSameJavaTypeTl.Value;
 

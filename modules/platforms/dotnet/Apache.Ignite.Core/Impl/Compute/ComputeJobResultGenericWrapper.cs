@@ -38,14 +38,14 @@ namespace Apache.Ignite.Core.Impl.Compute
 
         /** <inheritdoc /> */
 
-        public T Data
+        public T? Data
         {
-            get { return (T) _wrappedRes.Data; }
+            get { return (T?) _wrappedRes.Data; }
         }
 
         /** <inheritdoc /> */
 
-        public Exception Exception
+        public Exception? Exception
         {
             get { return _wrappedRes.Exception; }
         }

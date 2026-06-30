@@ -492,11 +492,20 @@ namespace Apache.Ignite.Core.Tests.Binary.Serializable
             Assert.AreEqual("Object", binType.GetFieldTypeName("datetime"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("datetimes"));
 
+#if NET8_0_OR_GREATER
+            // .NET 8 made IntPtr and UIntPtr implement IConvertible, so they are treated as long by BinaryType.
+            Assert.AreEqual("long", binType.GetFieldTypeName("intptr"));
+            Assert.AreEqual("Object", binType.GetFieldTypeName("intptrs"));
+
+            Assert.AreEqual("long", binType.GetFieldTypeName("uintptr"));
+            Assert.AreEqual("Object", binType.GetFieldTypeName("uintptrs"));
+#else
             Assert.AreEqual("Object", binType.GetFieldTypeName("intptr"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("intptrs"));
 
             Assert.AreEqual("Object", binType.GetFieldTypeName("uintptr"));
             Assert.AreEqual("Object", binType.GetFieldTypeName("uintptrs"));
+#endif
         }
 
         /// <summary>

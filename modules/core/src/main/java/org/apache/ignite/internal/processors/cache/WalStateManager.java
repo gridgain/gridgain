@@ -559,12 +559,14 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
         if (!srv)
             return;
 
-        synchronized (mux) {
-            WalStateResult res = null;
+        WalStateResult res = null;
+        CheckpointProgress cpFut = null;
+        CacheGroupContext grpCtx = null;
 
+        synchronized (mux) {
             if (msg.affinityNode()) {
                 // Affinity node, normal processing.
-                CacheGroupContext grpCtx = cacheProcessor().cacheGroup(msg.groupId());
+                grpCtx = cacheProcessor().cacheGroup(msg.groupId());
 
                 if (grpCtx == null) {
                     // Related caches were destroyed concurrently.
@@ -577,47 +579,9 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                         res = new WalStateResult(msg, false);
                     else {
                         // Initiate a checkpoint.
-                        CheckpointProgress cpFut = triggerCheckpoint("wal-state-change-grp-" + msg.groupId());
+                        cpFut = triggerCheckpoint("wal-state-change-grp-" + msg.groupId());
 
-                        if (cpFut != null) {
-                            try {
-                                // Wait for checkpoint mark synchronously before releasing the control.
-                                cpFut.futureFor(LOCK_RELEASED).get();
-
-                                if (msg.enable()) {
-                                    grpCtx.globalWalEnabled(true);
-
-                                    // Enable: it is enough to release cache operations once mark is finished because
-                                    // not-yet-flushed dirty pages have been logged.
-                                    WalStateChangeWorker worker = new WalStateChangeWorker(msg, cpFut);
-
-                                    IgniteThread thread = new IgniteThread(worker);
-
-                                    thread.setUncaughtExceptionHandler(new OomExceptionHandler(
-                                        cctx.kernalContext()));
-
-                                    thread.start();
-                                }
-                                else {
-                                    // Disable: not-yet-flushed operations are not logged, so wait for them
-                                    // synchronously in exchange thread. Otherwise, we cannot define a point in
-                                    // when it is safe to continue cache operations.
-                                    res = awaitCheckpoint(cpFut, msg);
-
-                                    // WAL state is persisted after checkpoint if finished. Otherwise in case of crash
-                                    // and restart we will think that WAL is enabled, but data might be corrupted.
-                                    grpCtx.globalWalEnabled(false);
-                                }
-                            }
-                            catch (Exception e) {
-                                U.warn(log, "Failed to change WAL mode due to unexpected exception [" +
-                                    "msg=" + msg + ']', e);
-
-                                res = new WalStateResult(msg, "Failed to change WAL mode due to unexpected " +
-                                    "exception (see server logs for more information): " + e.getMessage());
-                            }
-                        }
-                        else {
+                        if (cpFut == null) {
                             res = new WalStateResult(msg, "Failed to initiate a checkpoint (checkpoint thread " +
                                 "is not available).");
                         }
@@ -629,7 +593,53 @@ public class WalStateManager extends GridCacheSharedManagerAdapter {
                 // which will be ignored anyway.
                 res = new WalStateResult(msg, false);
             }
+        }
 
+        // Wait for the checkpoint outside mux to avoid the deadlock; everything else stays under mux.
+        if (cpFut != null) {
+            try {
+                // Wait for checkpoint mark synchronously before releasing the control.
+                cpFut.futureFor(LOCK_RELEASED).get();
+
+                if (msg.enable()) {
+                    synchronized (mux) {
+                        grpCtx.globalWalEnabled(true);
+
+                        // Enable: it is enough to release cache operations once mark is finished because
+                        // not-yet-flushed dirty pages have been logged.
+                        WalStateChangeWorker worker = new WalStateChangeWorker(msg, cpFut);
+
+                        IgniteThread thread = new IgniteThread(worker);
+
+                        thread.setUncaughtExceptionHandler(new OomExceptionHandler(
+                            cctx.kernalContext()));
+
+                        thread.start();
+                    }
+                }
+                else {
+                    // Disable: not-yet-flushed operations are not logged, so wait for them
+                    // synchronously in exchange thread. Otherwise, we cannot define a point in
+                    // when it is safe to continue cache operations.
+                    res = awaitCheckpoint(cpFut, msg);
+
+                    synchronized (mux) {
+                        // WAL state is persisted after checkpoint if finished. Otherwise in case of crash
+                        // and restart we will think that WAL is enabled, but data might be corrupted.
+                        grpCtx.globalWalEnabled(false);
+                    }
+                }
+            }
+            catch (Exception e) {
+                U.warn(log, "Failed to change WAL mode due to unexpected exception [" +
+                    "msg=" + msg + ']', e);
+
+                res = new WalStateResult(msg, "Failed to change WAL mode due to unexpected " +
+                    "exception (see server logs for more information): " + e.getMessage());
+            }
+        }
+
+        synchronized (mux) {
             if (res != null) {
                 addResult(res);
 

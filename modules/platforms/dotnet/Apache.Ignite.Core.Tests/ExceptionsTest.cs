@@ -106,33 +106,34 @@ namespace Apache.Ignite.Core.Tests
             Assert.AreEqual(name, javaEx.JavaMessage);
             Assert.IsTrue(javaEx.JavaClassName.EndsWith("." + name));
 
+#if !NET8_0_OR_GREATER
             // Check serialization.
             var formatter = new BinaryFormatter();
-            using (var ms = new MemoryStream())
-            {
+            using var ms = new MemoryStream();
+
 #pragma warning disable SYSLIB0011 // BinaryFormatter is obsolete
-                formatter.Serialize(ms, ex);
+            formatter.Serialize(ms, ex);
 
-                ms.Seek(0, SeekOrigin.Begin);
+            ms.Seek(0, SeekOrigin.Begin);
 
-                var res = (T) formatter.Deserialize(ms);
+            var res = (T) formatter.Deserialize(ms);
 
-                Assert.AreEqual(ex.Message, res.Message);
-                Assert.AreEqual(ex.Source, res.Source);
-                Assert.AreEqual(ex.StackTrace, res.StackTrace);
-                Assert.AreEqual(ex.HelpLink, res.HelpLink);
+            Assert.AreEqual(ex.Message, res.Message);
+            Assert.AreEqual(ex.Source, res.Source);
+            Assert.AreEqual(ex.StackTrace, res.StackTrace);
+            Assert.AreEqual(ex.HelpLink, res.HelpLink);
 
-                var resJavaEx = res.InnerException as JavaException;
+            var resJavaEx = res.InnerException as JavaException;
 
-                Assert.IsNotNull(resJavaEx);
-                Assert.AreEqual(javaEx.Message, resJavaEx.Message);
-                Assert.AreEqual(javaEx.JavaClassName, resJavaEx.JavaClassName);
-                Assert.AreEqual(javaEx.JavaMessage, resJavaEx.JavaMessage);
-                Assert.AreEqual(javaEx.StackTrace, resJavaEx.StackTrace);
-                Assert.AreEqual(javaEx.Source, resJavaEx.Source);
-                Assert.AreEqual(javaEx.HelpLink, resJavaEx.HelpLink);
+            Assert.IsNotNull(resJavaEx);
+            Assert.AreEqual(javaEx.Message, resJavaEx.Message);
+            Assert.AreEqual(javaEx.JavaClassName, resJavaEx.JavaClassName);
+            Assert.AreEqual(javaEx.JavaMessage, resJavaEx.JavaMessage);
+            Assert.AreEqual(javaEx.StackTrace, resJavaEx.StackTrace);
+            Assert.AreEqual(javaEx.Source, resJavaEx.Source);
+            Assert.AreEqual(javaEx.HelpLink, resJavaEx.HelpLink);
 #pragma warning restore SYSLIB0011 // BinaryFormatter is obsolete
-            }
+#endif
         }
 
         /// <summary>
@@ -209,6 +210,7 @@ namespace Apache.Ignite.Core.Tests
                 ex = (Exception) msgCtor.Invoke(new object[] {"myMessage"});
                 Assert.AreEqual("myMessage", ex.Message);
 
+#if !NET8_0_OR_GREATER
                 // Serialization.
                 var stream = new MemoryStream();
                 var formatter = new BinaryFormatter();
@@ -220,6 +222,7 @@ namespace Apache.Ignite.Core.Tests
                 ex = (Exception) formatter.Deserialize(stream);
                 Assert.AreEqual("myMessage", ex.Message);
 #pragma warning restore SYSLIB0011 // BinaryFormatter is obsolete
+#endif
 
                 // Message+cause ctor.
                 var msgCauseCtor = type.GetConstructor(new[] { typeof(string), typeof(Exception) });
@@ -237,6 +240,7 @@ namespace Apache.Ignite.Core.Tests
         /// </summary>
         private static void TestPartialUpdateExceptionSerialization(Exception ex)
         {
+#if !NET8_0_OR_GREATER
             var formatter = new BinaryFormatter();
 
             var stream = new MemoryStream();
@@ -272,6 +276,7 @@ namespace Apache.Ignite.Core.Tests
             }
 
             Assert.AreEqual(ex, ex0);
+#endif
         }
 
         /// <summary>

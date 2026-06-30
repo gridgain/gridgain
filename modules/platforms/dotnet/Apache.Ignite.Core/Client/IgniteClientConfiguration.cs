@@ -106,7 +106,7 @@ namespace Apache.Ignite.Core.Client
         /// Initializes a new instance of the <see cref="IgniteClientConfiguration"/> class.
         /// </summary>
         /// <param name="cfg">The configuration to copy.</param>
-        public IgniteClientConfiguration(IgniteClientConfiguration cfg) : this()
+        public IgniteClientConfiguration(IgniteClientConfiguration? cfg) : this()
         {
             if (cfg == null)
             {
@@ -154,7 +154,7 @@ namespace Apache.Ignite.Core.Client
         /// Gets or sets the host. Should not be null.
         /// </summary>
         [Obsolete("Use Endpoints instead")]
-        public string Host { get; set; }
+        public string? Host { get; set; }
 
         /// <summary>
         /// Gets or sets the port.
@@ -178,7 +178,7 @@ namespace Apache.Ignite.Core.Client
         /// * On disconnect, next endpoint is picked from the list (.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<string> Endpoints { get; set; }
+        public ICollection<string>? Endpoints { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether automatic reconnect is disabled.
@@ -218,24 +218,24 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Gets or sets the binary configuration.
         /// </summary>
-        public BinaryConfiguration BinaryConfiguration { get; set; }
+        public BinaryConfiguration? BinaryConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the SSL stream factory.
         /// <para />
         /// When not null, secure socket connection will be established.
         /// </summary>
-        public ISslStreamFactory SslStreamFactory { get; set; }
+        public ISslStreamFactory? SslStreamFactory { get; set; }
 
         /// <summary>
         /// Username to be used to connect to secured cluster.
         /// </summary>
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
 
         /// <summary>
         /// Password to be used to connect to secured cluster.
         /// </summary>
-        public string Password { get; set; }
+        public string? Password { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether Partition Awareness should be enabled.
@@ -268,13 +268,13 @@ namespace Apache.Ignite.Core.Client
         /// Gets or sets the logger.
         /// Default is <see cref="ConsoleLogger"/>. Set to <c>null</c> to disable logging.
         /// </summary>
-        public ILogger Logger { get; set; }
+        public ILogger? Logger { get; set; }
 
         /// <summary>
         /// Gets or sets the transaction configuration.
         /// See <see cref="ITransactionsClient"/>, <see cref="IIgniteClient.GetTransactions"/>.
         /// </summary>
-        public TransactionClientConfiguration TransactionConfiguration { get; set; }
+        public TransactionClientConfiguration? TransactionConfiguration { get; set; }
 
         /// <summary>
         /// Gets or sets the retry policy. When a request fails due to a connection error,
@@ -284,7 +284,7 @@ namespace Apache.Ignite.Core.Client
         /// <para />
         /// See also <see cref="ClientRetryAllPolicy"/>, <see cref="ClientRetryReadPolicy"/>, <see cref="RetryLimit"/>.
         /// </summary>
-        public IClientRetryPolicy RetryPolicy { get; set; }
+        public IClientRetryPolicy? RetryPolicy { get; set; }
 
         /// <summary>
         /// Gets or sets the retry limit. When a request fails due to a connection error,
@@ -322,7 +322,7 @@ namespace Apache.Ignite.Core.Client
         /// <summary>
         /// Gets or sets custom binary processor. Internal property for tests.
         /// </summary>
-        internal IBinaryProcessor BinaryProcessor { get; set; }
+        internal IBinaryProcessor? BinaryProcessor { get; set; }
 
         /// <summary>
         /// Gets or sets protocol version. Internal property for tests.

@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Transactions
         /// Initializes a new instance of the <see cref="TransactionRollbackException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public TransactionRollbackException(string message) : base(message)
+        public TransactionRollbackException(string? message) : base(message)
         {
             // No-op.
         }
@@ -59,7 +59,7 @@ namespace Apache.Ignite.Core.Transactions
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public TransactionRollbackException(string message, Exception cause) : base(message, cause)
+        public TransactionRollbackException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

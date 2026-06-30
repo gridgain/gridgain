@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Cache
         /// Initializes a new instance of the <see cref="CacheException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public CacheException(string message) : base(message)
+        public CacheException(string? message) : base(message)
         {
             // No-op.
         }
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Cache
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public CacheException(string message, Exception cause) : base(message, cause)
+        public CacheException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

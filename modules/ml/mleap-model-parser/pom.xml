@@ -26,12 +26,16 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.10.127-SNAPSHOT</version>
         <relativePath>../../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-ml-mleap-model-parser</artifactId>
     <url>http://ignite.apache.org</url>
+
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
 
     <build>
         <plugins>

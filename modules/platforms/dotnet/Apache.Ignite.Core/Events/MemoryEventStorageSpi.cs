@@ -65,8 +65,6 @@ namespace Apache.Ignite.Core.Events
         /// </summary>
         internal static MemoryEventStorageSpi Read(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             var eventCount = reader.ReadLong();
             var timeout = reader.ReadLong();
 

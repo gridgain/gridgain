@@ -39,7 +39,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// </summary>
         /// <param name="sql">SQL.</param>
         /// <param name="args">Arguments.</param>
-        public SqlFieldsQuery(string sql, params object[] args) : this(sql, false, args)
+        public SqlFieldsQuery(string sql, params object?[]? args) : this(sql, false, args)
         {
             // No-op.
         }
@@ -50,7 +50,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <param name="sql">SQL.</param>
         /// <param name="loc">Whether query should be executed locally.</param>
         /// <param name="args">Arguments.</param>
-        public SqlFieldsQuery(string sql, bool loc, params object[] args)
+        public SqlFieldsQuery(string sql, bool loc, params object?[]? args)
         {
             Sql = sql;
             Local = loc;
@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Arguments.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public object[] Arguments { get; set; }
+        public object?[]? Arguments { get; set; }
 
         /// <summary>
         /// Local flag. When set query will be executed only on local node, so only local
@@ -140,7 +140,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// If not set, current cache name is used,
         /// which means you can omit schema name for tables within the current cache.
         /// </summary>
-        public string Schema { get; set; }
+        public string? Schema { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="SqlFieldsQuery"/> is lazy.
@@ -161,7 +161,7 @@ namespace Apache.Ignite.Core.Cache.Query
         /// The query will be executed only on nodes which are primary for specified partitions.
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays")]
-        public int[] Partitions { get; set; }
+        public int[]? Partitions { get; set; }
 
         /// <summary>
         /// Gets or sets batch size for update queries.
@@ -169,6 +169,14 @@ namespace Apache.Ignite.Core.Cache.Query
         /// Default is 1 (<see cref="DefaultUpdateBatchSize"/>.
         /// </summary>
         public int UpdateBatchSize { get; set; }
+
+        /// <summary>
+        /// Gets or sets the query label.
+        /// <para />
+        /// The specified label can be used to identify the running query in system views
+        /// and in the log when printing warnings about long-running queries.
+        /// </summary>
+        public string? Label { get; set; }
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
@@ -188,9 +196,9 @@ namespace Apache.Ignite.Core.Cache.Query
 
             return string.Format("SqlFieldsQuery [Sql={0}, Arguments=[{1}], Local={2}, PageSize={3}, " +
                                  "EnableDistributedJoins={4}, EnforceJoinOrder={5}, Timeout={6}, Partitions=[{7}], " +
-                                 "UpdateBatchSize={8}, Colocated={9}, Schema={10}, Lazy={11}]", Sql, args, Local,
+                                 "UpdateBatchSize={8}, Colocated={9}, Schema={10}, Lazy={11}, Label={12}]", Sql, args, Local,
                                  PageSize, EnableDistributedJoins, EnforceJoinOrder, Timeout, parts,
-                                 UpdateBatchSize, Colocated, Schema, Lazy);
+                                 UpdateBatchSize, Colocated, Schema, Lazy, Label);
         }
 
         /** <inheritdoc /> */
@@ -221,6 +229,7 @@ namespace Apache.Ignite.Core.Cache.Query
             writer.WriteString(Schema); // Schema
             writer.WriteIntArray(Partitions);
             writer.WriteInt(UpdateBatchSize);
+            writer.WriteString(Label); // Label
         }
 
         /** <inheritdoc /> */

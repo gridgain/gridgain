@@ -72,7 +72,7 @@ public class GridNioClientConnectionMultiplexer implements ClientConnectionMulti
      * @param cfg Client config.
      */
     public GridNioClientConnectionMultiplexer(ClientConfiguration cfg) {
-        timeout = cfg.getTimeout();
+        timeout = cfg.getHandshakeTimeout();
 
         IgniteLogger gridLog = new NullLogger();
 

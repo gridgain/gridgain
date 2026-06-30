@@ -17,7 +17,9 @@
 namespace Apache.Ignite.Core.Tests.Client.Cache
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Client;
     using NUnit.Framework;
@@ -86,6 +88,20 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             qry.EnableDistributedJoins = true;
             Assert.AreEqual(Count, cache.Query(qry).Count());
 #pragma warning restore 618
+        }
+
+        /// <summary>
+        /// Tests that the async fields query returns the same results as the sync one.
+        /// </summary>
+        [Test]
+        public async Task TestFieldsQueryAsync()
+        {
+            var cache = GetClientCache<Person>();
+
+            var cursor = await cache.QueryAsync(new SqlFieldsQuery("select Id from Person"));
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, Count), cursor.Select(x => (int) x[0]));
+            Assert.AreEqual("ID", cursor.FieldNames.Single());
         }
 
         /// <summary>
@@ -257,5 +273,97 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
             var ex = Assert.Throws<IgniteClientException>(() => cache.Query(qry).GetAll());
             StringAssert.EndsWith("updateBatchSize cannot be lower than 1", ex.Message);
         }
+
+        /// <summary>
+        /// Tests <see cref="SqlFieldsQuery.Label"/> property propagation to running queries system view.
+        /// </summary>
+        [Test]
+        public void TestFieldsQueryLabel()
+        {
+            var cache = GetClientCache<Person>();
+
+            const string systemViewSql = "SELECT SQL, LOCAL, LABEL FROM SYS.SQL_QUERIES";
+            const string label = "test-label-0";
+
+            var results = cache.Query(new SqlFieldsQuery(systemViewSql)
+            {
+                Label = label,
+                Local = true
+            }).GetAll();
+
+            // Should see 1 running query (itself)
+            Assert.AreEqual(1, results.Count);
+            var res = results[0];
+
+            Assert.AreEqual(systemViewSql, res[0]);
+            Assert.IsTrue((bool)res[1]);
+            Assert.AreEqual(label, (string)res[2]);
+        }
+
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that a fields query cursor (<c>ClientFieldsQueryCursor</c>) can be disposed with
+        /// <c>await using</c>, returning all rows and closing the server-side cursor asynchronously.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitUsingFieldsQueryCursor()
+        {
+            var cache = GetClientCache<Person>();
+
+            var qry = new SqlFieldsQuery("select Id from Person");
+
+            await using var cursor = cache.Query(qry);
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, Count), cursor.Select(x => (int)x[0]));
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.IAsyncDisposable.DisposeAsync"/> closes a fields query cursor that is
+        /// still open on the server (only partially enumerated), and is idempotent.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncClosesOpenFieldsQueryCursor()
+        {
+            var cache = GetClientCache<Person>();
+
+            // Small page size keeps the server-side cursor open so DisposeAsync sends a real close request.
+            var qry = new SqlFieldsQuery("select Id from Person") { PageSize = 1 };
+            var cursor = cache.Query(qry);
+
+            // Read a single row, leaving the server-side cursor open (more pages remain).
+            using var enumerator = cursor.GetEnumerator();
+            Assert.IsTrue(enumerator.MoveNext());
+
+            // DisposeAsync closes the still-open server cursor without blocking; repeated dispose is a no-op.
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            cursor.Dispose();
+
+            // Cursor is disposed: further iteration throws.
+            Assert.Throws<ObjectDisposedException>(() => enumerator.MoveNext());
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a fields query cursor (<c>ClientFieldsQueryCursor</c>) returns all
+        /// rows, fetching multiple pages asynchronously from the server.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitForeachFieldsQueryReturnsAllRows()
+        {
+            var cache = GetClientCache<Person>();
+
+            // Small page size forces multiple async page requests during enumeration.
+            var qry = new SqlFieldsQuery("select Id from Person order by Id") { PageSize = 1 };
+
+            var ids = new List<int>();
+
+            await foreach (var row in await cache.QueryAsync(qry))
+            {
+                ids.Add((int)row[0]);
+            }
+
+            CollectionAssert.AreEqual(Enumerable.Range(1, Count), ids);
+        }
+#endif
     }
 }

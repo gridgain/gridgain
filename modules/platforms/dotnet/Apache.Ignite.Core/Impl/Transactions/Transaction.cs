@@ -47,6 +47,14 @@ namespace Apache.Ignite.Core.Impl.Transactions
         }
 
         /** <inheritDoc /> */
+        [SuppressMessage("Microsoft.Usage", "CA1816:CallGCSuppressFinalizeCorrectly",
+            Justification = "There is no finalizer.")]
+        public ValueTask DisposeAsync()
+        {
+            return _tx.DisposeAsync();
+        }
+
+        /** <inheritDoc /> */
         public Guid NodeId
         {
             get { return _tx.NodeId; }

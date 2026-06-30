@@ -62,10 +62,10 @@ namespace Apache.Ignite.Core.Impl.Cluster
         private readonly IgniteProductVersion _version;
 
         /** Metrics. */
-        private volatile ClusterMetricsImpl _metrics;
+        private volatile ClusterMetricsImpl? _metrics;
         
         /** Ignite reference. */
-        private WeakReference _igniteRef;
+        private WeakReference _igniteRef = null!;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ClusterNodeImpl"/> class.
@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
             Debug.Assert(id.HasValue);
 
-            _id = id.Value;
+            _id = id!.Value;
 
             _attrs = ReadAttributes(reader);
             _addrs = reader.ReadCollectionAsList<string>().AsReadOnly();
@@ -107,19 +107,17 @@ namespace Apache.Ignite.Core.Impl.Cluster
         }
 
         /** <inheritDoc /> */
-        public bool TryGetAttribute<T>(string name, out T attr)
+        public bool TryGetAttribute<T>(string name, out T? attr)
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
-            object val;
-
-            if (_attrs.TryGetValue(name, out val))
+            if (_attrs.TryGetValue(name, out var val))
             {
                 attr = (T)val;
 
                 return true;
             }
-            attr = default(T);
+            attr = default;
 
             return false;
         }
@@ -168,14 +166,14 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
         public IClusterMetrics GetMetrics()
         {
-            var ignite = (Ignite)_igniteRef.Target;
+            var ignite = (Ignite?)_igniteRef.Target;
 
             if (ignite == null)
-                return _metrics;
+                return _metrics!;
 
-            ClusterMetricsImpl oldMetrics = _metrics;
+            ClusterMetricsImpl? oldMetrics = _metrics;
 
-            long lastUpdateTime = oldMetrics.LastUpdateTimeRaw;
+            long lastUpdateTime = oldMetrics!.LastUpdateTimeRaw;
 
             ClusterMetricsImpl newMetrics = ignite.ClusterGroup.RefreshClusterNodeMetrics(_id, lastUpdateTime);
 
@@ -183,7 +181,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
             {
                 lock (this)
                 {
-                    if (_metrics.LastUpdateTime < newMetrics.LastUpdateTime)
+                    if (_metrics!.LastUpdateTime < newMetrics.LastUpdateTime)
                         _metrics = newMetrics;
                 }
 
@@ -218,9 +216,9 @@ namespace Apache.Ignite.Core.Impl.Cluster
         }
 
         /** <inheritDoc /> */
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            ClusterNodeImpl node = obj as ClusterNodeImpl;
+            ClusterNodeImpl? node = obj as ClusterNodeImpl;
 
             if (node != null)
                 return _id.Equals(node._id);
@@ -249,14 +247,12 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// </summary>
         internal static IDictionary<string, object> ReadAttributes(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             var count = reader.ReadInt();
             var res = new Dictionary<string, object>(count);
 
             for (var i = 0; i < count; i++)
             {
-                res[reader.ReadString()] = reader.ReadObject<object>();
+                res[reader.ReadString()!] = reader.ReadObject<object>();
             }
 
             return res.AsReadOnly();

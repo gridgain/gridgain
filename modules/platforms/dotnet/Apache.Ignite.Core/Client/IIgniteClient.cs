@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Client
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Net;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client.Cache;
     using Apache.Ignite.Core.Client.Compute;
@@ -50,7 +51,8 @@ namespace Apache.Ignite.Core.Client
         /// <returns>Cache instance for given name.</returns>
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
-        ICacheClient<TK, TV> GetCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using template configuration.
@@ -59,7 +61,18 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull;
+
+        /// <summary>
+        /// Gets existing cache with the given name or creates new one using template configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="name">Cache name.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        Task<ICacheClient<TK, TV>> GetOrCreateCacheAsync<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -68,7 +81,18 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> GetOrCreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
+
+        /// <summary>
+        /// Gets existing cache with the given name or creates new one using provided configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="configuration">Cache configuration.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        Task<ICacheClient<TK, TV>> GetOrCreateCacheAsync<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using template configuration.
@@ -77,7 +101,18 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(string name);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull;
+
+        /// <summary>
+        /// Dynamically starts new cache using template configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="name">Cache name.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        Task<ICacheClient<TK, TV>> CreateCacheAsync<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -86,13 +121,30 @@ namespace Apache.Ignite.Core.Client
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration);
+        ICacheClient<TK, TV> CreateCache<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
+
+        /// <summary>
+        /// Dynamically starts new cache using provided configuration.
+        /// </summary>
+        /// <typeparam name="TK">Cache key type.</typeparam>
+        /// <typeparam name="TV">Cache value type.</typeparam>
+        /// <param name="configuration">Cache configuration.</param>
+        /// <returns>Existing or newly created cache.</returns>
+        Task<ICacheClient<TK, TV>> CreateCacheAsync<TK, TV>(CacheClientConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.
         /// </summary>
         /// <returns>Collection of names of currently available caches.</returns>
         ICollection<string> GetCacheNames();
+
+        /// <summary>
+        /// Gets the collection of names of currently available caches, or empty collection if there are no caches.
+        /// </summary>
+        /// <returns>Collection of names of currently available caches.</returns>
+        Task<ICollection<string>> GetCacheNamesAsync();
 
         /// <summary>
         /// Gets Ignite cluster.
@@ -106,6 +158,14 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="name">The name of the cache to stop.</param>
         void DestroyCache(string name);
+
+        /// <summary>
+        /// Destroys dynamically created (with <see cref="CreateCacheAsync{TK,TV}(string)"/> or
+        /// <see cref="GetOrCreateCacheAsync{TK,TV}(string)"/>) cache.
+        /// </summary>
+        /// <param name="name">The name of the cache to stop.</param>
+        /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
+        Task DestroyCacheAsync(string name);
 
         /// <summary>
         /// Gets Ignite binary services.
@@ -166,7 +226,8 @@ namespace Apache.Ignite.Core.Client
         /// </summary>
         /// <param name="cacheName">Cache name.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -177,7 +238,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets a new instance of the data streamer associated with the given cache name.
@@ -188,7 +250,8 @@ namespace Apache.Ignite.Core.Client
         /// <param name="cacheName">Cache name.</param>
         /// <param name="options">Data streamer options.</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options);
+        IDataStreamerClient<TK, TV> GetDataStreamer<TK, TV>(string cacheName, DataStreamerClientOptions<TK, TV> options)
+            where TK : notnull;
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -201,7 +264,20 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(string name, long initialValue, bool create);
+        IAtomicLongClient? GetAtomicLong(string name, long initialValue, bool create);
+
+        /// <summary>
+        /// Gets an atomic long with the specified name.
+        /// Creates a new atomic long if it does not exist and <paramref name="create"/> is true.
+        /// </summary>
+        /// <param name="name">Name of the atomic long.</param>
+        /// <param name="initialValue">
+        /// Initial value for the atomic long. Ignored if <paramref name="create"/> is false.
+        /// </param>
+        /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
+        /// <returns>Atomic long instance with the specified name,
+        /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
+        Task<IAtomicLongClient?> GetAtomicLongAsync(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic long with the specified name.
@@ -215,9 +291,27 @@ namespace Apache.Ignite.Core.Client
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLongClient GetAtomicLong(
+        IAtomicLongClient? GetAtomicLong(
             string name,
-            AtomicClientConfiguration configuration,
+            AtomicClientConfiguration? configuration,
+            long initialValue,
+            bool create);
+
+        /// <summary>
+        /// Gets an atomic long with the specified name.
+        /// Creates a new atomic long if it does not exist and <paramref name="create"/> is true.
+        /// </summary>
+        /// <param name="name">Name of the atomic long.</param>
+        /// <param name="configuration">Configuration.</param>
+        /// <param name="initialValue">
+        /// Initial value for the atomic long. Ignored if <paramref name="create"/> is false.
+        /// </param>
+        /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
+        /// <returns>Atomic long instance with the specified name,
+        /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
+        Task<IAtomicLongClient?> GetAtomicLongAsync(
+            string name,
+            AtomicClientConfiguration? configuration,
             long initialValue,
             bool create);
 
@@ -225,10 +319,20 @@ namespace Apache.Ignite.Core.Client
         /// Gets or creates an Ignite set with the specified name.
         /// </summary>
         /// <param name="name">Name.</param>
-        /// <param name="configuration">Configuration. When null, gets and existing set by name;
+        /// <param name="configuration">Configuration. When null, gets an existing set by name;
         /// otherwise, creates a new set with the specified configuration.</param>
         /// <typeparam name="T">Element type.</typeparam>
         /// <returns>Ignite set.</returns>
-        IIgniteSetClient<T> GetIgniteSet<T>(string name, CollectionClientConfiguration configuration);
+        IIgniteSetClient<T>? GetIgniteSet<T>(string name, CollectionClientConfiguration? configuration);
+
+        /// <summary>
+        /// Gets or creates an Ignite set with the specified name.
+        /// </summary>
+        /// <param name="name">Name.</param>
+        /// <param name="configuration">Configuration. When null, gets an existing set by name;
+        /// otherwise, creates a new set with the specified configuration.</param>
+        /// <typeparam name="T">Element type.</typeparam>
+        /// <returns>Ignite set.</returns>
+        Task<IIgniteSetClient<T>?> GetIgniteSetAsync<T>(string name, CollectionClientConfiguration? configuration);
     }
 }

@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Impl.Binary
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.IO;
     using Apache.Ignite.Core.Binary;
 
@@ -35,7 +34,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="selector">A transform function to apply to each element.</param>
         /// <returns>The same writer for chaining.</returns>
         private static void WriteCollection<T1, T2>(this BinaryWriter writer, ICollection<T1> vals, 
-            Func<T1, T2> selector)
+            Func<T1, T2>? selector)
         {
             writer.WriteInt(vals.Count);
 
@@ -70,7 +69,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="selector">A transform function to apply to each element.</param>
         /// <returns>The same writer for chaining.</returns>
         public static void WriteEnumerable<T1, T2>(this BinaryWriter writer, IEnumerable<T1> vals, 
-            Func<T1, T2> selector)
+            Func<T1, T2>? selector)
         {
             var col = vals as ICollection<T1>;
 
@@ -136,7 +135,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <summary>
         /// Writes the collection of write-aware items.
         /// </summary>
-        public static void WriteCollectionRaw<T, TWriter>(this TWriter writer, ICollection<T> collection)
+        public static void WriteCollectionRaw<T, TWriter>(this TWriter writer, ICollection<T>? collection)
             where T : IBinaryRawWriteAware<TWriter> where TWriter: IBinaryRawWriter
         {
             WriteCollectionRaw(writer, collection, (w, x) => x.Write(w));
@@ -147,12 +146,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// </summary>
         public static void WriteCollectionRaw<T, TWriter>(
             this TWriter writer,
-            ICollection<T> collection,
+            ICollection<T>? collection,
             Action<TWriter, T> action)
             where TWriter: IBinaryRawWriter
         {
-            Debug.Assert(writer != null);
-
             if (collection != null)
             {
                 writer.WriteInt(collection.Count);
@@ -180,9 +177,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="strings">Strings.</param>
         public static int WriteStrings(this BinaryWriter writer, IEnumerable<string> strings)
         {
-            Debug.Assert(writer != null);
-            Debug.Assert(strings != null);
-            
             var pos = writer.Stream.Position;
 
             var count = 0;

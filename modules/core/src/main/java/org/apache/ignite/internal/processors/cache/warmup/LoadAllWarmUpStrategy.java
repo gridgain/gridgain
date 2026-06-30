@@ -18,10 +18,16 @@ package org.apache.ignite.internal.processors.cache.warmup;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Supplier;
+
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.DataRegionConfiguration;
@@ -33,6 +39,8 @@ import org.apache.ignite.internal.processors.cache.persistence.DataRegion;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryEx;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.S;
+import org.apache.ignite.internal.util.typedef.internal.U;
+import org.apache.ignite.thread.IgniteThreadPoolExecutor;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION;
@@ -40,8 +48,10 @@ import static org.apache.ignite.internal.pagemem.PageIdAllocator.INDEX_PARTITION
 /**
  * "Load all" warm-up strategy, which loads pages to persistent data region
  * until it reaches {@link DataRegionConfiguration#getMaxSize} with priority
- * to index partitions. Loading occurs sequentially for each cache group,
- * starting with index partition, and then all others in ascending order.
+ * to index partitions. Partitions to load are planned with index-partition
+ * priority per cache group; the planned partitions are then loaded
+ * concurrently using a configurable number of worker threads
+ * (see {@link LoadAllWarmUpConfiguration#getThreads()}).
  */
 public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfiguration> {
     /** Logger. */
@@ -55,6 +65,9 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
     @GridToStringExclude
     private final Supplier<Collection<CacheGroupContext>> grpCtxSup;
 
+    /** Ignite instance name. */
+    private final String igniteInstanceName;
+
     /** Stop flag. */
     private volatile boolean stop;
 
@@ -63,10 +76,16 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
      *
      * @param log Logger.
      * @param grpCtxSup Cache group contexts supplier. Since {@link GridCacheProcessor} starts later.
+     * @param igniteInstanceName Ignite instance name.
      */
-    public LoadAllWarmUpStrategy(IgniteLogger log, Supplier<Collection<CacheGroupContext>> grpCtxSup) {
+    public LoadAllWarmUpStrategy(
+            IgniteLogger log,
+            Supplier<Collection<CacheGroupContext>> grpCtxSup,
+            String igniteInstanceName
+    ) {
         this.log = log;
         this.grpCtxSup = grpCtxSup;
+        this.igniteInstanceName = igniteInstanceName;
     }
 
     /** {@inheritDoc} */
@@ -75,10 +94,7 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
     }
 
     /** {@inheritDoc} */
-    @Override public void warmUp(
-        LoadAllWarmUpConfiguration cfg,
-        DataRegion region
-    ) throws IgniteCheckedException {
+    @Override public void warmUp(LoadAllWarmUpConfiguration cfg, DataRegion region) throws IgniteCheckedException {
         if (stop)
             return;
 
@@ -88,56 +104,190 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
 
         long availableLoadPageCnt = availableLoadPageCount(region);
 
+        int threads = Math.max(1, cfg.getThreads());
+
         if (log.isInfoEnabled()) {
             Collection<List<LoadPartition>> parts = loadDataInfo.values();
 
-            log.info("Order of cache groups loaded into data region [name=" + region.config().getName()
-                + ", partCnt=" + parts.stream().mapToLong(Collection::size).sum()
-                + ", pageCnt=" + parts.stream().flatMap(Collection::stream).mapToLong(LoadPartition::pages).sum()
-                + ", availablePageCnt=" + availableLoadPageCnt + ", grpNames=" +
-                loadDataInfo.keySet().stream().map(CacheGroupContext::cacheOrGroupName).collect(toList()) + ']');
+            int totalParts = parts.stream().mapToInt(List::size).sum();
+
+            long pageCnt = parts.stream().flatMap(Collection::stream).mapToLong(LoadPartition::pages).sum();
+
+            List<String> grpNames = loadDataInfo.keySet().stream()
+                    .map(CacheGroupContext::cacheOrGroupName)
+                    .sorted()
+                    .collect(toList());
+
+            log.info(String.format(
+                    "Order of cache groups loaded into data region [name=%s, partCnt=%d, pageCnt=%d, " +
+                            "availablePageCnt=%d, threads=%d, grpNames=%s]",
+                    region.config().getName(),
+                    totalParts,
+                    pageCnt,
+                    availableLoadPageCnt,
+                    threads,
+                    grpNames
+            ));
         }
 
-        long loadedPageCnt = 0;
+        PageMemoryEx pageMemEx = (PageMemoryEx) region.pageMemory();
 
-        for (Map.Entry<CacheGroupContext, List<LoadPartition>> e : loadDataInfo.entrySet()) {
-            CacheGroupContext grp = e.getKey();
-            List<LoadPartition> parts = e.getValue();
+        if (threads == 1)
+            warmUpSequential(loadDataInfo, pageMemEx);
+        else
+            warmUpParallel(loadDataInfo, pageMemEx, threads);
+    }
 
-            if (log.isInfoEnabled()) {
-                log.info("Start warm-up cache group, with estimated statistics [name=" + grp.cacheOrGroupName()
-                    + ", partCnt=" + parts.size() + ", pageCnt="
-                    + parts.stream().mapToLong(LoadPartition::pages).sum() + ']');
-            }
+    /**
+     * Sequential warmup — loads partitions on the calling thread.
+     */
+    private void warmUpSequential(
+            Map<CacheGroupContext, List<LoadPartition>> loadDataInfo,
+            PageMemoryEx pageMemEx
+    ) throws IgniteCheckedException {
+        try {
+            for (Map.Entry<CacheGroupContext, List<LoadPartition>> e : loadDataInfo.entrySet()) {
+                if (stop)
+                    return;
 
-            PageMemoryEx pageMemEx = (PageMemoryEx)region.pageMemory();
+                CacheGroupContext grp = e.getKey();
+                List<LoadPartition> parts = e.getValue();
 
-            for (LoadPartition part : parts) {
-                long pageId = pageMemEx.partitionMetaPageId(grp.groupId(), part.part());
+                logStartGroup(grp, parts);
 
-                for (int i = 0; i < part.pages(); i++, pageId++, loadedPageCnt++) {
-                    if (stop) {
-                        if (log.isInfoEnabled()) {
-                            log.info("Stop warm-up cache group with loaded statistics [name="
-                                + grp.cacheOrGroupName() + ", pageCnt=" + loadedPageCnt
-                                + ", remainingPageCnt=" + (availableLoadPageCnt - loadedPageCnt) + ']');
-                        }
-
+                for (LoadPartition part : parts) {
+                    if (stop)
                         return;
-                    }
 
-                    long pagePtr = -1;
-
-                    try {
-                        pagePtr = pageMemEx.acquirePage(grp.groupId(), pageId);
-                    }
-                    finally {
-                        if (pagePtr != -1)
-                            pageMemEx.releasePage(grp.groupId(), pageId, pagePtr);
-                    }
+                    loadPartition(pageMemEx, grp, part);
                 }
+
+                logFinishGroup(grp);
             }
         }
+        catch (CompletionException ex) {
+            throw unwrap(ex);
+        }
+    }
+
+    /**
+     * Parallel warmup — submits one {@link CompletableFuture} per planned {@link LoadPartition} to a pool.
+     */
+    private void warmUpParallel(
+            Map<CacheGroupContext, List<LoadPartition>> loadDataInfo,
+            PageMemoryEx pageMemEx,
+            int threads
+    ) throws IgniteCheckedException {
+        ExecutorService pool = new IgniteThreadPoolExecutor(
+                "warmup-loader",
+                igniteInstanceName,
+                threads,
+                threads,
+                30_000L,
+                new LinkedBlockingQueue<>()
+        );
+
+        try {
+            CompletableFuture<?>[] allGrpsFutures = new CompletableFuture[loadDataInfo.size()];
+            int i = 0;
+
+            for (Map.Entry<CacheGroupContext, List<LoadPartition>> e : loadDataInfo.entrySet()) {
+                if (stop)
+                    return;
+
+                CacheGroupContext grp = e.getKey();
+                List<LoadPartition> parts = e.getValue();
+
+                logStartGroup(grp, parts);
+
+                CompletableFuture<?>[] partFutures = new CompletableFuture[parts.size()];
+
+                for (int j = 0; j < parts.size(); j++) {
+                    LoadPartition part = parts.get(j);
+
+                    partFutures[j] = CompletableFuture.runAsync(() -> loadPartition(pageMemEx, grp, part), pool);
+                }
+
+                CompletableFuture<Void> grpFuture = CompletableFuture.allOf(partFutures)
+                        .thenRun(() -> logFinishGroup(grp));
+
+                allGrpsFutures[i++] = grpFuture;
+            }
+
+            try {
+                CompletableFuture.allOf(allGrpsFutures).get();
+            }
+            catch (ExecutionException ex) {
+                throw new IgniteCheckedException(ex.getCause());
+            }
+            catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+
+                throw new IgniteCheckedException(ex);
+            }
+        }
+        finally {
+            U.shutdownNow(getClass(), pool, log);
+        }
+    }
+
+    /** Unwraps the underlying {@link IgniteCheckedException} from a {@link CompletionException}. */
+    private static IgniteCheckedException unwrap(CompletionException ex) {
+        Throwable c = ex.getCause();
+
+        if (c instanceof IgniteCheckedException)
+            return (IgniteCheckedException) c;
+
+        return new IgniteCheckedException(c != null ? c : ex);
+    }
+
+    /** Logs that we're about to start a cache group. */
+    private void logStartGroup(CacheGroupContext grp, List<LoadPartition> parts) {
+        if (log.isInfoEnabled()) {
+            long pages = parts.stream().mapToLong(LoadPartition::pages).sum();
+
+            log.info(String.format(
+                    "Starting warming up cache group [name=%s, partCnt=%d, pageCnt=%d]",
+                    grp.cacheOrGroupName(), parts.size(), pages
+            ));
+        }
+    }
+
+    /** Logs that a cache group has been warmed up. */
+    private void logFinishGroup(CacheGroupContext grp) {
+        if (log.isInfoEnabled())
+            log.info("Finished warming up cache group [name=" + grp.cacheOrGroupName() + ']');
+    }
+
+    /** Loads every planned page of a single partition. */
+    protected void loadPartition(PageMemoryEx pageMemEx, CacheGroupContext grp, LoadPartition part) {
+        if (stop)
+            return;
+
+        try {
+            long pageId = pageMemEx.partitionMetaPageId(grp.groupId(), part.partitionId());
+
+            for (int i = 0; i < part.pages(); i++, pageId++) {
+                if (stop)
+                    return;
+
+                loadPage(pageMemEx, grp.groupId(), pageId);
+            }
+        }
+        catch (Throwable t) {
+            stop = true;
+
+            throw t instanceof CompletionException ? (CompletionException) t : new CompletionException(t);
+        }
+    }
+
+    /**
+     * Acquires and immediately releases a page — the act of acquiring pulls it into the data region.
+     */
+    private void loadPage(PageMemoryEx pageMemEx, int grpId, long pageId) throws IgniteCheckedException {
+        long pagePtr = pageMemEx.acquirePage(grpId, pageId);
+
+        pageMemEx.releasePage(grpId, pageId, pagePtr);
     }
 
     /** {@inheritDoc} */
@@ -182,7 +332,7 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
         long availableLoadPageCnt = availableLoadPageCount(region);
 
         // Computing groups, partitions, and pages to load into data region.
-        Map<CacheGroupContext, List<LoadPartition>> loadableGrps = new LinkedHashMap<>();
+        Map<CacheGroupContext, List<LoadPartition>> loadableGrps = new HashMap<>();
 
         for (int i = 0; i < regionGrps.size() && availableLoadPageCnt > 0; i++) {
             CacheGroupContext grp = regionGrps.get(i);
@@ -211,9 +361,9 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
     /**
      * Information about loaded partition.
      */
-    static class LoadPartition {
+    protected static class LoadPartition {
         /** Partition id. */
-        private final int part;
+        private final int partitionId;
 
         /** Number of pages to load. */
         private final long pages;
@@ -221,14 +371,14 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
         /**
          * Constructor.
          *
-         * @param part Partition id.
+         * @param partitionId Partition id.
          * @param pages Number of pages to load.
          */
-        public LoadPartition(int part, long pages) {
-            assert part >= 0 : "Partition id cannot be negative.";
+        public LoadPartition(int partitionId, long pages) {
+            assert partitionId >= 0 : "Partition id cannot be negative.";
             assert pages > 0 : "Number of pages to load must be greater than zero.";
 
-            this.part = part;
+            this.partitionId = partitionId;
             this.pages = pages;
         }
 
@@ -237,8 +387,8 @@ public class LoadAllWarmUpStrategy implements WarmUpStrategy<LoadAllWarmUpConfig
          *
          * @return Partition id.
          */
-        public int part() {
-            return part;
+        public int partitionId() {
+            return partitionId;
         }
 
         /**

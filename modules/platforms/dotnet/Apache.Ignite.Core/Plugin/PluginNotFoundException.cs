@@ -37,7 +37,7 @@ namespace Apache.Ignite.Core.Plugin
         /// Initializes a new instance of the <see cref="PluginNotFoundException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public PluginNotFoundException(string message) : base(message)
+        public PluginNotFoundException(string? message) : base(message)
         {
             // No-op.
         }
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Plugin
         /// <param name="message">The error message that explains the reason for the exception.</param>
         /// <param name="innerException">The exception that is the cause of the current exception, 
         /// or a null reference if no inner exception is specified.</param>
-        public PluginNotFoundException(string message, Exception innerException) : base(message, innerException)
+        public PluginNotFoundException(string? message, Exception? innerException) : base(message, innerException)
         {
             // No-op.
         }
@@ -56,9 +56,12 @@ namespace Apache.Ignite.Core.Plugin
         /// <summary>
         /// Initializes a new instance of the <see cref="PluginNotFoundException"/> class.
         /// </summary>
+        // SYSLIB0051: legacy formatter-based serialization ctor is obsolete in net8.0+ but preserved for binary compatibility.
+#pragma warning disable SYSLIB0051
         protected PluginNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
             // No-op.
         }
+#pragma warning restore SYSLIB0051
     }
 }

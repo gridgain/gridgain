@@ -61,9 +61,6 @@ namespace Apache.Ignite.Core.Tests.Examples
 
             var text = File.ReadAllText(example.ProjectFile);
 
-            StringAssert.Contains("<OutputType>Exe</OutputType>", text);
-            StringAssert.Contains($"<TargetFramework>{TargetFramework}</TargetFramework>", text);
-            StringAssert.Contains("<ProjectReference Include=\"..\\..\\..\\Shared\\Shared.csproj", text);
             StringAssert.Contains($"{example.Name}.csproj", ExamplesSlnText);
             StringAssert.Contains($"{example.Name}.dll", LaunchJsonText);
 

@@ -42,21 +42,23 @@
         </file>
 
         <file>
-            <source>examples-ml/pom-standalone.xml</source>
+            <source>${gg8.examples.dir}/examples-ml/pom.xml</source>
             <outputDirectory>/examples-ml</outputDirectory>
             <destName>pom.xml</destName>
-        </file>
-
-        <file>
-            <source>examples-ml/README.txt</source>
-            <outputDirectory>/examples-ml</outputDirectory>
-            <destName>README.txt</destName>
         </file>
     </files>
 
     <fileSets>
         <fileSet>
-            <directory>examples-ml</directory>
+            <directory>target/swid</directory>
+            <outputDirectory>/swidtag</outputDirectory>
+            <includes>
+                <include>*.swidtag</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${gg8.examples.dir}/examples-ml</directory>
             <outputDirectory>/examples-ml</outputDirectory>
             <includes>
                 <include>config/**</include>

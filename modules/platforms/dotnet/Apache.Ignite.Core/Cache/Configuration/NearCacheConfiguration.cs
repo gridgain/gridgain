@@ -62,7 +62,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the eviction policy.
         /// Null value means disabled evictions.
         /// </summary>
-        public IEvictionPolicy EvictionPolicy { get; set; }
+        public IEvictionPolicy? EvictionPolicy { get; set; }
 
         /// <summary>
         /// Gets or sets the initial cache size for near cache which will be used 

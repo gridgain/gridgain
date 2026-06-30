@@ -18,7 +18,6 @@ namespace Apache.Ignite.Core.Configuration
 {
     using System;
     using System.ComponentModel;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary;
 
@@ -107,8 +106,6 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         internal ClientConnectorConfiguration(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             Host = reader.ReadString();
             Port = reader.ReadInt();
             PortRange = reader.ReadInt();
@@ -142,8 +139,6 @@ namespace Apache.Ignite.Core.Configuration
         /// </summary>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(Host);
             writer.WriteInt(Port);
             writer.WriteInt(PortRange);
@@ -177,7 +172,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the host.
         /// </summary>
-        public string Host { get; set; }
+        public string? Host { get; set; }
 
         /// <summary>
         /// Gets or sets the port.
@@ -261,6 +256,6 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets thin client specific configuration.
         /// </summary>
-        public ThinClientConfiguration ThinClientConfiguration { get; set; }
+        public ThinClientConfiguration? ThinClientConfiguration { get; set; }
     }
 }

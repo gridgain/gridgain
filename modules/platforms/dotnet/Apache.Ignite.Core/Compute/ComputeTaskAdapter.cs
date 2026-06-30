@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Compute
         public virtual ComputeJobResultPolicy OnResult(IComputeJobResult<TJobRes> res,
             IList<IComputeJobResult<TJobRes>> rcvd)
         {
-            Exception err = res.Exception;
+            Exception? err = res.Exception;
 
             if (err != null)
             {

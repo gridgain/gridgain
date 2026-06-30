@@ -32,10 +32,10 @@ namespace Apache.Ignite.Core.Common
         private const string JavaMessageField = "JavaMessage";
 
         /** Java exception class name. */
-        private readonly string _javaClassName;
+        private readonly string? _javaClassName;
         
         /** Java exception message. */
-        private readonly string _javaMessage;
+        private readonly string? _javaMessage;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="JavaException"/> class.
@@ -49,7 +49,7 @@ namespace Apache.Ignite.Core.Common
         /// Initializes a new instance of the <see cref="JavaException"/> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public JavaException(string message) : base(message)
+        public JavaException(string? message) : base(message)
         {
             // No-op.
         }
@@ -73,7 +73,7 @@ namespace Apache.Ignite.Core.Common
         /// <param name="javaMessage">Java exception message.</param>
         /// <param name="stackTrace">Java stack trace.</param>
         /// <param name="cause">The cause.</param>
-        public JavaException(string javaClassName, string javaMessage, string stackTrace, Exception cause)
+        public JavaException(string javaClassName, string javaMessage, string? stackTrace, Exception? cause)
             : base(stackTrace ?? javaMessage, cause)
         {
             // Send stackTrace to base ctor because it has all information, including class names and messages.
@@ -87,7 +87,7 @@ namespace Apache.Ignite.Core.Common
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public JavaException(string message, Exception cause) : base(message, cause)
+        public JavaException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }
@@ -111,6 +111,9 @@ namespace Apache.Ignite.Core.Common
         /// about the exception being thrown.</param>
         /// <param name="context">The <see cref="StreamingContext" /> that contains contextual information
         /// about the source or destination.</param>
+#if NET6_0_OR_GREATER
+        [Obsolete("Formatter-based serialization is obsolete and should not be used.")]
+#endif
         public override void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             base.GetObjectData(info, context);
@@ -122,17 +125,11 @@ namespace Apache.Ignite.Core.Common
         /// <summary>
         /// Gets the Java exception class name.
         /// </summary>
-        public string JavaClassName
-        {
-            get { return _javaClassName; }
-        }
+        public string? JavaClassName => _javaClassName;
 
         /// <summary>
         /// Gets the Java exception message.
         /// </summary>
-        public string JavaMessage
-        {
-            get { return _javaMessage; }
-        }
+        public string? JavaMessage => _javaMessage;
     }
 }

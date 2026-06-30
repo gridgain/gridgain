@@ -20,6 +20,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Cluster;
@@ -55,10 +56,10 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         private readonly ClientClusterGroupProjection _projection;
 
         /** Predicate. */
-        private readonly Func<IClientClusterNode, bool> _predicate;
+        private readonly Func<IClientClusterNode, bool>? _predicate;
 
         /** Node ids collection. */
-        private Guid[] _nodeIds;
+        private Guid[]? _nodeIds;
 
         /// <summary>
         /// Constructor.
@@ -77,10 +78,8 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="projection">Projection.</param>
         /// <param name="predicate">Predicate.</param>
         private ClientClusterGroup(IgniteClient ignite,
-            ClientClusterGroupProjection projection, Func<IClientClusterNode, bool> predicate = null)
+            ClientClusterGroupProjection projection, Func<IClientClusterNode, bool>? predicate = null)
         {
-            Debug.Assert(ignite != null);
-
             _ignite = ignite;
             _projection = projection;
             _predicate = predicate;
@@ -122,7 +121,13 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClientClusterNode GetNode(Guid id)
+        public async Task<ICollection<IClientClusterNode>> GetNodesAsync()
+        {
+            return await RefreshNodesAsync().ConfigureAwait(false);
+        }
+
+        /** <inheritDoc /> */
+        public IClientClusterNode? GetNode(Guid id)
         {
             if (id == Guid.Empty)
             {
@@ -133,9 +138,30 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClientClusterNode GetNode()
+        public async Task<IClientClusterNode?> GetNodeAsync(Guid id)
+        {
+            if (id == Guid.Empty)
+            {
+                throw new ArgumentException("Node id should not be empty.");
+            }
+
+            var nodes = await RefreshNodesAsync().ConfigureAwait(false);
+
+            return nodes.FirstOrDefault(node => node.Id == id);
+        }
+
+        /** <inheritDoc /> */
+        public IClientClusterNode? GetNode()
         {
             return GetNodes().FirstOrDefault();
+        }
+
+        /** <inheritDoc /> */
+        public async Task<IClientClusterNode?> GetNodeAsync()
+        {
+            var nodes = await RefreshNodesAsync().ConfigureAwait(false);
+
+            return nodes.FirstOrDefault();
         }
 
         /** <inheritDoc /> */
@@ -165,12 +191,39 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 RequestNodesInfo(topology.Item2);
             }
 
+            return BuildNodesList();
+        }
+
+        /// <summary>
+        /// Refresh projection nodes asynchronously.
+        /// </summary>
+        /// <returns>Nodes.</returns>
+        private async Task<IList<IClientClusterNode>> RefreshNodesAsync()
+        {
+            long oldTopVer = Interlocked.Read(ref _topVer);
+
+            var topology = await RequestTopologyInformationAsync(oldTopVer).ConfigureAwait(false);
+            if (topology != null)
+            {
+                UpdateTopology(topology.Item1, topology.Item2);
+                await RequestNodesInfoAsync(topology.Item2).ConfigureAwait(false);
+            }
+
+            return BuildNodesList();
+        }
+
+        /// <summary>
+        /// Builds the resulting nodes list from the current topology snapshot, applying the predicate.
+        /// </summary>
+        /// <returns>Nodes.</returns>
+        private IList<IClientClusterNode> BuildNodesList()
+        {
             // No topology changes.
             Debug.Assert(_nodeIds != null, "At least one topology update should have occurred.");
 
             // Local lookup with a native predicate is a trade off between complexity and consistency.
             var nodesList = new List<IClientClusterNode>();
-            foreach (Guid nodeId in _nodeIds)
+            foreach (Guid nodeId in _nodeIds!)
             {
                 IClientClusterNode node = _ignite.GetClientNode(nodeId);
                 if (_predicate == null || _predicate(node))
@@ -185,28 +238,49 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <summary>
         /// Request topology information.
         /// </summary>
-        /// <returns>Topology version with nodes identifiers.</returns>rns>
-        private Tuple<long, Guid[]> RequestTopologyInformation(long oldTopVer)
+        /// <returns>Topology version with nodes identifiers.</returns>
+        private Tuple<long, Guid[]>? RequestTopologyInformation(long oldTopVer)
         {
-            Action<ClientRequestContext> writeAction = ctx =>
+            return DoOutInOp(
+                ClientOp.ClusterGroupGetNodeIds,
+                ctx => WriteTopologyRequest(ctx, oldTopVer),
+                ReadTopologyInformation);
+        }
+
+        /// <summary>
+        /// Request topology information asynchronously.
+        /// </summary>
+        /// <returns>Topology version with nodes identifiers.</returns>
+        private Task<Tuple<long, Guid[]>?> RequestTopologyInformationAsync(long oldTopVer)
+        {
+            return DoOutInOpAsync(
+                ClientOp.ClusterGroupGetNodeIds,
+                ctx => WriteTopologyRequest(ctx, oldTopVer),
+                ReadTopologyInformation);
+        }
+
+        /// <summary>
+        /// Writes the topology information request.
+        /// </summary>
+        private void WriteTopologyRequest(ClientRequestContext ctx, long oldTopVer)
+        {
+            ctx.Stream.WriteLong(oldTopVer);
+            _projection.Write(ctx.Writer);
+        }
+
+        /// <summary>
+        /// Reads the topology information response.
+        /// </summary>
+        private static Tuple<long, Guid[]>? ReadTopologyInformation(ClientResponseContext ctx)
+        {
+            if (!ctx.Stream.ReadBool())
             {
-                ctx.Stream.WriteLong(oldTopVer);
-                _projection.Write(ctx.Writer);
-            };
+                // No topology changes.
+                return null;
+            }
 
-            Func<ClientResponseContext, Tuple<long, Guid[]>> readFunc = ctx =>
-            {
-                if (!ctx.Stream.ReadBool())
-                {
-                    // No topology changes.
-                    return null;
-                }
-
-                long remoteTopVer = ctx.Stream.ReadLong();
-                return Tuple.Create(remoteTopVer, ReadNodeIds(ctx.Reader));
-            };
-
-            return DoOutInOp(ClientOp.ClusterGroupGetNodeIds, writeAction, readFunc);
+            long remoteTopVer = ctx.Stream.ReadLong();
+            return Tuple.Create(remoteTopVer, ReadNodeIds(ctx.Reader));
         }
 
         /// <summary>
@@ -257,6 +331,37 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <returns>Collection of <see cref="IClusterNode"/> instances.</returns>
         private void RequestNodesInfo(Guid[] nodeIds)
         {
+            var unknownNodes = GetUnknownNodes(nodeIds);
+
+            if (unknownNodes.Count > 0)
+            {
+                RequestRemoteNodesDetails(unknownNodes);
+            }
+        }
+
+        /// <summary>
+        /// Gets nodes information asynchronously.
+        /// This method will filter only unknown node ids that
+        /// have not been serialized inside IgniteClient before.
+        /// </summary>
+        /// <param name="nodeIds">Node ids array.</param>
+        private async Task RequestNodesInfoAsync(Guid[] nodeIds)
+        {
+            var unknownNodes = GetUnknownNodes(nodeIds);
+
+            if (unknownNodes.Count > 0)
+            {
+                await RequestRemoteNodesDetailsAsync(unknownNodes).ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Filters out node ids that are already known to the client.
+        /// </summary>
+        /// <param name="nodeIds">Node ids array.</param>
+        /// <returns>Unknown node ids.</returns>
+        private List<Guid> GetUnknownNodes(Guid[] nodeIds)
+        {
             var unknownNodes = new List<Guid>(nodeIds.Length);
             foreach (var nodeId in nodeIds)
             {
@@ -266,10 +371,7 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
                 }
             }
 
-            if (unknownNodes.Count > 0)
-            {
-                RequestRemoteNodesDetails(unknownNodes);
-            }
+            return unknownNodes;
         }
 
         /// <summary>
@@ -278,27 +380,46 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         /// <param name="ids">Node identifiers.</param>
         private void RequestRemoteNodesDetails(List<Guid> ids)
         {
-            Action<ClientRequestContext> writeAction = ctx =>
+            DoOutInOp(ClientOp.ClusterGroupGetNodesInfo,
+                ctx => WriteRemoteNodesDetailsRequest(ctx, ids),
+                ReadRemoteNodesDetails);
+        }
+
+        /// <summary>
+        /// Make remote API call to fetch node information asynchronously.
+        /// </summary>
+        /// <param name="ids">Node identifiers.</param>
+        private Task<bool> RequestRemoteNodesDetailsAsync(List<Guid> ids)
+        {
+            return DoOutInOpAsync(ClientOp.ClusterGroupGetNodesInfo,
+                ctx => WriteRemoteNodesDetailsRequest(ctx, ids),
+                ReadRemoteNodesDetails);
+        }
+
+        /// <summary>
+        /// Writes the remote nodes details request.
+        /// </summary>
+        private static void WriteRemoteNodesDetailsRequest(ClientRequestContext ctx, List<Guid> ids)
+        {
+            ctx.Stream.WriteInt(ids.Count);
+            foreach (var id in ids)
             {
-                ctx.Stream.WriteInt(ids.Count);
-                foreach (var id in ids)
-                {
-                    BinaryUtils.WriteGuid(id, ctx.Stream);
-                }
-            };
+                BinaryUtils.WriteGuid(id, ctx.Stream);
+            }
+        }
 
-            Func<ClientResponseContext, bool> readFunc = ctx =>
+        /// <summary>
+        /// Reads the remote nodes details response.
+        /// </summary>
+        private bool ReadRemoteNodesDetails(ClientResponseContext ctx)
+        {
+            var cnt = ctx.Stream.ReadInt();
+            for (var i = 0; i < cnt; i++)
             {
-                var cnt = ctx.Stream.ReadInt();
-                for (var i = 0; i < cnt; i++)
-                {
-                    _ignite.SaveClientClusterNode(ctx.Reader);
-                }
+                _ignite.SaveClientClusterNode(ctx.Reader);
+            }
 
-                return true;
-            };
-
-            DoOutInOp(ClientOp.ClusterGroupGetNodesInfo, writeAction, readFunc);
+            return true;
         }
 
 
@@ -309,6 +430,15 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             Func<ClientResponseContext, T> readFunc)
         {
             return _ignite.Socket.DoOutInOp(opId, writeAction, readFunc, HandleError<T>);
+        }
+
+        /// <summary>
+        /// Does the out in op asynchronously.
+        /// </summary>
+        protected Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
+            Func<ClientResponseContext, T> readFunc)
+        {
+            return _ignite.Socket.DoOutInOpAsync(opId, writeAction, readFunc, HandleError<T>);
         }
 
         /// <summary>

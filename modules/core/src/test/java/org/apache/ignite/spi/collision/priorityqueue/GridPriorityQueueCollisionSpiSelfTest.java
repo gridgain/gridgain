@@ -34,6 +34,9 @@ import static org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisi
 import static org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi.DFLT_PARALLEL_JOBS_NUM;
 import static org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi.DFLT_PRIORITY_ATTRIBUTE_KEY;
 import static org.apache.ignite.spi.collision.priorityqueue.PriorityQueueCollisionSpi.DFLT_STARVATION_INCREMENT;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasSize;
 
 /**
  * Priority queue collision SPI test.
@@ -419,6 +422,68 @@ public class GridPriorityQueueCollisionSpiSelfTest extends GridSpiAbstractTest<P
             assert !((GridTestCollisionJobContext)ctx).isActivated();
             assert !((GridTestCollisionJobContext)ctx).isCanceled();
         }
+    }
+
+    /**
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testTryActivateJobs() throws Exception {
+        List<CollisionJobContext> activeJobs = new ArrayList<>();
+
+        for (int i = 0; i < 10; i++)
+            activeJobs.add(new GridTestCollisionJobContext(new GridTestCollisionTaskSession(i, DFLT_PRIORITY_ATTRIBUTE_KEY)));
+
+        List<CollisionJobContext> passiveJobs = makeContextList(null);
+
+        assertThat(passiveJobs, hasSize(10));
+
+        getSpi().setParallelJobsNumber(10);
+
+        GridCollisionTestContext testCtx = new GridCollisionTestContext(activeJobs, passiveJobs);
+
+        // No jobs were cached yet.
+        assertThat(getSpi().tryActivateJobs(testCtx), equalTo(true));
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assertThat(((GridTestCollisionJobContext)ctx).isActivated(), equalTo(false));
+
+        // No free slots, caches waiting jobs.
+        getSpi().onCollision(testCtx);
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assertThat(((GridTestCollisionJobContext)ctx).isActivated(), equalTo(false));
+
+        // 3 top priority jobs will be activated.
+        activeJobs.subList(0, 3).clear();
+
+        assertThat(getSpi().tryActivateJobs(testCtx), equalTo(true));
+
+        for (CollisionJobContext ctx : passiveJobs) {
+            int pri = ((GridTestCollisionTaskSession)ctx.getTaskSession()).getPriority();
+
+            assertThat("pri=" + pri, ((GridTestCollisionJobContext)ctx).isActivated(), equalTo(pri >= 7));
+        }
+
+        // All remaining jobs will be activated.
+        activeJobs.clear();
+
+        assertThat(getSpi().tryActivateJobs(testCtx), equalTo(true));
+
+        for (CollisionJobContext ctx : passiveJobs)
+            assertThat(((GridTestCollisionJobContext)ctx).isActivated(), equalTo(true));
+
+        // Cursor is exhausted, so will not be activated.
+        GridTestCollisionJobContext newJob = new GridTestCollisionJobContext(
+            new GridTestCollisionTaskSession(100, DFLT_PRIORITY_ATTRIBUTE_KEY));
+
+        passiveJobs.add(newJob);
+
+        activeJobs.clear();
+
+        assertThat(getSpi().tryActivateJobs(testCtx), equalTo(true));
+
+        assertThat(newJob.isActivated(), equalTo(false));
     }
 
     /**

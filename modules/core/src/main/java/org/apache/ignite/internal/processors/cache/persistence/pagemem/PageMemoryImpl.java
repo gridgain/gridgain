@@ -54,15 +54,9 @@ import org.apache.ignite.internal.metric.IoStatisticsHolderNoOp;
 import org.apache.ignite.internal.pagemem.FullPageId;
 import org.apache.ignite.internal.pagemem.PageIdAllocator;
 import org.apache.ignite.internal.pagemem.PageIdUtils;
-import org.apache.ignite.internal.pagemem.PageUtils;
 import org.apache.ignite.internal.pagemem.wal.IgniteWriteAheadLogManager;
-import org.apache.ignite.internal.pagemem.wal.WALIterator;
-import org.apache.ignite.internal.pagemem.wal.WALPointer;
-import org.apache.ignite.internal.pagemem.wal.record.CheckpointRecord;
 import org.apache.ignite.internal.pagemem.wal.record.PageSnapshot;
-import org.apache.ignite.internal.pagemem.wal.record.WALRecord;
 import org.apache.ignite.internal.pagemem.wal.record.delta.InitNewPageRecord;
-import org.apache.ignite.internal.pagemem.wal.record.delta.PageDeltaRecord;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointLockStateChecker;
 import org.apache.ignite.internal.processors.cache.persistence.CheckpointState;
@@ -75,7 +69,6 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.DataPageI
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.TrackingPageIO;
 import org.apache.ignite.internal.processors.cache.persistence.wal.crc.IgniteDataIntegrityViolationException;
-import org.apache.ignite.internal.processors.compress.CompressionProcessor;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.query.GridQueryRowCacheCleaner;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
@@ -88,7 +81,6 @@ import org.apache.ignite.internal.util.lang.GridInClosure3X;
 import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 import org.apache.ignite.internal.util.typedef.internal.U;
-import org.apache.ignite.lang.IgniteBiTuple;
 import org.apache.ignite.lang.IgniteOutClosure;
 import org.apache.ignite.spi.encryption.noop.NoopEncryptionSpi;
 import org.apache.ignite.thread.IgniteThreadFactory;
@@ -100,7 +92,9 @@ import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_DELAYED_REPLACED_PAGE_WRITE;
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.IgniteSystemProperties.getBoolean;
+import static org.apache.ignite.IgniteSystemProperties.getDouble;
 import static org.apache.ignite.internal.pagemem.FullPageId.NULL_PAGE;
 import static org.apache.ignite.internal.processors.cache.persistence.DataRegionMetricsImpl.DATAREGION_METRICS_PREFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.IgniteCacheDatabaseSharedManager.INTERNAL_DATA_REGION_NAMES;
@@ -166,6 +160,9 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** @see IgniteSystemProperties#IGNITE_LOADED_PAGES_BACKWARD_SHIFT_MAP */
     public static final boolean DFLT_LOADED_PAGES_BACKWARD_SHIFT_MAP = true;
 
+    /** @see IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO */
+    public static final double DFLT_MAX_DIRTY_PAGES_RATIO = 0.75;
+
     /** Tracking io. */
     private static final TrackingPageIO trackingIO = TrackingPageIO.VERSIONS.latest();
 
@@ -200,6 +197,9 @@ public class PageMemoryImpl implements PageMemoryEx {
 
     /** */
     private final IgniteWriteAheadLogManager walMgr;
+
+    /** Lazily-initialized WAL page recovery helper. */
+    private volatile WalPageRecovery walPageRecovery;
 
     /** */
     private final GridEncryptionManager encMgr;
@@ -250,6 +250,12 @@ public class PageMemoryImpl implements PageMemoryEx {
     /** Write throttle type. */
     private final ThrottlingPolicy throttlingPlc;
 
+    /**
+     * Maximum fraction of dirty pages in a data region before a checkpoint is forced and throttling reaches its
+     * ceiling. Configured with {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}.
+     */
+    private final double maxDirtyPagesRatio;
+
     /** Checkpoint progress provider. Null disables throttling. */
     @Nullable private final IgniteOutClosure<CheckpointProgress> cpProgressProvider;
 
@@ -287,6 +293,7 @@ public class PageMemoryImpl implements PageMemoryEx {
      * @param dataRegionMetrics Memory metrics to track dirty pages count and page replace rate.
      * @param throttlingPlc Write throttle enabled and its type. Null equal to none.
      * @param cpProgressProvider checkpoint progress, base for throttling. Null disables throttling.
+     * @param maxDirtyPagesRatio Max-dirty-pages ratio.
      */
     public PageMemoryImpl(
         DataRegionConfiguration dataRegionCfg,
@@ -300,7 +307,8 @@ public class PageMemoryImpl implements PageMemoryEx {
         CheckpointLockStateChecker stateChecker,
         DataRegionMetricsImpl dataRegionMetrics,
         @Nullable ThrottlingPolicy throttlingPlc,
-        IgniteOutClosure<CheckpointProgress> cpProgressProvider
+        IgniteOutClosure<CheckpointProgress> cpProgressProvider,
+        double maxDirtyPagesRatio
     ) {
         assert ctx != null;
         assert pageSize > 0;
@@ -321,6 +329,7 @@ public class PageMemoryImpl implements PageMemoryEx {
         this.changeTracker = changeTracker;
         this.stateChecker = stateChecker;
         this.throttlingPlc = throttlingPlc != null ? throttlingPlc : ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY;
+        this.maxDirtyPagesRatio = maxDirtyPagesRatio;
         this.cpProgressProvider = cpProgressProvider;
 
         this.pmPageMgr = pmPageMgr;
@@ -439,6 +448,7 @@ public class PageMemoryImpl implements PageMemoryEx {
     private void initWriteThrottle() {
         if (throttlingPlc == ThrottlingPolicy.SPEED_BASED)
             writeThrottle = new PagesWriteSpeedBasedThrottle(
+                maxDirtyPagesRatio,
                 this,
                 cpProgressProvider,
                 stateChecker,
@@ -446,9 +456,25 @@ public class PageMemoryImpl implements PageMemoryEx {
                 ctx.kernalContext().metric().registry(MetricUtils.metricName(DATAREGION_METRICS_PREFIX, metrics().getName()))
             );
         else if (throttlingPlc == ThrottlingPolicy.TARGET_RATIO_BASED)
-            writeThrottle = new PagesWriteThrottle(this, cpProgressProvider, stateChecker, false, log);
+            writeThrottle = new PagesWriteThrottle(maxDirtyPagesRatio, this, cpProgressProvider, stateChecker, false, log);
         else if (throttlingPlc == ThrottlingPolicy.CHECKPOINT_BUFFER_ONLY)
-            writeThrottle = new PagesWriteThrottle(this, null, stateChecker, true, log);
+            writeThrottle = new PagesWriteThrottle(maxDirtyPagesRatio, this, null, stateChecker, true, log);
+    }
+
+    /**
+     * Reads {@link IgniteSystemProperties#IGNITE_MAX_DIRTY_PAGES_RATIO}, returns it if the value is in the allowed
+     * range {@code (0.5, 0.99999]}; otherwise logs a warning and returns {@link #DFLT_MAX_DIRTY_PAGES_RATIO}.
+     */
+    public static double resolveMaxDirtyPagesRatio(IgniteLogger log) {
+        double ratio = getDouble(IGNITE_MAX_DIRTY_PAGES_RATIO, DFLT_MAX_DIRTY_PAGES_RATIO);
+
+        if (ratio > 0.5 && ratio <= 0.99999)
+            return ratio;
+
+        U.warn(log, "Invalid " + IGNITE_MAX_DIRTY_PAGES_RATIO + "=" + ratio
+            + ", expected value in (0.5, 0.99999]; using default " + DFLT_MAX_DIRTY_PAGES_RATIO + ".");
+
+        return DFLT_MAX_DIRTY_PAGES_RATIO;
     }
 
     /** {@inheritDoc} */
@@ -1000,87 +1026,32 @@ public class PageMemoryImpl implements PageMemoryEx {
      * @throws StorageException If it was not possible to restore page, page not found in WAL.
      */
     private void tryToRestorePage(FullPageId fullId, ByteBuffer buf) throws IgniteCheckedException {
-        Long tmpAddr = null;
-        try {
-            ByteBuffer curPage = null;
-            ByteBuffer lastValidPage = null;
+        walPageRecovery().recoverPage(fullId, buf);
+    }
 
-            try (WALIterator it = walMgr.replay(null)) {
-                for (IgniteBiTuple<WALPointer, WALRecord> tuple : it) {
-                    switch (tuple.getValue().type()) {
-                        case PAGE_RECORD:
-                            PageSnapshot snapshot = (PageSnapshot)tuple.getValue();
+    /**
+     * @return Lazily-initialized WAL page recovery helper.
+     */
+    private WalPageRecovery walPageRecovery() {
+        WalPageRecovery local = walPageRecovery;
 
-                            if (snapshot.fullPageId().equals(fullId)) {
-                                if (tmpAddr == null) {
-                                    assert snapshot.pageDataSize() <= pageSize() : snapshot.pageDataSize();
+        if (local == null) {
+            synchronized (this) {
+                local = walPageRecovery;
 
-                                    tmpAddr = GridUnsafe.allocateMemory(pageSize());
-                                }
-
-                                if (curPage == null)
-                                    curPage = wrapPointer(tmpAddr, pageSize());
-
-                                PageUtils.putBytes(tmpAddr, 0, snapshot.pageData());
-
-                                if (PageIO.getCompressionType(tmpAddr) != CompressionProcessor.UNCOMPRESSED_PAGE) {
-                                    int realPageSize = realPageSize(snapshot.groupId());
-
-                                    assert snapshot.pageDataSize() < realPageSize : snapshot.pageDataSize();
-
-                                    ctx.kernalContext().compress().decompressPage(curPage, realPageSize);
-                                }
-                            }
-
-                            break;
-
-                        case CHECKPOINT_RECORD:
-                            CheckpointRecord rec = (CheckpointRecord)tuple.getValue();
-
-                            assert !rec.end();
-
-                            if (curPage != null) {
-                                lastValidPage = curPage;
-                                curPage = null;
-                            }
-
-                            break;
-
-                        case MEMORY_RECOVERY: // It means that previous checkpoint was broken.
-                            curPage = null;
-
-                            break;
-
-                        default:
-                            if (tuple.getValue() instanceof PageDeltaRecord) {
-                                PageDeltaRecord deltaRecord = (PageDeltaRecord)tuple.getValue();
-
-                                if (curPage != null
-                                    && deltaRecord.pageId() == fullId.pageId()
-                                    && deltaRecord.groupId() == fullId.groupId()) {
-                                    assert tmpAddr != null;
-
-                                    deltaRecord.applyDelta(this, tmpAddr);
-                                }
-                            }
-                    }
+                if (local == null) {
+                    walPageRecovery = local = new WalPageRecovery(
+                        walMgr,
+                        ctx.kernalContext().compress(),
+                        log,
+                        pageSize(),
+                        grpId -> this
+                    );
                 }
             }
-
-            ByteBuffer restored = curPage == null ? lastValidPage : curPage;
-
-            if (restored == null)
-                throw new StorageException(String.format(
-                    "Page is broken. Can't restore it from WAL. (grpId = %d, pageId = %X).",
-                    fullId.groupId(), fullId.pageId()
-                ));
-
-            buf.put(restored);
         }
-        finally {
-            if (tmpAddr != null)
-                GridUnsafe.freeMemory(tmpAddr);
-        }
+
+        return local;
     }
 
     /** {@inheritDoc} */
@@ -2096,7 +2067,7 @@ public class PageMemoryImpl implements PageMemoryEx {
                     region.address() + memPerTbl + ldPagesMapOffInRegion, pool.pages());
 
             maxDirtyPages = throttlingPlc != ThrottlingPolicy.DISABLED
-                ? pool.pages() * 3L / 4
+                ? Math.round(pool.pages() * maxDirtyPagesRatio)
                 : Math.min(pool.pages() * 2L / 3, cpPoolPages);
         }
 

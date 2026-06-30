@@ -38,6 +38,7 @@ import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.NotWritablePropertyException;
 import org.springframework.beans.PropertyValue;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
@@ -245,12 +246,7 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             springCtx.refresh();
         }
         catch (BeansException e) {
-            if (X.hasCause(e, ClassNotFoundException.class))
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
-                    "(make sure all classes used in Spring configuration are present at CLASSPATH) ", e);
-            else
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context" +
-                    ", err=" + e.getMessage() + ']', e);
+            throw springConfigurationException(e, null);
         }
 
         return springCtx;
@@ -272,13 +268,7 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             springCtx.refresh();
         }
         catch (BeansException e) {
-            if (X.hasCause(e, ClassNotFoundException.class))
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
-                    "(make sure all classes used in Spring configuration are present at CLASSPATH) " +
-                    "[springUrl=" + url + ']', e);
-            else
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context [springUrl=" +
-                    url + ", err=" + e.getMessage() + ']', e);
+            throw springConfigurationException(e, "springUrl=" + url);
         }
 
         return springCtx;
@@ -382,13 +372,7 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             return springCtx;
         }
         catch (BeansException e) {
-            if (X.hasCause(e, ClassNotFoundException.class))
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
-                    "(make sure all classes used in Spring configuration are present at CLASSPATH) " +
-                    "[springUrl=" + cfgUrl + ']', e);
-            else
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context [springUrl=" +
-                    cfgUrl + ", err=" + e.getMessage() + ']', e);
+            throw springConfigurationException(e, "springUrl=" + cfgUrl);
         }
     }
 
@@ -419,13 +403,37 @@ public class IgniteSpringHelperImpl implements IgniteSpringHelper {
             return springCtx;
         }
         catch (BeansException e) {
-            if (X.hasCause(e, ClassNotFoundException.class))
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context " +
-                    "(make sure all classes used in Spring configuration are present at CLASSPATH) ", e);
-            else
-                throw new IgniteCheckedException("Failed to instantiate Spring XML application context [err=" +
-                    e.getMessage() + ']', e);
+            throw springConfigurationException(e, null);
         }
+    }
+
+    /**
+     * Builds an exception describing a failure to load a Spring XML configuration, choosing the most specific
+     * message available for the given Spring exception: a configuration property that does not exist on the
+     * target bean (typically an Ignite-only property left in the config of a user migrating to GridGain), a
+     * class missing from the classpath, or a generic instantiation failure. The original Spring exception is
+     * preserved as the cause.
+     *
+     * @param e Spring exception that caused the failure.
+     * @param srcDesc Configuration source description to include in the message (e.g. {@code "springUrl=..."}),
+     *      or {@code null} if not available.
+     * @return Exception to be thrown by the caller.
+     */
+    private static IgniteCheckedException springConfigurationException(BeansException e, @Nullable String srcDesc) {
+        NotWritablePropertyException pe = X.cause(e, NotWritablePropertyException.class);
+
+        if (pe != null && pe.getBeanClass() != null)
+            return new IgniteCheckedException(String.format("Configuration property %s.%s does not exist",
+                pe.getBeanClass().getSimpleName(), pe.getPropertyName()), e);
+
+        if (X.hasCause(e, ClassNotFoundException.class))
+            return new IgniteCheckedException(String.format("Failed to instantiate Spring XML application context " +
+                "(make sure all classes used in Spring configuration are present in CLASSPATH)%s",
+                srcDesc != null ? " [" + srcDesc + ']' : ""), e);
+
+        return new IgniteCheckedException(String.format(
+            "Failed to instantiate Spring XML application context [%serr=%s]",
+            srcDesc != null ? srcDesc + ", " : "", e.getMessage()), e);
     }
 
     /**

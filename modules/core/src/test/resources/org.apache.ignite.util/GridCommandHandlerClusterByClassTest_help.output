@@ -155,6 +155,9 @@ This utility can do the following commands:
   Schedule/run maintenance task for cleanup DR tries:
     control.(sh|bat) --dr cleanup-partition-tree [--caches cacheName1,cacheName2,...,cacheNameN] [--groups groupName1,groupName2,...,groupNameN] [--nodes consistentId0,consistentId1,...,consistentIdN] [--yes]
 
+  Start task for resetting DR state:
+    control.(sh|bat) --dr reset-partition-tree [--caches cacheName1,cacheName2,...,cacheNameN] [--partitions 0,1,...,N] [--nodes consistentId0,consistentId1,...,consistentIdN] [--yes]
+
   View or update tracing configuration in a cluster. For more details type:
     control.(sh|bat) --tracing-configuration help
 

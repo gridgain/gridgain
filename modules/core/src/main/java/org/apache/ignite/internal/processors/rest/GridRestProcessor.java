@@ -58,6 +58,7 @@ import org.apache.ignite.internal.processors.rest.handlers.datastructures.DataSt
 import org.apache.ignite.internal.processors.rest.handlers.log.GridLogCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.memory.MemoryMetricsCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.probe.GridProbeCommandHandler;
+import org.apache.ignite.internal.processors.rest.handlers.property.GridPropertyCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.query.QueryCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.task.GridTaskCommandHandler;
 import org.apache.ignite.internal.processors.rest.handlers.top.GridTopologyCommandHandler;
@@ -581,6 +582,7 @@ public class GridRestProcessor extends GridProcessorAdapter {
             addHandler(new MemoryMetricsCommandHandler(ctx));
             addHandler(new NodeWarmupCommandHandler(ctx));
             addHandler(new GridProbeCommandHandler(ctx));
+            addHandler(new GridPropertyCommandHandler(ctx));
 
             // Start protocols.
             startTcpProtocol();
@@ -953,6 +955,17 @@ public class GridRestProcessor extends GridProcessorAdapter {
             case BASELINE_REMOVE:
             case CLUSTER_SET_STATE:
                 perm = SecurityPermission.ADMIN_OPS;
+
+                break;
+
+            case PROPERTY_LIST:
+            case PROPERTY_GET:
+                perm = SecurityPermission.ADMIN_READ_DISTRIBUTED_PROPERTY;
+
+                break;
+
+            case PROPERTY_SET:
+                perm = SecurityPermission.ADMIN_WRITE_DISTRIBUTED_PROPERTY;
 
                 break;
 

@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the sql field name.
         /// If not provided, property or field name will be used.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether corresponding field should be indexed.
@@ -65,7 +65,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         [SuppressMessage("Microsoft.Performance", "CA1819:PropertiesShouldNotReturnArrays", 
             Justification = "Attribute initializers do not allow collections")]
-        public string[] IndexGroups { get; set; }
+        public string[]? IndexGroups { get; set; }
 
         /// <summary>
         /// Gets or sets the index inline size, see <see cref="QueryIndex.InlineSize"/>.
@@ -81,7 +81,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets the default value for the field (has effect when inserting with DML).
         /// </summary>
-        public object DefaultValue { get; set; }
+        public object? DefaultValue { get; set; }
 
         /// <summary>
         /// Gets or sets the precision for the field.

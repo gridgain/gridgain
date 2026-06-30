@@ -148,6 +148,7 @@ import static org.apache.ignite.failure.FailureType.SYSTEM_WORKER_TERMINATION;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.TMP_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.ZIP_SUFFIX;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileDescriptor.fileName;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.READ_VALUE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordSerializerFactory.LATEST_SERIALIZER_VERSION;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.readPosition;
@@ -939,7 +940,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
     /** {@inheritDoc} */
     @Override public WALRecord read(WALPointer ptr) throws IgniteCheckedException {
-        try (WALIterator it = replay(ptr)) {
+        try (WALIterator it = replay(ptr, READ_VALUE)) {
             IgniteBiTuple<WALPointer, WALRecord> rec = it.next();
 
             if (rec != null && rec.get2().position().equals(ptr))
@@ -950,14 +951,15 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
     }
 
     /** {@inheritDoc} */
-    @Override public WALIterator replay(WALPointer start) throws IgniteCheckedException, StorageException {
-        return replay(start, null);
+    @Override public WALIterator replay(WALPointer start, IterationReason reason) throws IgniteCheckedException, StorageException {
+        return replay(start, null, reason);
     }
 
     /** {@inheritDoc} */
     @Override public WALIterator replay(
         WALPointer start,
-        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter
+        @Nullable IgniteBiPredicate<WALRecord.RecordType, WALPointer> recordDeserializeFilter,
+        IterationReason reason
     ) throws IgniteCheckedException, StorageException {
         assert start == null || start instanceof FileWALPointer : "Invalid start pointer: " + start;
 
@@ -982,7 +984,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             log,
             segmentAware,
             segmentRouter,
-            lockedSegmentFileInputFactory
+            lockedSegmentFileInputFactory,
+            reason
         );
 
         try {
@@ -2804,6 +2807,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
         /** Holder of actual information of latest manipulation on WAL segments. */
         private final SegmentAware segmentAware;
 
+        /** Reason to iterate WAL. */
+        private final IterationReason iterationReason;
+
         /**
          * @param cctx Shared context.
          * @param walArchiveDir WAL archive dir.
@@ -2818,6 +2824,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
          * @param segmentAware Segment aware.
          * @param segmentRouter Segment router.
          * @param segmentFileInputFactory Factory to provide I/O interfaces for read primitives with files.
+         * @param reason Reason to iterate WAL.
          */
         private RecordsIterator(
             GridCacheSharedContext<?, ?> cctx,
@@ -2833,7 +2840,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             IgniteLogger log,
             SegmentAware segmentAware,
             SegmentRouter segmentRouter,
-            SegmentFileInputFactory segmentFileInputFactory
+            SegmentFileInputFactory segmentFileInputFactory,
+            IterationReason reason
         ) throws IgniteCheckedException {
             super(
                 log,
@@ -2854,6 +2862,7 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
             this.decompressor = decompressor;
             this.segmentRouter = segmentRouter;
             this.segmentAware = segmentAware;
+            this.iterationReason = reason;
         }
 
         /** {@inheritDoc} */
@@ -2934,8 +2943,8 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
 
             curWalSegmIdx--;
 
-            if (log.isDebugEnabled())
-                log.debug("Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" + curWalSegmIdx + ']');
+            iterationReason.logIfNeeded(log, () -> "Initialized WAL cursor [start=" + start + ", end=" + end + ", curWalSegmIdx=" +
+                curWalSegmIdx + ", reason=" + iterationReason + ']');
 
             advance();
         }
@@ -2966,10 +2975,9 @@ public class FileWriteAheadLogManager extends GridCacheSharedManagerAdapter impl
                 try {
                     fd = segmentRouter.findSegment(curWalSegmIdx);
 
-                    if (log.isDebugEnabled()) {
-                        log.debug("Reading next file [absIdx=" + curWalSegmIdx +
-                            ", file=" + fd.file.getAbsolutePath() + ']');
-                    }
+                    File file = fd.file;
+                    iterationReason.logIfNeeded(log, () -> "Reading next file [absIdx=" + curWalSegmIdx +
+                        ", file=" + file.getAbsolutePath() + ", reason=" + iterationReason + ']');
 
                     nextHandle = initReadHandle(fd, start != null && curWalSegmIdx == start.index() ? start : null);
                 }

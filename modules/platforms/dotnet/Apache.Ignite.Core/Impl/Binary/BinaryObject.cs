@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Binary
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Runtime.CompilerServices;
@@ -50,10 +49,10 @@ namespace Apache.Ignite.Core.Impl.Binary
         private readonly BinaryObjectHeader _header;
 
         /** Fields. */
-        private volatile IDictionary<int, int> _fields;
+        private volatile IDictionary<int, int>? _fields;
 
         /** Deserialized value. */
-        private object _deserialized;
+        private object? _deserialized;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BinaryObject" /> class.
@@ -64,10 +63,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="header">The header.</param>
         public BinaryObject(Marshaller marsh, byte[] data, int offset, BinaryObjectHeader header)
         {
-            Debug.Assert(marsh != null);
-            Debug.Assert(data != null);
-            Debug.Assert(offset >= 0 && offset < data.Length);
-
             _marsh = marsh;
 
             _data = data;
@@ -85,13 +80,15 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public T GetField<T>(string fieldName)
+        public T? GetField<T>(string fieldName)
         {
             IgniteArgumentCheck.NotNullOrEmpty(fieldName, "fieldName");
 
             int pos;
 
-            return TryGetFieldPosition(fieldName, out pos) ? GetField<T>(pos, null) : default(T);
+            return TryGetFieldPosition(fieldName, out pos)
+                ? GetField<T>(pos, null)
+                : default;
         }
 
         /** <inheritdoc /> */
@@ -110,7 +107,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="pos">Position.</param>
         /// <param name="builder">Builder.</param>
         /// <returns>Field value.</returns>
-        public T GetField<T>(int pos, BinaryObjectBuilder builder)
+        public T GetField<T>(int pos, BinaryObjectBuilder? builder)
         {
             using (IBinaryStream stream = new BinaryHeapStream(_data))
             {
@@ -182,7 +179,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 _deserialized = res;
             }
 
-            return (T)_deserialized;
+            return (T)_deserialized!;
         }
 
         /** <inheritdoc /> */
@@ -219,20 +216,22 @@ namespace Apache.Ignite.Core.Impl.Binary
         {
             var desc = _marsh.GetDescriptor(true, _header.TypeId);
 
-            InitializeFields(desc);
+            var fields = InitializeFields(desc);
 
             int fieldId = BinaryUtils.FieldId(_header.TypeId, fieldName, desc.NameMapper, desc.IdMapper);
 
-            return _fields.TryGetValue(fieldId, out pos);
+            return fields.TryGetValue(fieldId, out pos);
         }
 
         /// <summary>
         /// Lazy fields initialization routine.
         /// </summary>
-        private void InitializeFields(IBinaryTypeDescriptor desc = null)
+        private IDictionary<int, int> InitializeFields(IBinaryTypeDescriptor? desc = null)
         {
-            if (_fields != null)
-                return;
+            var fields = _fields;
+
+            if (fields != null)
+                return fields;
 
             desc = desc ?? _marsh.GetDescriptor(true, _header.TypeId);
 
@@ -240,8 +239,12 @@ namespace Apache.Ignite.Core.Impl.Binary
             {
                 var hdr = BinaryObjectHeader.Read(stream, _offset);
 
-                _fields = BinaryObjectSchemaSerializer.ReadSchema(stream, _offset, hdr, desc.Schema, _marsh.Ignite)
+                fields = BinaryObjectSchemaSerializer.ReadSchema(stream, _offset, hdr, desc.Schema, _marsh.Ignite)
                     .ToDictionary() ?? EmptyFields;
+
+                _fields = fields;
+
+                return fields;
             }
         }
 
@@ -252,12 +255,12 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (this == obj)
                 return true;
 
-            BinaryObject that = obj as BinaryObject;
+            BinaryObject? that = obj as BinaryObject;
 
             if (that == null)
                 return false;
@@ -295,7 +298,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
             IBinaryTypeDescriptor desc = _marsh.GetDescriptor(true, _header.TypeId);
 
-            IBinaryType meta;
+            IBinaryType? meta;
 
             try
             {
@@ -316,7 +319,7 @@ namespace Apache.Ignite.Core.Impl.Binary
                 {
                     handled[_offset] = idHash;
 
-                    InitializeFields();
+                    var fields = InitializeFields();
 
                     foreach (string fieldName in meta.Fields)
                     {
@@ -324,9 +327,7 @@ namespace Apache.Ignite.Core.Impl.Binary
 
                         int fieldId = BinaryUtils.FieldId(_header.TypeId, fieldName, desc.NameMapper, desc.IdMapper);
 
-                        int fieldPos;
-
-                        if (_fields.TryGetValue(fieldId, out fieldPos))
+                        if (fields.TryGetValue(fieldId, out var fieldPos))
                         {
                             sb.Append(fieldName).Append('=');
 
@@ -350,13 +351,13 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="obj">Object to print.</param>
         /// <param name="handled">Already handled objects.</param>
         /// <returns>The same string builder.</returns>
-        private static void ToString0(StringBuilder sb, object obj, IDictionary<int, int> handled)
+        private static void ToString0(StringBuilder sb, object? obj, IDictionary<int, int> handled)
         {
-            IEnumerable col = (obj is string) ? null : obj as IEnumerable;
+            IEnumerable? col = (obj is string) ? null : obj as IEnumerable;
 
             if (col == null)
             {
-                BinaryObject obj0 = obj as BinaryObject;
+                BinaryObject? obj0 = obj as BinaryObject;
 
                 sb.Append(obj0 == null ? obj : obj0.ToString(handled));
             }

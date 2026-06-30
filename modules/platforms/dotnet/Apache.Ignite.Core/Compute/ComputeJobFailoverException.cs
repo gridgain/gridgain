@@ -42,7 +42,7 @@ namespace Apache.Ignite.Core.Compute
         /// Initializes a new instance of the <see cref="ComputeJobFailoverException" /> class.
         /// </summary>
         /// <param name="message">The message that describes the error.</param>
-        public ComputeJobFailoverException(string message) : base(message)
+        public ComputeJobFailoverException(string? message) : base(message)
         {
             // No-op.
         }
@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Compute
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ComputeJobFailoverException(string message, Exception cause) : base(message, cause)
+        public ComputeJobFailoverException(string? message, Exception? cause) : base(message, cause)
         {
             // No-op.
         }

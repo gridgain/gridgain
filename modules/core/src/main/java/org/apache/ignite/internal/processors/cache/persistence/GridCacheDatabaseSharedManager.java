@@ -204,6 +204,8 @@ import static org.apache.ignite.internal.processors.cache.persistence.checkpoint
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.CachePartitionDefragmentationManager.DEFRAGMENTATION_MNTC_TASK_NAME;
 import static org.apache.ignite.internal.processors.cache.persistence.defragmentation.maintenance.DefragmentationParameters.fromStore;
 import static org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager.CORRUPTED_DATA_FILES_MNTC_TASK_NAME;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.LOGICAL_UPDATES;
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.RESTORE_BINARY_STATE;
 import static org.apache.ignite.internal.util.IgniteUtils.GB;
 import static org.apache.ignite.internal.util.IgniteUtils.checkpointBufferSize;
 
@@ -1311,7 +1313,8 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
             this,
             memMetrics,
             resolveThrottlingPolicy(),
-            () -> getCheckpointer().currentProgress()
+            () -> getCheckpointer().currentProgress(),
+            maxDirtyPagesRatio
         );
 
         memMetrics.pageMemory(pageMem);
@@ -2259,7 +2262,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         long lastArchivedSegment = cctx.wal().lastArchivedSegment();
 
-        WALIterator it = cctx.wal().replay(recPtr, recordTypePredicate);
+        WALIterator it = cctx.wal().replay(recPtr, recordTypePredicate, RESTORE_BINARY_STATE);
 
         RestoreBinaryState restoreBinaryState = new RestoreBinaryState(status, it, lastArchivedSegment, cacheGroupsPredicate);
 
@@ -2890,7 +2893,7 @@ public class GridCacheDatabaseSharedManager extends IgniteCacheDatabaseSharedMan
 
         Map<GroupPartitionId, Integer> partitionRecoveryStates = new HashMap<>();
 
-        WALIterator it = cctx.wal().replay(status.startPtr, recordTypePredicate);
+        WALIterator it = cctx.wal().replay(status.startPtr, recordTypePredicate, LOGICAL_UPDATES);
 
         RestoreLogicalState restoreLogicalState =
             new RestoreLogicalState(status, it, lastArchivedSegment, cacheGroupsPredicate, partitionRecoveryStates);

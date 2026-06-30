@@ -260,6 +260,117 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 #pragma warning restore 618
         }
 
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor returns all entries, fetching multiple
+        /// pages asynchronously (the server cursor delegates batch retrieval to Java on a background thread).
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryAsyncEnumeration()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size forces multiple async batch requests during enumeration.
+            var qry = new ScanQuery<int, QueryPerson> { PageSize = 10 };
+
+            var keys = new List<int>();
+
+            await foreach (var entry in cache.Query(qry))
+            {
+                Assert.IsNotNull(entry.Value);
+                keys.Add(entry.Key);
+            }
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, MaxItemCnt), keys);
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a SQL fields query cursor returns all rows asynchronously,
+        /// fetching multiple pages from the server cursor.
+        /// </summary>
+        [Test]
+        public async Task TestSqlFieldsQueryAsyncEnumeration()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            var qry = new SqlFieldsQuery("SELECT age FROM QueryPerson ORDER BY age") { PageSize = 10 };
+
+            var ages = new List<int>();
+
+            await foreach (var row in cache.Query(qry))
+            {
+                ages.Add((int)row[0]);
+            }
+
+            CollectionAssert.AreEqual(Enumerable.Range(1, MaxItemCnt), ages);
+        }
+
+        /// <summary>
+        /// Tests that a server scan query cursor that was not fully enumerated can be disposed without throwing,
+        /// and that <c>Dispose</c>/<c>DisposeAsync</c> are idempotent and can be mixed. Guards against the cursor's
+        /// synchronization primitive being disposed while it is still considered in use (open server-side cursor).
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryCursorDisposeIsIdempotentWhenNotDrained()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size leaves the server-side cursor open (more pages remain) so _hasNext stays true.
+            var qry = new ScanQuery<int, QueryPerson> { PageSize = 10 };
+
+            // Sync Dispose of a never-enumerated cursor must not throw, and must be idempotent.
+            var cursor = cache.Query(qry);
+            Assert.DoesNotThrow(() => cursor.Dispose());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+
+            // DisposeAsync of a non-drained cursor, then a second DisposeAsync and a sync Dispose, must all be safe.
+            cursor = cache.Query(qry);
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
+
+        /// <summary>
+        /// Tests that breaking out of <c>await foreach</c> over a server scan query cursor disposes the cursor
+        /// (closing the still-open server-side cursor) and that explicit disposal afterwards remains a safe no-op.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryAsyncEnumerationBreakDisposesCursor()
+        {
+            var cache = Cache();
+            await cache.RemoveAllAsync();
+            await cache.PutAllAsync(Enumerable.Range(1, MaxItemCnt).ToDictionary(x => x, x => new QueryPerson(x.ToString(), x)));
+
+            // Small page size keeps the server-side cursor open when we break early.
+            var cursor = cache.Query(new ScanQuery<int, QueryPerson> { PageSize = 10 });
+
+            var count = 0;
+
+            await foreach (var entry in cursor)
+            {
+                Assert.IsNotNull(entry.Value);
+
+                if (++count == 5)
+                {
+                    break;
+                }
+            }
+
+            Assert.AreEqual(5, count);
+
+            // await foreach disposed the still-open cursor on break (DisposeAsync on a non-drained cursor);
+            // explicit disposal afterwards must remain a safe, idempotent no-op.
+            Assert.DoesNotThrowAsync(async () => await cursor.DisposeAsync());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
+#endif
+
         /// <summary>
         /// Test SQL query arguments passing.
         /// </summary>
@@ -960,6 +1071,32 @@ namespace Apache.Ignite.Core.Tests.Cache.Query
 
             var ex = Assert.Throws<ArgumentException>(() => cache.Query(qry).GetAll());
             StringAssert.EndsWith("updateBatchSize cannot be lower than 1", ex.Message);
+        }
+
+        /// <summary>
+        /// Tests <see cref="SqlFieldsQuery.Label"/> property propagation to running queries system view.
+        /// </summary>
+        [Test]
+        public void TestSqlFieldsQueryLabel()
+        {
+            var cache = Cache();
+
+            const string systemViewSql = "SELECT SQL, LOCAL, LABEL FROM SYS.SQL_QUERIES";
+            const string label = "test-label-0";
+
+            var results = cache.Query(new SqlFieldsQuery(systemViewSql)
+            {
+                Label = label,
+                Local = true
+            }).GetAll();
+
+            // Should see 1 running query (itself)
+            Assert.AreEqual(1, results.Count);
+            var res = results[0];
+
+            Assert.AreEqual(systemViewSql, res[0]);
+            Assert.IsTrue((bool)res[1]);
+            Assert.AreEqual(label, (string)res[2]);
         }
 
         /// <summary>

@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the cluster-wide lock name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the lock should be in fair mode.

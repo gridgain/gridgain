@@ -559,8 +559,12 @@ public class MessageCodeGenerator {
      * @param colAnn Collection annotation.
      * @param mapAnn Map annotation.
      */
-    private void writeField(Field field, int opt, @Nullable GridDirectCollection colAnn,
-        @Nullable GridDirectMap mapAnn) {
+    private void writeField(
+        Field field,
+        int opt,
+        @Nullable GridDirectCollection colAnn,
+        @Nullable GridDirectMap mapAnn
+    ) {
         assert field != null;
         assert opt >= 0;
 
@@ -590,8 +594,12 @@ public class MessageCodeGenerator {
      * @param colAnn Collection annotation.
      * @param mapAnn Map annotation.
      */
-    private void readField(Field field, int opt, @Nullable GridDirectCollection colAnn,
-        @Nullable GridDirectMap mapAnn) {
+    private void readField(
+        Field field,
+        int opt,
+        @Nullable GridDirectCollection colAnn,
+        @Nullable GridDirectMap mapAnn
+    ) {
         assert field != null;
         assert opt >= 0;
 
@@ -600,12 +608,13 @@ public class MessageCodeGenerator {
         indent++;
 
         GridCodegenConverter fldPreproc = field.getAnnotation(GridCodegenConverter.class);
-        String setExp = (fldPreproc != null && !fldPreproc.get().isEmpty()) ? fldPreproc.set() : "";
+        String setExp = (fldPreproc != null && !fldPreproc.set().isEmpty()) ? fldPreproc.set() : "";
         Class<?> writeType = (fldPreproc != null && !fldPreproc.type().equals(GridCodegenConverter.Default.class)) ?
             fldPreproc.type() : field.getType();
+        String defaultVal = (fldPreproc != null ? fldPreproc.defaultValueOnRead() : "");
 
         returnFalseIfReadFailed(writeType, field.getName(), colAnn != null ? colAnn.value() : null,
-            mapAnn != null ? mapAnn.keyType() : null, mapAnn != null ? mapAnn.valueType() : null, setExp);
+            mapAnn != null ? mapAnn.keyType() : null, mapAnn != null ? mapAnn.valueType() : null, setExp, defaultVal);
 
         read.add(EMPTY);
         read.add(builder().a("reader.incrementState();").toString());
@@ -707,11 +716,20 @@ public class MessageCodeGenerator {
      * @param mapKeyType Map key type.
      * @param mapValType Map value type.
      */
-    private void returnFalseIfReadFailed(Class<?> type, @Nullable String name, @Nullable Class<?> colItemType,
-        @Nullable Class<?> mapKeyType, @Nullable Class<?> mapValType, String setExpr) {
+    private void returnFalseIfReadFailed(
+        Class<?> type,
+        @Nullable String name,
+        @Nullable Class<?> colItemType,
+        @Nullable Class<?> mapKeyType,
+        @Nullable Class<?> mapValType,
+        String setExpr,
+        String defaultVal
+    ) {
         assert type != null;
 
         String field = '"' + name + '"';
+        if (!defaultVal.isEmpty())
+            field = field + ", " + defaultVal;
 
         if (type == byte.class)
             returnFalseIfReadFailed(name, "reader.readByte", setExpr, field);

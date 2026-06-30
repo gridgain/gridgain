@@ -232,8 +232,6 @@ public class SqlUnsupportedSelfTest extends AbstractIndexingCommonTest {
         assertSqlUnsupported("CREATE DOMAIN EMAIL AS VARCHAR(255) CHECK (POSITION('@', VALUE) > 1)");
         assertSqlUnsupported("DROP DOMAIN EMAIL");
 
-        assertSqlUnsupported("CREATE LINKED TABLE link('', '', '', '', '(SELECT * FROM test WHERE ID>0)');");
-
         assertSqlUnsupported("DROP ALL OBJECTS");
 
         assertSqlUnsupported("TRUNCATE TABLE test");

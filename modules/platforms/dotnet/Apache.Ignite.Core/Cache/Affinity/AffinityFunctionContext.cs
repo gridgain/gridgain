@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Cache.Affinity
 {
     using System.Collections.Generic;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Cluster;
     using Apache.Ignite.Core.Events;
     using Apache.Ignite.Core.Impl;
@@ -29,7 +28,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
     public class AffinityFunctionContext
     {
         /** */
-        private readonly List<List<IClusterNode>> _previousAssignment;
+        private readonly List<List<IClusterNode>>? _previousAssignment;
 
         /** */
         private readonly int _backups;
@@ -49,9 +48,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// <param name="reader">The reader.</param>
         internal AffinityFunctionContext(BinaryReader reader)
         {
-            Debug.Assert(reader != null);
-
-            _currentTopologySnapshot = IgniteUtils.ReadNodes(reader);
+            _currentTopologySnapshot = IgniteUtils.ReadNodes(reader)!;
             _backups = reader.ReadInt();
             _currentTopologyVersion = new AffinityTopologyVersion(reader.ReadLong(), reader.ReadInt());
             _discoveryEvent = EventReader.Read<DiscoveryEvent>(reader);
@@ -64,7 +61,7 @@ namespace Apache.Ignite.Core.Cache.Affinity
                 _previousAssignment = new List<List<IClusterNode>>(cnt);
 
                 for (var i = 0; i < cnt; i++)
-                    _previousAssignment.Add(IgniteUtils.ReadNodes(reader));
+                    _previousAssignment.Add(IgniteUtils.ReadNodes(reader)!);
             }
         }
 
@@ -77,9 +74,9 @@ namespace Apache.Ignite.Core.Cache.Affinity
         /// List of nodes assigned to a given partition on previous topology version or <code>null</code>
         /// if this information is not available.
         /// </returns>
-        public ICollection<IClusterNode> GetPreviousAssignment(int partition)
+        public ICollection<IClusterNode>? GetPreviousAssignment(int partition)
         {
-            return _previousAssignment == null ? null : _previousAssignment[partition];
+            return _previousAssignment?[partition];
         }
 
         /// <summary>

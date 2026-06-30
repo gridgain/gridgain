@@ -37,10 +37,10 @@ namespace Apache.Ignite.Core.Events
         private readonly long _localOrder;
 
         /** */
-        private readonly IClusterNode _node;
+        private readonly IClusterNode? _node;
 
         /** */
-        private readonly string _message;
+        private readonly string? _message;
 
         /** */
         private readonly int _type;
@@ -58,8 +58,6 @@ namespace Apache.Ignite.Core.Events
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         protected EventBase(IBinaryRawReader r)
         {
-            Debug.Assert(r != null);
-
             _id = r.ReadObject<IgniteGuid>();
 
             _localOrder = r.ReadLong();
@@ -68,11 +66,11 @@ namespace Apache.Ignite.Core.Events
 
             _message = r.ReadString();
             _type = r.ReadInt();
-            _name = r.ReadString();
+            _name = r.ReadString()!;
             
             var timestamp = r.ReadTimestamp();
             Debug.Assert(timestamp.HasValue);
-            _timestamp = timestamp.Value;
+            _timestamp = timestamp!.Value;
         }
 
         /// <summary>
@@ -97,7 +95,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Node where event occurred and was recorded.
         /// </summary>
-        public IClusterNode Node
+        public IClusterNode? Node
         {
             get { return _node; }
         }
@@ -105,7 +103,7 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets optional message for this event.
         /// </summary>
-        public string Message
+        public string? Message
         {
             get { return _message; }
         }
@@ -151,7 +149,7 @@ namespace Apache.Ignite.Core.Events
         /// <returns>
         ///   <c>true</c> if the specified object is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public bool Equals(EventBase other)
+        public bool Equals(EventBase? other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -166,7 +164,7 @@ namespace Apache.Ignite.Core.Events
         /// <returns>
         ///   <c>true</c> if the specified object is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
@@ -204,7 +202,7 @@ namespace Apache.Ignite.Core.Events
         /// <param name="reader">Reader.</param>
         /// <returns>Node or null.</returns>
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
-        protected static IClusterNode ReadNode(IBinaryRawReader reader)
+        protected static IClusterNode? ReadNode(IBinaryRawReader reader)
         {
             return ((BinaryReader)reader).Marshaller.Ignite.GetNode(reader.ReadGuid());
         }

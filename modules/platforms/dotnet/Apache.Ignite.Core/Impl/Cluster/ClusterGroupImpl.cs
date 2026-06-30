@@ -163,13 +163,13 @@ namespace Apache.Ignite.Core.Impl.Cluster
         private readonly IIgniteInternal _ignite;
         
         /** Predicate. */
-        private readonly Func<IClusterNode, bool> _pred;
+        private readonly Func<IClusterNode, bool>? _pred;
 
         /** Topology version. */
         private long _topVer = TopVerInit;
 
         /** Nodes for the given topology version. */
-        private volatile IList<IClusterNode> _nodes;
+        private volatile IList<IClusterNode>? _nodes;
 
         /** Compute. */
         private readonly Lazy<ICompute> _comp;
@@ -189,7 +189,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// <param name="target">Target.</param>
         /// <param name="pred">Predicate.</param>
         [SuppressMessage("Microsoft.Performance", "CA1805:DoNotInitializeUnnecessarily")]
-        public ClusterGroupImpl(IPlatformTargetInternal target, Func<IClusterNode, bool> pred)
+        public ClusterGroupImpl(IPlatformTargetInternal target, Func<IClusterNode, bool>? pred)
             : base(target)
         {
             _ignite = target.Marshaller.Ignite;
@@ -259,11 +259,9 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// <param name="items">Items.</param>
         /// <param name="func">Function to transform item to Guid (optional).</param>
         /// <returns></returns>
-        private IClusterGroup ForNodeIds0<T>(IEnumerable<T> items, Func<T, Guid> func)
+        private IClusterGroup ForNodeIds0<T>(IEnumerable<T> items, Func<T, Guid>? func)
         {
-            Debug.Assert(items != null);
-
-            var prj = DoOutOpObject(OpForNodeIds, writer => writer.WriteEnumerable(items, func));
+            var prj = DoOutOpObject(OpForNodeIds, writer => writer.WriteEnumerable(items, func))!;
             
             return GetClusterGroup(prj);
         }
@@ -277,7 +275,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClusterGroup ForAttribute(string name, string val)
+        public IClusterGroup ForAttribute(string name, string? val)
         {
             IgniteArgumentCheck.NotNull(name, "name");
 
@@ -288,7 +286,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
             };
             var prj = DoOutOpObject(OpForAttribute, action);
 
-            return GetClusterGroup(prj);
+            return GetClusterGroup(prj!);
         }
 
         /// <summary>
@@ -306,7 +304,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
                 writer.WriteString(name);
             });
 
-            return GetClusterGroup(prj);
+            return GetClusterGroup(prj!);
         }
 
         /** <inheritDoc /> */
@@ -349,7 +347,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
                 writer.WriteGuid(node.Id);
             });    
                     
-            return GetClusterGroup(prj);
+            return GetClusterGroup(prj!);
         }
 
         /** <inheritDoc /> */
@@ -389,13 +387,13 @@ namespace Apache.Ignite.Core.Impl.Cluster
         }
 
         /** <inheritDoc /> */
-        public IClusterNode GetNode(Guid id)
+        public IClusterNode? GetNode(Guid id)
         {
             return GetNodes().FirstOrDefault(node => node.Id == id);
         }
 
         /** <inheritDoc /> */
-        public IClusterNode GetNode()
+        public IClusterNode? GetNode()
         {
             return GetNodes().FirstOrDefault();
         }
@@ -410,7 +408,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
                     IBinaryRawReader reader = Marshaller.StartUnmarshal(stream, false);
 
                     return reader.ReadBoolean() ? new ClusterMetricsImpl(reader) : null;
-                });
+                })!;
             }
             return DoOutInOp(OpMetricsFiltered,
                 writer => writer.WriteEnumerable(GetNodes().Select(node => node.Id)),
@@ -419,7 +417,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
                     IBinaryRawReader reader = Marshaller.StartUnmarshal(stream, false);
 
                     return reader.ReadBoolean() ? new ClusterMetricsImpl(reader) : null;
-                });
+                })!;
         }
 
         /** <inheritDoc /> */
@@ -499,7 +497,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// <summary>
         /// Predicate (if any).
         /// </summary>
-        public Func<IClusterNode, bool> Predicate
+        public Func<IClusterNode, bool>? Predicate
         {
             get { return _pred; }
         }
@@ -522,7 +520,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
 
                     return reader.ReadBoolean() ? new ClusterMetricsImpl(reader) : null;
                 }
-            );
+            )!;
         }
 
         /// <summary>
@@ -538,7 +536,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         internal ICollection<IClusterNode> Topology(long version)
         {
             return DoOutInOp(OpTopology, writer => writer.WriteLong(version), 
-                input => IgniteUtils.ReadNodes(Marshaller.StartUnmarshal(input)));
+                input => IgniteUtils.ReadNodes(Marshaller.StartUnmarshal(input)))!;
         }
 
         /// <summary>
@@ -578,7 +576,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         /// Get current nodes without refreshing the topology.
         /// </summary>
         /// <returns>Current nodes.</returns>
-        internal IList<IClusterNode> NodesNoRefresh()
+        internal IList<IClusterNode>? NodesNoRefresh()
         {
             return _nodes;
         }
@@ -645,7 +643,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         public IMemoryMetrics GetMemoryMetrics(string memoryPolicyName)
         {
             return DoOutInOp(OpMemoryMetricsByName, w => w.WriteString(memoryPolicyName),
-                stream => stream.ReadBool() ? new MemoryMetrics(Marshaller.StartUnmarshal(stream, false)) : null);
+                stream => stream.ReadBool() ? new MemoryMetrics(Marshaller.StartUnmarshal(stream, false)) : null)!;
         }
 #pragma warning restore 618
 
@@ -677,7 +675,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
         public IDataRegionMetrics GetDataRegionMetrics(string memoryPolicyName)
         {
             return DoOutInOp(OpDataRegionMetricsByName, w => w.WriteString(memoryPolicyName),
-                stream => stream.ReadBool() ? new DataRegionMetrics(Marshaller.StartUnmarshal(stream, false)) : null);
+                stream => stream.ReadBool() ? new DataRegionMetrics(Marshaller.StartUnmarshal(stream, false)) : null)!;
         }
 
         /// <summary>
@@ -755,7 +753,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
                 {
                     // Topology has been updated.
                     long newTopVer = reader.ReadLong();
-                    var newNodes = IgniteUtils.ReadNodes((BinaryReader) reader, _pred);
+                    var newNodes = IgniteUtils.ReadNodes((BinaryReader) reader, _pred)!;
 
                     return Tuple.Create(newTopVer, newNodes);
                 }
@@ -773,7 +771,7 @@ namespace Apache.Ignite.Core.Impl.Cluster
             // No topology changes.
             Debug.Assert(_nodes != null, "At least one topology update should have occurred.");
 
-            return _nodes;
+            return _nodes!;
         }
     }
 }

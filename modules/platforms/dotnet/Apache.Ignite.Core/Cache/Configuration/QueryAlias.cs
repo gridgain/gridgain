@@ -28,7 +28,8 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         public QueryAlias()
         {
-            // No-op.
+            FullName = string.Empty;
+            Alias = string.Empty;
         }
 
         /// <summary>

@@ -238,7 +238,7 @@ public class GridMetricManager extends GridManagerAdapter<MetricExporterSpi> imp
         gcCpuLoad = sysreg.doubleMetric(GC_CPU_LOAD, GC_CPU_LOAD_DESCRIPTION);
         cpuLoad = sysreg.doubleMetric(CPU_LOAD, CPU_LOAD_DESCRIPTION);
 
-        sysreg.register("SystemLoadAverage", os::getSystemLoadAverage, Double.class, null);
+        sysreg.register("SystemLoadAverage", os::getSystemLoadAverage, null);
         sysreg.register(UP_TIME, rt::getUptime, null);
         sysreg.register(THREAD_CNT, threads::getThreadCount, null);
         sysreg.register(PEAK_THREAD_CNT, threads::getPeakThreadCount, null);

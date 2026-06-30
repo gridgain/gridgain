@@ -42,6 +42,7 @@ import org.apache.ignite.binary.BinaryObject;
 import org.apache.ignite.binary.BinaryObjectBuilder;
 import org.apache.ignite.binary.BinaryObjectException;
 import org.apache.ignite.binary.BinaryType;
+import org.apache.ignite.cache.affinity.AffinityKeyMapped;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.configuration.ClientConfiguration;
@@ -78,7 +79,7 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     /** */
     @After
     public void clear() {
-        crd.binary().types().stream().forEach(type -> crd.context().cacheObjects().removeType(type.typeId()));
+        crd.binary().types().forEach(type -> crd.context().cacheObjects().removeType(type.typeId()));
     }
 
     /**
@@ -667,6 +668,36 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     }
 
     /**
+     * Checks that '--meta details' and '--meta list' show affinity key field name.
+     *
+     * <p>Steps:
+     * - Puts an object of a type annotated with {@link AffinityKeyMapped} into cache,
+     *   which registers binary metadata with affinity key field name.
+     * - Executes '--meta details' and verifies affinityKeyFieldName is shown.
+     * - Executes '--meta list' and verifies affinityKeyFieldName is shown for the type with affinity key.
+     */
+    @Test
+    public void testMetadataAffinityKeyField() {
+        IgniteCache<Object, Object> cache = grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
+
+        try {
+            cache.put(1, new TypeWithAffinityKey("aff_val", 42));
+
+            String typeName = TypeWithAffinityKey.class.getName();
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "details", "--typeName", typeName));
+
+            assertContains(log, testOut.toString(), "affinityKeyFieldName=affField");
+
+            assertEquals(EXIT_CODE_OK, execute("--meta", "list"));
+
+            assertContains(log, testOut.toString(), "affinityKeyFieldName=affField");
+        } finally {
+            cache.destroy();
+        }
+    }
+
+    /**
      * Repeats {@code cons} {@code cnt} times.
      *
      * @param cnt Count.
@@ -683,6 +714,8 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     private void checkTypeDetails(@Nullable IgniteLogger log, String cmdOut, BinaryType t) {
         assertContains(log, cmdOut, "typeId=" + "0x" + Integer.toHexString(t.typeId()).toUpperCase());
         assertContains(log, cmdOut, "typeName=" + t.typeName());
+        if (t.affinityKeyFieldName() != null)
+            assertContains(log, cmdOut, "affinityKeyFieldName=" + t.affinityKeyFieldName());
         assertContains(log, cmdOut, "Fields:");
 
         for (String fldName : t.fieldNames())
@@ -730,5 +763,21 @@ public class GridCommandHandlerMetadataTest extends GridCommandHandlerClusterByC
     public static class TestValue {
         /** */
         public final int val = 3;
+    }
+
+    /** Test type with affinity key field. */
+    public static class TypeWithAffinityKey {
+        /** Affinity key field. */
+        @AffinityKeyMapped
+        public final String affField;
+
+        /** Value field. */
+        public final int val;
+
+        /** */
+        public TypeWithAffinityKey(String affField, int val) {
+            this.affField = affField;
+            this.val = val;
+        }
     }
 }

@@ -85,10 +85,10 @@ namespace Apache.Ignite.Core.Impl.Client
         private readonly TimeSpan _timeout;
 
         /** Request timeout checker. */
-        private readonly Timer _timeoutCheckTimer;
+        private readonly Timer? _timeoutCheckTimer;
 
         /** Heartbeat timer. */
-        private readonly Timer _heartbeatTimer;
+        private readonly Timer? _heartbeatTimer;
 
         /** Callback checker guard. */
         private volatile bool _checkingTimeouts;
@@ -97,8 +97,8 @@ namespace Apache.Ignite.Core.Impl.Client
         private bool _isReadTimeoutEnabled;
 
         /** Current async operations, map from request id. */
-        private readonly ConcurrentDictionary<long, Request> _requests
-            = new ConcurrentDictionary<long, Request>();
+        private readonly ConcurrentDictionary<long, Request?> _requests
+            = new ConcurrentDictionary<long, Request?>();
 
         /** Server -> Client notification listeners. */
         private readonly ConcurrentDictionary<long, ClientNotificationHandler> _notificationListeners
@@ -111,7 +111,7 @@ namespace Apache.Ignite.Core.Impl.Client
         private long _requestId;
 
         /** Socket failure exception. */
-        private volatile Exception _exception;
+        private volatile Exception? _exception;
 
         /** Locker. */
         private readonly object _sendRequestSyncRoot = new object();
@@ -156,12 +156,6 @@ namespace Apache.Ignite.Core.Impl.Client
             ClientProtocolVersion? version, Action<AffinityTopologyVersion> topVerCallback,
             Marshaller marshaller)
         {
-            Debug.Assert(clientConfiguration != null);
-            Debug.Assert(endPoint != null);
-            Debug.Assert(!string.IsNullOrWhiteSpace(host));
-            Debug.Assert(topVerCallback != null);
-            Debug.Assert(marshaller != null);
-
             _topVerCallback = topVerCallback;
             _marsh = marshaller;
             _timeout = clientConfiguration.SocketTimeout;
@@ -280,8 +274,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "BinaryHeapStream does not need to be disposed.")]
-        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null)
+        public T DoOutInOp<T>(ClientOp opId, Action<ClientRequestContext>? writeAction,
+            Func<ClientResponseContext, T>? readFunc, Func<ClientStatusCode, string, T>? errorFunc = null)
         {
             // Encode.
             var reqMsg = WriteMessage(writeAction, opId);
@@ -297,7 +291,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// Performs a send-receive operation asynchronously.
         /// </summary>
         public Task<T> DoOutInOpAsync<T>(ClientOp opId, Action<ClientRequestContext> writeAction,
-            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T> errorFunc = null,
+            Func<ClientResponseContext, T> readFunc, Func<ClientStatusCode, string, T>? errorFunc = null,
             bool syncCallback = false)
         {
             // Encode.
@@ -359,8 +353,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return;
             }
 
-            ClientNotificationHandler unused;
-            var removed = _notificationListeners.TryRemove(notificationId, out unused);
+            var removed = _notificationListeners.TryRemove(notificationId, out _);
             Debug.Assert(removed);
 
             var count = Interlocked.Decrement(ref _expectedNotifications);
@@ -381,12 +374,12 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Gets the current remote EndPoint.
         /// </summary>
-        public EndPoint RemoteEndPoint { get { return _socket.RemoteEndPoint; } }
+        public EndPoint RemoteEndPoint { get { return _socket.RemoteEndPoint!; } }
 
         /// <summary>
         /// Gets the current local EndPoint.
         /// </summary>
-        public EndPoint LocalEndPoint { get { return _socket.LocalEndPoint; } }
+        public EndPoint LocalEndPoint { get { return _socket.LocalEndPoint!; } }
 
         /// <summary>
         /// Gets the ID of the connected server node.
@@ -496,7 +489,7 @@ namespace Apache.Ignite.Core.Impl.Client
                 return;
             }
 
-            Request req;
+            Request? req;
             if (!_requests.TryRemove(requestId, out req))
             {
                 if (_exception != null)
@@ -541,8 +534,8 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Decodes the response that we got from <see cref="HandleResponse"/>.
         /// </summary>
-        private T DecodeResponse<T>(BinaryHeapStream stream, Func<ClientResponseContext, T> readFunc,
-            Func<ClientStatusCode, string, T> errorFunc)
+        private T DecodeResponse<T>(BinaryHeapStream stream, Func<ClientResponseContext, T>? readFunc,
+            Func<ClientStatusCode, string, T>? errorFunc)
         {
             ClientStatusCode statusCode;
 
@@ -572,7 +565,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 return readFunc != null
                     ? readFunc(new ClientResponseContext(stream, this))
-                    : default(T);
+                    : default!;
             }
 
             var msg = BinaryUtils.Marshaller.StartUnmarshal(stream).ReadString();
@@ -645,7 +638,7 @@ namespace Apache.Ignite.Core.Impl.Client
 
                 if (success)
                 {
-                    BitArray featureBits = null;
+                    BitArray? featureBits = null;
 
                     if (hasFeatures)
                     {
@@ -750,7 +743,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Sends the request synchronously.
         /// </summary>
-        private BinaryHeapStream SendRequest(ref RequestMessage reqMsg)
+        private BinaryHeapStream? SendRequest(ref RequestMessage reqMsg)
         {
             // Do not enter lock when disposed.
             CheckException();
@@ -861,7 +854,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Reliability", "CA2000:Dispose objects before losing scope",
             Justification = "BinaryHeapStream does not need to be disposed.")]
-        private RequestMessage WriteMessage(Action<ClientRequestContext> writeAction, ClientOp opId)
+        private RequestMessage WriteMessage(Action<ClientRequestContext>? writeAction, ClientOp opId)
         {
             _features.ValidateOp(opId);
 
@@ -981,7 +974,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// <summary>
         /// Checks if any of the current requests timed out.
         /// </summary>
-        private void CheckTimeouts(object _)
+        private void CheckTimeouts(object? _)
         {
             if (_checkingTimeouts)
             {
@@ -994,7 +987,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 if (_exception != null)
                 {
-                    _timeoutCheckTimer.Dispose();
+                    _timeoutCheckTimer?.Dispose();
                 }
 
                 foreach (var pair in _requests)
@@ -1020,7 +1013,7 @@ namespace Apache.Ignite.Core.Impl.Client
         /// </summary>
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes",
             Justification = "Thread root must catch all exceptions to avoid crashing the process.")]
-        private void SendHeartbeat(object unused)
+        private void SendHeartbeat(object? unused)
         {
             try
             {
@@ -1063,16 +1056,15 @@ namespace Apache.Ignite.Core.Impl.Client
         private void EndRequestsWithError()
         {
             var ex = _exception;
-            Debug.Assert(ex != null);
 
             while (!_requests.IsEmpty)
             {
                 foreach (var reqId in _requests.Keys.ToArray())
                 {
-                    Request req;
+                    Request? req;
                     if (_requests.TryRemove(reqId, out req) && req != null)
                     {
-                        req.CompletionSource.TrySetException(ex);
+                        req.CompletionSource.TrySetException(ex!);
                     }
                 }
             }
@@ -1081,8 +1073,7 @@ namespace Apache.Ignite.Core.Impl.Client
             {
                 foreach (var id in _notificationListeners.Keys)
                 {
-                    ClientNotificationHandler handler;
-                    if (_notificationListeners.TryRemove(id, out handler))
+                    if (_notificationListeners.TryRemove(id, out var handler))
                     {
                         handler.Handle(null, ex);
                     }

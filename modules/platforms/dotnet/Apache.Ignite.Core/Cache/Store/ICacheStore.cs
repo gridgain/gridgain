@@ -84,6 +84,7 @@ namespace Apache.Ignite.Core.Cache.Store
     /// <typeparam name="TK">Key type.</typeparam>
     /// <typeparam name="TV">Value type.</typeparam>
     public interface ICacheStore<TK, TV> : ICacheStore
+        where TK : notnull
     {
         /// <summary>
         /// Loads all values from underlying persistent storage. Note that keys are
@@ -100,7 +101,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <param name="act">Action for loaded values.</param>
         /// <param name="args">Optional arguemnts passed to <see cref="ICache{K,V}.LocalLoadCache"/> method.</param>
         /// <exception cref="CacheStoreException" />
-        void LoadCache(Action<TK, TV> act, params object[] args);
+        void LoadCache(Action<TK, TV> act, params object?[]? args);
 
         /// <summary>
         /// Loads an object. Application developers should implement this method to customize the loading 
@@ -112,7 +113,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <returns>The value for the entry that is to be stored in the cache 
         /// or <c>null</c> if the object can't be loaded</returns>
         /// <exception cref="CacheStoreException" />
-        TV Load(TK key);
+        TV? Load(TK key);
 
         /// <summary>
         /// Loads multiple objects. Application developers should implement this method to customize 
@@ -122,7 +123,7 @@ namespace Apache.Ignite.Core.Cache.Store
         /// <param name="keys">Keys identifying the values to be loaded.</param>
         /// <returns>A map of key, values to be stored in the cache.</returns>
         /// <exception cref="CacheStoreException" />
-        IEnumerable<KeyValuePair<TK, TV>> LoadAll(IEnumerable<TK> keys);
+        IEnumerable<KeyValuePair<TK, TV>>? LoadAll(IEnumerable<TK> keys);
 
         /// <summary>
         /// Write the specified value under the specified key to the external resource.

@@ -885,6 +885,7 @@ public class JdbcThinMetadataSelfTest extends JdbcThinAbstractSelfTest {
                 sysSchemaName() + ".TABLES.KEY_TYPE_NAME.null.2147483647",
                 sysSchemaName() + ".TABLES.VALUE_TYPE_NAME.null.2147483647",
                 sysSchemaName() + ".TABLES.IS_INDEX_REBUILD_IN_PROGRESS.null.1",
+                sysSchemaName() + ".TABLES.BINARY_AFFINITY_FIELD.null.2147483647",
                 sysSchemaName() + ".METRICS.NAME.null.2147483647",
                 sysSchemaName() + ".METRICS.VALUE.null.2147483647",
                 sysSchemaName() + ".METRICS.DESCRIPTION.null.2147483647",

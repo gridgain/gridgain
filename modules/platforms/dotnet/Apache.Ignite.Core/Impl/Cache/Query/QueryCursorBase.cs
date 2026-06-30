@@ -14,20 +14,26 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Cache.Query
 {
     using System;
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Diagnostics.CodeAnalysis;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Impl.Binary;
     using Apache.Ignite.Core.Impl.Binary.IO;
+    using Apache.Ignite.Core.Impl.Common;
 
     /// <summary>
     /// Abstract query cursor implementation.
     /// </summary>
-    internal abstract class QueryCursorBase<T> : IQueryCursor<T>, IEnumerator<T>
+    internal abstract class QueryCursorBase<T> : IQueryCursor<T>, IEnumerator<T>, IAsyncEnumerator<T>
     {
         /** Position before head. */
         private const int BatchPosBeforeHead = -1;
@@ -61,6 +67,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
         /** Whether next batch is available. */
         private bool _hasNext = true;
+
+        /** Cancellation token captured by GetAsyncEnumerator and observed between async batch fetches. */
+        private CancellationToken _asyncEnumeratorToken;
 
         /// <summary>
         /// Constructor.
@@ -111,7 +120,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         #region Public IEnumerable methods
 
         /** <inheritdoc /> */
-        public IEnumerator<T> GetEnumerator()
+        public IEnumerator<T> GetEnumerator() => GetEnumeratorInternal();
+
+        private QueryCursorBase<T> GetEnumeratorInternal()
         {
             if (_getAllCalled)
             {
@@ -142,11 +153,23 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
             return GetEnumerator();
         }
 
+        public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default)
+        {
+            // The cursor is its own single-use enumerator, so capture the token in a field and observe it
+            // in MoveNextAsync. Cancellation is cooperative: an already-issued batch request (network or JVM
+            // call) can not be aborted mid-flight, but cancellation is honored before each new batch is fetched.
+            _asyncEnumeratorToken = cancellationToken;
+
+            return GetEnumeratorInternal();
+        }
+
         #endregion
 
         #region Public IEnumerator methods
 
-        /** <inheritdoc /> */
+        /// <summary>
+        /// Gets the element in the collection at the current position of the enumerator.
+        /// </summary>
         public T Current
         {
             get
@@ -179,23 +202,55 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             lock (_syncRoot)
             {
-                if (_batch == null)
-                {
-                    if (_batchPos == BatchPosBeforeHead)
-                        // Standing before head, let's get batch and advance position.
-                        RequestBatch();
-                }
-                else
-                {
-                    _batchPos++;
-
-                    if (_batch.Length == _batchPos)
-                        // Reached batch end => request another.
-                        RequestBatch();
-                }
-
-                return _batch != null;
+                return MoveNextLocked();
             }
+        }
+
+        private bool MoveNextLocked()
+        {
+            Debug.Assert(Monitor.IsEntered(_syncRoot), "_syncRoot must be held");
+
+            ThrowIfDisposed();
+
+            if (_batch == null)
+            {
+                if (_batchPos == BatchPosBeforeHead)
+                    // Standing before head, let's get batch and advance position.
+                    RequestBatch();
+            }
+            else
+            {
+                _batchPos++;
+
+                if (_batch.Length == _batchPos)
+                    // Reached batch end => request another.
+                    RequestBatch();
+            }
+
+            return _batch != null;
+        }
+
+        public async ValueTask<bool> MoveNextAsync()
+        {
+            ThrowIfDisposed();
+            _asyncEnumeratorToken.ThrowIfCancellationRequested();
+
+            if (_batch == null)
+            {
+                if (_batchPos == BatchPosBeforeHead)
+                    // Standing before head, let's get batch and advance position.
+                    await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
+            }
+            else
+            {
+                _batchPos++;
+
+                if (_batch.Length == _batchPos)
+                    // Reached batch end => request another.
+                    await RequestBatchAsync(_asyncEnumeratorToken).ConfigureAwait(false);
+            }
+
+            return _batch != null;
         }
 
         /** <inheritdoc /> */
@@ -216,20 +271,35 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// </summary>
         private void RequestBatch()
         {
-            lock (_syncRoot)
-            {
-                ThrowIfDisposed();
+            _batch = _hasNext
+                ? GetBatch()
+                : null;
 
-                _batch = _hasNext ? GetBatch() : null;
+            _batchPos = 0;
+        }
 
-                _batchPos = 0;
-            }
+        /// <summary>
+        /// Requests next batch.
+        /// </summary>
+        private async ValueTask RequestBatchAsync(CancellationToken cancellationToken)
+        {
+            _batch = _hasNext
+                ? await GetBatchAsync(cancellationToken).ConfigureAwait(false)
+                : null;
+
+            _batchPos = 0;
         }
 
         /// <summary>
         /// Gets the next batch.
         /// </summary>
         protected abstract T[] GetBatch();
+
+        /// <summary>
+        /// Gets the next batch.
+        /// </summary>
+        /// <param name="cancellationToken">Cancellation token observed before the batch is fetched.</param>
+        protected abstract ValueTask<T[]> GetBatchAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Converter for GET_ALL operation.
@@ -261,25 +331,22 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
             var size = reader.ReadInt();
 
-            lock (_syncRoot)
+            if (size == 0)
             {
-                if (size == 0)
-                {
-                    _hasNext = false;
-                    return null;
-                }
-
-                var res = new T[size];
-
-                for (var i = 0; i < size; i++)
-                {
-                    res[i] = _readFunc(reader);
-                }
-
-                _hasNext = stream.ReadBool();
-
-                return res;
+                _hasNext = false;
+                return null;
             }
+
+            var res = new T[size];
+
+            for (var i = 0; i < size; i++)
+            {
+                res[i] = _readFunc(reader);
+            }
+
+            _hasNext = stream.ReadBool();
+
+            return res;
         }
 
         /** <inheritdoc /> */
@@ -302,6 +369,50 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
 
                 _disposed = true;
             }
+        }
+
+        /** <inheritdoc /> */
+        [SuppressMessage("Microsoft.Usage", "CA1816:CallGCSuppressFinalizeCorrectly",
+            Justification = "GC.SuppressFinalize is valid in DisposeAsync; the analyzer only recognizes Dispose.")]
+        public async ValueTask DisposeAsync()
+        {
+            Task task = null;
+
+            lock (_syncRoot)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                // When _hasNext is false, cursor is already disposed by the server.
+                if (_hasNext)
+                {
+                    // Initiate the close under the lock; await its completion without blocking a thread.
+                    task = DisposeAsyncCore();
+                }
+
+                GC.SuppressFinalize(this);
+
+                _disposed = true;
+            }
+
+            if (task != null)
+            {
+                await task.ConfigureAwait(false);
+            }
+        }
+
+        /// <summary>
+        /// Releases the server-side cursor and returns a task that completes when the resource is closed.
+        /// The default implementation has no asynchronous counterpart and falls back to the synchronous
+        /// <see cref="Dispose(bool)"/>.
+        /// </summary>
+        protected virtual Task DisposeAsyncCore()
+        {
+            Dispose(true);
+
+            return TaskRunner.CompletedTask;
         }
 
         /// <summary>

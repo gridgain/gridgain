@@ -63,7 +63,7 @@ namespace Apache.Ignite.Core.Impl.Compute.Closure
         [SuppressMessage("Microsoft.Design", "CA1062:Validate arguments of public methods")]
         public ComputeJobResultPolicy OnResult(IComputeJobResult<T> res, IList<IComputeJobResult<T>> rcvd)
         {
-            Exception err = res.Exception;
+            Exception? err = res.Exception;
 
             if (err != null)
             {

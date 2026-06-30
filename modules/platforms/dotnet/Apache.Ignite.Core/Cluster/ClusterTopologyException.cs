@@ -38,7 +38,7 @@ namespace Apache.Ignite.Core.Cluster
         /// Initializes a new instance of the <see cref="ClusterTopologyException"/> class.
         /// </summary>
         /// <param name="msg">Exception message.</param>
-        public ClusterTopologyException(string msg) : base(msg)
+        public ClusterTopologyException(string? msg) : base(msg)
         {
             // No-op.
         }
@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Cluster
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="cause">The cause.</param>
-        public ClusterTopologyException(string message, Exception cause)
+        public ClusterTopologyException(string? message, Exception? cause)
             : base(message, cause)
         {
             // No-op.

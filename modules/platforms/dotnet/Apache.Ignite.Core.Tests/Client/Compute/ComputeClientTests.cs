@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable enable
+
 namespace Apache.Ignite.Core.Tests.Client.Compute
 {
     using System;
@@ -67,7 +69,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
         [TearDown]
         public void TearDown()
         {
-            var logger = (ListLogger) Client.GetConfiguration().Logger;
+            var logger = (ListLogger) Client.GetConfiguration().Logger!;
             var entries = logger.Entries;
 
             logger.Clear();
@@ -339,7 +341,7 @@ namespace Apache.Ignite.Core.Tests.Client.Compute
             const long timeoutMs = 200;
 
             var cluster = Client.GetCluster();
-            var nodeId = cluster.GetNode().Id;
+            var nodeId = cluster.GetNode()!.Id;
 
             var compute = cluster.ForPredicate(n => n.Id == nodeId)
                 .GetCompute()

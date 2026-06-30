@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Binary
         /// to a corresponding Java type name <c>org.apache.ignite.Foo</c>, conforming to the naming conventions
         /// for both languages.
         /// </summary>
-        public string NamespacePrefix { get; set; }
+        public string? NamespacePrefix { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether this instance converts the namespace part to the lower case.

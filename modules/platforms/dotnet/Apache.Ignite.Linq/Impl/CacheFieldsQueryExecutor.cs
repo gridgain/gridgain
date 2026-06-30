@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Linq.Impl
 {
     using System;
@@ -211,7 +213,8 @@ namespace Apache.Ignite.Linq.Impl
                 Arguments = args,
                 Lazy = _options.Lazy,
                 UpdateBatchSize = _options.UpdateBatchSize,
-                Partitions = _options.Partitions
+                Partitions = _options.Partitions,
+                Label = _options.Label
             };
         }
 

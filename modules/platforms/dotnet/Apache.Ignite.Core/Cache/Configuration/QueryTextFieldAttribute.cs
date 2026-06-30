@@ -30,6 +30,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the text field name.
         /// If not provided, property or field name will be used.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 }

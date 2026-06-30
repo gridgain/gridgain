@@ -1253,7 +1253,8 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
             null,                // VALUE_ALIAS
             "java.lang.Integer", // KEY_TYPE_NAME
             "random_name",       // VALUE_TYPE_NAME
-            false                // IS_INDEX_REBUILD_IN_PROGRESS
+            false,               // IS_INDEX_REBUILD_IN_PROGRESS
+            null                 // BINARY_AFFINITY_FIELD
         );
 
         assertEquals("Returned incorrect info. ", expRow, cacheSqlInfos.get(0));
@@ -1277,7 +1278,8 @@ public class SqlSystemViewsSelfTest extends AbstractIndexingCommonTest {
                 "MY_VAL",                // VALUE_ALIAS
                 "random_name",           // KEY_TYPE_NAME
                 "java.lang.String",      // VALUE_TYPE_NAME
-                false                    // IS_INDEX_REBUILD_IN_PROGRESS
+                false,                   // IS_INDEX_REBUILD_IN_PROGRESS
+                "ID2"                    // BINARY_AFFINITY_FIELD
             )
         );
 

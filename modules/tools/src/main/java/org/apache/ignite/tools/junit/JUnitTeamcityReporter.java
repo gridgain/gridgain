@@ -200,13 +200,25 @@ public class JUnitTeamcityReporter extends RunListener {
             catch (XMLStreamException | IOException ex) {
                 throw new RuntimeException(ex);
             }
+            finally {
+                curXmlStream = null;
+                curStream = null;
+            }
 
             File report = reportDir.resolve(fileName()).toFile();
 
-            assert report.exists();
-
-            System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
-                escapeForTeamcity(report.getAbsolutePath())));
+            // The temp report directory can be wiped externally on CI agents mid-run. Skip the
+            // import instead of failing the whole suite with an AssertionError that masks the
+            // real test results.
+            if (report.exists()) {
+                System.out.println(String.format("##teamcity[importData type='surefire' path='%s']",
+                    escapeForTeamcity(report.getAbsolutePath())));
+            }
+            else {
+                System.out.println(String.format("##teamcity[message text='%s' status='WARNING']",
+                    escapeForTeamcity("JUnitTeamcityReporter: surefire report is missing, skipping import: "
+                        + report.getAbsolutePath())));
+            }
 
             return true;
         }

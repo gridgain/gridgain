@@ -54,6 +54,7 @@ import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
+import org.apache.ignite.events.PartitionsStateValidationEvent;
 import org.apache.ignite.failure.FailureContext;
 import org.apache.ignite.failure.FailureType;
 import org.apache.ignite.internal.GridKernalContext;
@@ -89,6 +90,7 @@ import org.apache.ignite.internal.processors.cache.GridCacheMvccCandidate;
 import org.apache.ignite.internal.processors.cache.GridCacheProcessor;
 import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.GridCacheUtils;
+import org.apache.ignite.internal.processors.cache.PartitionUpdateCounter;
 import org.apache.ignite.internal.processors.cache.StateChangeRequest;
 import org.apache.ignite.internal.processors.cache.WalStateAbstractMessage;
 import org.apache.ignite.internal.processors.cache.distributed.dht.GridDhtTopologyFutureAdapter;
@@ -119,6 +121,7 @@ import org.apache.ignite.internal.util.IgniteUtils;
 import org.apache.ignite.internal.util.TimeBag;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.lang.GridPlainCallable;
+import org.apache.ignite.internal.util.lang.GridPlainRunnable;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.CI1;
@@ -146,6 +149,8 @@ import static org.apache.ignite.cluster.ClusterState.active;
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_JOINED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_FAILED;
+import static org.apache.ignite.events.EventType.EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED;
 import static org.apache.ignite.internal.IgniteNodeAttributes.ATTR_DYNAMIC_CACHE_START_ROLLBACK_SUPPORTED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
@@ -2568,6 +2573,8 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             // Create and destroy caches and cache proxies.
             cctx.cache().onExchangeDone(initialVersion(), exchActions, err);
 
+            timeBag.finishGlobalStage("Create and destroy caches and cache proxies");
+
             cctx.kernalContext().authentication().onActivate();
 
             Map<T2<Integer, Integer>, Long> localReserved = partHistSuppliers.getReservations(cctx.localNodeId());
@@ -3547,11 +3554,13 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             if (!haveHist.contains(part) && maxClearCntr != 0 && sortedCnrs.getValue().firstKey() <= maxClearCntr) {
                 // Process local partition.
                 GridDhtLocalPartition locPart0 = top.localPartition(part);
-                if (locPart0 != null
-                    && locPart0.state() == GridDhtPartitionState.MOVING
-                    && locPart0.dataStore().partUpdateCounter().tombstoneClearCounter() < maxClearCntr) {
-                    // Set partition as not applicable for fast full rebalancing.
-                    addClearingPartition(top.groupId(), part);
+                if (locPart0 != null) {
+                    PartitionUpdateCounter partCntr = locPart0.dataStore().partUpdateCounter();
+
+                    if (locPart0.state() == GridDhtPartitionState.MOVING
+                        && (partCntr == null || partCntr.tombstoneClearCounter() < maxClearCntr)) {
+                        addClearingPartition(top.groupId(), part);
+                    }
                 }
 
                 // Process remote partitions.
@@ -4316,6 +4325,10 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
      * Validates that partition update counters and cache sizes for all caches are consistent.
      */
     private void validatePartitionsState() {
+        Map<String, Set<Integer>> partsFailedValidation = new ConcurrentHashMap<>();
+
+        AtomicBoolean validated = new AtomicBoolean(false);
+
         try {
             U.doInParallel(
                 cctx.kernalContext().pools().getSystemExecutorService(),
@@ -4351,7 +4364,11 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
                     catch (PartitionStateValidationException ex) {
                         log.warning(String.format(PARTITION_STATE_FAILED_MSG, grpCtx.cacheOrGroupName(), ex.getMessage()));
                         // TODO: Handle such errors https://issues.apache.org/jira/browse/IGNITE-7833
+
+                        partsFailedValidation.put(grpCtx.cacheOrGroupName(), ex.failedPartitions());
                     }
+
+                    validated.compareAndSet(false, true);
 
                     return null;
                 }
@@ -4361,7 +4378,34 @@ public class GridDhtPartitionsExchangeFuture extends GridDhtTopologyFutureAdapte
             throw new IgniteException("Failed to validate partitions state", e);
         }
 
+        if (validated.get()) {
+            if (partsFailedValidation.isEmpty())
+                recordPartitionsValidationEvent(EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED, partsFailedValidation);
+            else
+                recordPartitionsValidationEvent(EVT_PARTITIONS_STATE_VALIDATION_FAILED, partsFailedValidation);
+        }
+
         timeBag.finishGlobalStage("Validate partitions states");
+    }
+
+    private void recordPartitionsValidationEvent(int evtType, Map<String, Set<Integer>> partsFailedValidation) {
+        GridKernalContext ctx = cctx.kernalContext();
+
+        if (!ctx.event().isRecordable(evtType))
+            return;
+
+        ClusterNode node = ctx.discovery().localNode();
+        AffinityTopologyVersion topVer = context().events().topologyVersion();
+
+        PartitionsStateValidationEvent event = evtType == EVT_PARTITIONS_STATE_VALIDATION_SUCCEEDED
+            ? PartitionsStateValidationEvent.succeededEvent(node, topVer)
+            : PartitionsStateValidationEvent.failedEvent(node, partsFailedValidation, topVer);
+
+        ctx.closure().runLocalSafe(new GridPlainRunnable() {
+            @Override public void run() {
+                ctx.event().record(event);
+            }
+        }, false);
     }
 
     /**

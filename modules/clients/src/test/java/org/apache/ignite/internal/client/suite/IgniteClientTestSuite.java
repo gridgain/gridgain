@@ -47,6 +47,7 @@ import org.apache.ignite.internal.client.integration.ClientTcpSslMultiNodeSelfTe
 import org.apache.ignite.internal.client.integration.ClientTcpSslSelfTest;
 import org.apache.ignite.internal.client.integration.ClientTcpUnreachableMultiNodeSelfTest;
 import org.apache.ignite.internal.client.rest.GridProbeCommandTest;
+import org.apache.ignite.internal.client.rest.GridProbeReadinessRebalanceTest;
 import org.apache.ignite.internal.client.router.ClientFailedInitSelfTest;
 import org.apache.ignite.internal.client.router.RouterFactorySelfTest;
 import org.apache.ignite.internal.client.router.TcpRouterMultiNodeSelfTest;
@@ -63,6 +64,8 @@ import org.apache.ignite.internal.processors.rest.JettyRestProcessorAuthenticati
 import org.apache.ignite.internal.processors.rest.JettyRestProcessorBaselineSelfTest;
 import org.apache.ignite.internal.processors.rest.JettyRestProcessorCustomInitializationTest;
 import org.apache.ignite.internal.processors.rest.JettyRestProcessorGetAllAsArrayTest;
+import org.apache.ignite.internal.processors.rest.JettyRestProcessorPropertySecurityTest;
+import org.apache.ignite.internal.processors.rest.JettyRestProcessorPropertyTest;
 import org.apache.ignite.internal.processors.rest.JettyRestProcessorSignedSelfTest;
 import org.apache.ignite.internal.processors.rest.JettyRestProcessorUnsignedSelfTest;
 import org.apache.ignite.internal.processors.rest.RestBinaryProtocolSelfTest;
@@ -104,6 +107,8 @@ import org.junit.runners.Suite;
     JettyRestProcessorAuthenticationWithTokenSelfTest.class,
     JettyRestProcessorGetAllAsArrayTest.class,
     JettyRestProcessorBaselineSelfTest.class,
+    JettyRestProcessorPropertyTest.class,
+    JettyRestProcessorPropertySecurityTest.class,
     JettyRestProcessorCustomInitializationTest.class,
     JettyRestBeforeNodeStartTest.class,
 
@@ -143,6 +148,7 @@ import org.junit.runners.Suite;
 
     //Test REST probe cmd
     GridProbeCommandTest.class,
+    GridProbeReadinessRebalanceTest.class,
 
     // Test client with many nodes and in multithreaded scenarios
     ClientTcpMultiThreadedSelfTest.class,

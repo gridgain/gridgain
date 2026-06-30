@@ -591,8 +591,9 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             if (err == null) {
                 try {
                     byte[] srvcBytes = U.marshal(marsh, cfg.getService());
+                    byte[] interceptorsBytes = U.marshal(marsh, cfg.getInterceptors());
 
-                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes));
+                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes, interceptorsBytes));
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to marshal service with configured marshaller [name=" + cfg.getName() +
@@ -1341,7 +1342,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
             final Service svc;
 
             try {
-                svc = copyAndInject(assigns.configuration());
+                svc = copyAndInject(assigns.configuration(), svcCtx);
 
                 // Initialize service.
                 svc.init(svcCtx);
@@ -1411,18 +1412,25 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
     /**
      * @param cfg Service configuration.
+     * @param svcCtx Service context to be injected into the service.
      * @return Copy of service.
      * @throws IgniteCheckedException If failed.
      */
-    private Service copyAndInject(ServiceConfiguration cfg) throws IgniteCheckedException {
+    private Service copyAndInject(ServiceConfiguration cfg, ServiceContextImpl svcCtx) throws IgniteCheckedException {
         Marshaller m = ctx.config().getMarshaller();
 
         if (cfg instanceof LazyServiceConfiguration) {
-            byte[] bytes = ((LazyServiceConfiguration)cfg).serviceBytes();
+            LazyServiceConfiguration srvcCfg = (LazyServiceConfiguration)cfg;
 
-            Service srvc = U.unmarshal(m, bytes, U.resolveClassLoader(null, ctx.config()));
+            ClassLoader clsLdr = U.resolveClassLoader(null, ctx.config());
 
-            ctx.resource().inject(srvc);
+            byte[] bytes = srvcCfg.serviceBytes();
+
+            Service srvc = U.unmarshal(m, bytes, clsLdr);
+
+            ctx.resource().inject(srvc, svcCtx);
+
+            injectInterceptors(srvcCfg, svcCtx, m, clsLdr);
 
             return srvc;
         }
@@ -1434,7 +1442,7 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
                 Service cp = U.unmarshal(m, bytes, U.resolveClassLoader(svc.getClass().getClassLoader(), ctx.config()));
 
-                ctx.resource().inject(cp);
+                ctx.resource().inject(cp, svcCtx);
 
                 return cp;
             }

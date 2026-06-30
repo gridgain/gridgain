@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Client.Datastream
 {
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Threading;
     using System.Threading.Tasks;
@@ -39,16 +38,16 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         private readonly DataStreamerClientEntry<TK, TV>[] _entries;
 
         /** */
-        private TaskCompletionSource<object> _flushCompletionSource;
+        private TaskCompletionSource<object?>? _flushCompletionSource;
 
         /** */
         private readonly ReaderWriterLockSlim _rwLock = new ReaderWriterLockSlim();
 
         /** */
-        private readonly DataStreamerClientPerNodeBuffer<TK,TV> _parent;
+        private readonly DataStreamerClientPerNodeBuffer<TK, TV> _parent;
 
         /** Previous buffer in the chain. Buffer chain allows us to track previous flushes. */
-        private DataStreamerClientBuffer<TK,TV> _previous;
+        private DataStreamerClientBuffer<TK,TV>? _previous;
 
         /** */
         private long _size;
@@ -67,8 +66,6 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             DataStreamerClientPerNodeBuffer<TK, TV> parent,
             DataStreamerClientBuffer<TK, TV> previous)
         {
-            Debug.Assert(parent != null);
-
             _entries = entries;
             _parent = parent;
             _previous = previous;
@@ -108,7 +105,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
 
                 if (_flushCompletionSource == null)
                 {
-                    _flushCompletionSource = new TaskCompletionSource<object>();
+                    _flushCompletionSource = new TaskCompletionSource<object?>();
                 }
 
                 return previous == null
@@ -132,10 +129,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// <summary>
         /// Gets the previous buffer in the chain.
         /// </summary>
-        public DataStreamerClientBuffer<TK, TV> Previous
-        {
-            get { return _previous; }
-        }
+        public DataStreamerClientBuffer<TK, TV>? Previous => _previous;
 
         /// <summary>
         /// Adds an entry to the buffer.
@@ -261,16 +255,16 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
             // NOTE: Continuation runs on socket thread - set result on thread pool.
             _parent.FlushBufferAsync(this).ContWith(
                 t => ThreadPool.QueueUserWorkItem(buf =>
-                    ((DataStreamerClientBuffer<TK, TV>)buf).OnFlushed(t.Exception), this),
+                    ((DataStreamerClientBuffer<TK, TV>)buf!).OnFlushed(t.Exception), this),
                 TaskContinuationOptions.ExecuteSynchronously);
         }
 
         /// <summary>
         /// Called when flush operation completes.
         /// </summary>
-        private void OnFlushed(AggregateException exception = null)
+        private void OnFlushed(AggregateException? exception = null)
         {
-            TaskCompletionSource<object> tcs;
+            TaskCompletionSource<object?>? tcs;
 
             _rwLock.EnterWriteLock();
 
@@ -330,7 +324,7 @@ namespace Apache.Ignite.Core.Impl.Client.Datastream
         /// <summary>
         /// Sets task completion source status.
         /// </summary>
-        private static void TrySetResultOrException(TaskCompletionSource<object> tcs, Exception exception)
+        private static void TrySetResultOrException(TaskCompletionSource<object?> tcs, Exception? exception)
         {
             if (exception == null)
             {

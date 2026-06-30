@@ -29,7 +29,7 @@ namespace Apache.Ignite.Core.Cache.Event
         /// <summary>
         /// Gets old the value.
         /// </summary>
-        TV OldValue { get; }
+        TV? OldValue { get; }
 
         /// <summary>
         /// Whether value exists.

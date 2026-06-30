@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Impl.Messaging
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
@@ -52,8 +51,8 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** Map from user (func+topic) -> id, needed for unsubscription. */
-        private readonly MultiValueDictionary<KeyValuePair<object, object>, long> _funcMap =
-            new MultiValueDictionary<KeyValuePair<object, object>, long>();
+        private readonly MultiValueDictionary<KeyValuePair<object, object?>, long> _funcMap =
+            new MultiValueDictionary<KeyValuePair<object, object?>, long>();
 
         /** Grid */
         private readonly Ignite _ignite;
@@ -69,8 +68,6 @@ namespace Apache.Ignite.Core.Impl.Messaging
         public Messaging(IPlatformTargetInternal target, IClusterGroup prj)
             : base(target)
         {
-            Debug.Assert(prj != null);
-
             _clusterGroup = prj;
 
             _ignite = (Ignite) prj.Ignite;
@@ -83,7 +80,7 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public void Send(object message, object topic = null)
+        public void Send(object message, object? topic = null)
         {
             IgniteArgumentCheck.NotNull(message, "message");
 
@@ -91,7 +88,7 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public void SendAll(IEnumerable messages, object topic = null)
+        public void SendAll(IEnumerable messages, object? topic = null)
         {
             IgniteArgumentCheck.NotNull(messages, "messages");
 
@@ -104,7 +101,7 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public void SendOrdered(object message, object topic = null, TimeSpan? timeout = null)
+        public void SendOrdered(object message, object? topic = null, TimeSpan? timeout = null)
         {
             IgniteArgumentCheck.NotNull(message, "message");
 
@@ -113,12 +110,12 @@ namespace Apache.Ignite.Core.Impl.Messaging
                 writer.Write(topic);
                 writer.Write(message);
 
-                writer.WriteLong((long)(timeout == null ? 0 : timeout.Value.TotalMilliseconds));
+                writer.WriteLong((long)(timeout?.TotalMilliseconds ?? 0));
             });
         }
 
         /** <inheritdoc /> */
-        public void LocalListen<T>(IMessageListener<T> listener, object topic = null)
+        public void LocalListen<T>(IMessageListener<T> listener, object? topic = null)
         {
             IgniteArgumentCheck.NotNull(listener, "filter");
 
@@ -160,7 +157,7 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public void StopLocalListen<T>(IMessageListener<T> listener, object topic = null)
+        public void StopLocalListen<T>(IMessageListener<T> listener, object? topic = null)
         {
             IgniteArgumentCheck.NotNull(listener, "filter");
 
@@ -183,7 +180,7 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public Guid RemoteListen<T>(IMessageListener<T> listener, object topic = null)
+        public Guid RemoteListen<T>(IMessageListener<T> listener, object? topic = null)
         {
             return RemoteListen(listener, topic,
                 (writeAct, readAct) => DoOutInOp((int) Op.RemoteListen, writeAct,
@@ -191,10 +188,10 @@ namespace Apache.Ignite.Core.Impl.Messaging
         }
 
         /** <inheritdoc /> */
-        public Task<Guid> RemoteListenAsync<T>(IMessageListener<T> listener, object topic = null)
+        public Task<Guid> RemoteListenAsync<T>(IMessageListener<T> listener, object? topic = null)
         {
             return RemoteListen(listener, topic,
-                (writeAct, readAct) => DoOutOpAsync((int) Op.RemoteListenAsync, writeAct, convertFunc: readAct));
+                (writeAct, readAct) => DoOutOpAsync((int) Op.RemoteListenAsync, writeAct, convertFunc: readAct!));
         }
 
         /** <inheritdoc /> */
@@ -215,15 +212,15 @@ namespace Apache.Ignite.Core.Impl.Messaging
         /// <param name="filter">Filter.</param>
         /// <param name="topic">Topic.</param>
         /// <returns>Compound dictionary key.</returns>
-        private static KeyValuePair<object, object> GetKey(object filter, object topic)
+        private static KeyValuePair<object, object?> GetKey(object filter, object? topic)
         {
-            return new KeyValuePair<object, object>(filter, topic);
+            return new KeyValuePair<object, object?>(filter, topic);
         }
 
         /// <summary>
         /// Remotes listen.
         /// </summary>
-        private TRes RemoteListen<T, TRes>(IMessageListener<T> filter, object topic,
+        private TRes RemoteListen<T, TRes>(IMessageListener<T> filter, object? topic,
             Func<Action<IBinaryRawWriter>, Func<BinaryReader, Guid>, TRes> invoker)
         {
             IgniteArgumentCheck.NotNull(filter, "filter");

@@ -17,9 +17,11 @@
 <Project>
     <PropertyGroup>
         <RunAnalyzers>false</RunAnalyzers>
+        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
-    <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\bin\net6.0\Apache.Ignite.Core.dll')">
+    <PropertyGroup Condition="Exists('$(MSBuildThisFileDirectory)..\bin\net8.0\Apache.Ignite.Core.dll')">
         <IgniteBinaryDistro>true</IgniteBinaryDistro>
     </PropertyGroup>
 
@@ -28,6 +30,10 @@
         <IgniteDevMode>true</IgniteDevMode>
     </PropertyGroup>
 
+    <ItemGroup Condition="'$(MSBuildProjectName)' != 'Shared'">
+        <ProjectReference Include="$(MSBuildThisFileDirectory)Shared\Shared.csproj" />
+    </ItemGroup>
+
     <ItemGroup Condition="$(IgniteDevMode) == 'true'">
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Apache.Ignite.Core\Apache.Ignite.Core.csproj" />
         <ProjectReference Include="$(MSBuildThisFileDirectory)..\Apache.Ignite.Linq\Apache.Ignite.Linq.csproj" />
@@ -35,10 +41,10 @@
 
     <ItemGroup Condition="$(IgniteBinaryDistro) == 'true' And $(IgniteDevMode) == ''">
         <Reference Include="Apache.Ignite.Core">
-            <HintPath>$(MSBuildThisFileDirectory)..\bin\net6.0\Apache.Ignite.Core.dll</HintPath>
+            <HintPath>$(MSBuildThisFileDirectory)..\bin\net8.0\Apache.Ignite.Core.dll</HintPath>
         </Reference>
         <Reference Include="Apache.Ignite.Linq">
-            <HintPath>$(MSBuildThisFileDirectory)..\bin\net6.0\Apache.Ignite.Linq.dll</HintPath>
+            <HintPath>$(MSBuildThisFileDirectory)..\bin\net8.0\Apache.Ignite.Linq.dll</HintPath>
         </Reference>
     </ItemGroup>
 

@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Services
 {
     using System;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cluster;
@@ -31,12 +30,12 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Gets or sets the service name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets the service instance.
         /// </summary>
-        public IService Service { get; set; }
+        public IService? Service { get; set; }
 
         /// <summary>
         /// Gets or sets the total number of deployed service instances in the cluster, 0 for unlimited.
@@ -51,17 +50,17 @@ namespace Apache.Ignite.Core.Services
         /// <summary>
         /// Gets or sets cache name used for key-to-node affinity calculation.
         /// </summary>
-        public string CacheName { get; set; }
+        public string? CacheName { get; set; }
 
         /// <summary>
         /// Gets or sets affinity key used for key-to-node affinity calculation.
         /// </summary>
-        public object AffinityKey { get; set; }
+        public object? AffinityKey { get; set; }
 
         /// <summary>
         /// Gets or sets node filter used to filter nodes on which the service will be deployed.
         /// </summary>
-        public IClusterNodeFilter NodeFilter { get; set; }
+        public IClusterNodeFilter? NodeFilter { get; set; }
 
         /// <summary>
         /// Serializes the Service configuration using IBinaryRawWriter
@@ -69,8 +68,6 @@ namespace Apache.Ignite.Core.Services
         /// <param name="w">IBinaryRawWriter</param>
         internal void Write(IBinaryRawWriter w)
         {
-            Debug.Assert(w != null);
-
             w.WriteString(Name);
             w.WriteObject(Service);
             w.WriteInt(TotalCount);
@@ -81,7 +78,7 @@ namespace Apache.Ignite.Core.Services
             if (NodeFilter != null)
                 w.WriteObject(NodeFilter);
             else
-                w.WriteObject<object>(null);
+                w.WriteObject<object?>(null);
         }
 
         /// <summary>
@@ -98,8 +95,6 @@ namespace Apache.Ignite.Core.Services
         [SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
         internal ServiceConfiguration(IBinaryRawReader r)
         {
-            Debug.Assert(r != null);
-
             Name = r.ReadString();
 
             try

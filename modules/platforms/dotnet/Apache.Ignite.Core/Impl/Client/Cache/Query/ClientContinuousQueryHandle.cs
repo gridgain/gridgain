@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Client.Cache.Query
 {
     using System;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client.Cache.Query.Continuous;
 
     /// <summary>
@@ -68,6 +71,35 @@ namespace Apache.Ignite.Core.Impl.Client.Cache.Query
 
                 _disposed = true;
             }
+        }
+
+        /** <inheritdoc /> */
+        public async ValueTask DisposeAsync()
+        {
+            Task task;
+
+            lock (_disposeSyncRoot)
+            {
+                if (_disposed)
+                {
+                    return;
+                }
+
+                _disposed = true;
+
+                if (_socket.IsDisposed)
+                {
+                    return;
+                }
+
+                // Initiate the close request under the lock; await its completion without blocking a thread.
+                task = _socket.DoOutInOpAsync<object>(ClientOp.ResourceClose,
+                    ctx => ctx.Writer.WriteLong(_queryId), _ => null);
+
+                _socket.RemoveNotificationHandler(_queryId);
+            }
+
+            await task.ConfigureAwait(false);
         }
 
         /// <summary>

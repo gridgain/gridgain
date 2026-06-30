@@ -40,6 +40,7 @@ import org.apache.ignite.internal.IgniteConnectionConcurrentReserveAndRemoveTest
 import org.apache.ignite.internal.IgniteUpdateNotifierPerClusterSettingSelfTest;
 import org.apache.ignite.internal.LongJVMPauseDetectorTest;
 import org.apache.ignite.internal.ThreadNameValidationTest;
+import org.apache.ignite.internal.UnsupportedSystemPropertyWarningTest;
 import org.apache.ignite.internal.managers.GridManagerStopSelfTest;
 import org.apache.ignite.internal.managers.communication.GridCommunicationSendMessageSelfTest;
 import org.apache.ignite.internal.managers.deployment.DeploymentRequestOfUnknownClassProcessingTest;
@@ -114,6 +115,7 @@ import org.junit.runners.Suite;
     ClusterMetricsSelfTest.class,
     DeploymentRequestOfUnknownClassProcessingTest.class,
     ThreadNameValidationTest.class,
+    UnsupportedSystemPropertyWarningTest.class,
     NodeWithFilterRestartTest.class,
     ClusterActiveStateChangeWithNodeOutOfBaselineTest.class,
     GridMutableLongTest.class,

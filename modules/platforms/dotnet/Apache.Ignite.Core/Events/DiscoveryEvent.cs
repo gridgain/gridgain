@@ -29,13 +29,13 @@ namespace Apache.Ignite.Core.Events
     public sealed class DiscoveryEvent : EventBase
 	{
         /** */
-        private readonly IClusterNode _eventNode;
+        private readonly IClusterNode? _eventNode;
 
         /** */
         private readonly long _topologyVersion;
 
         /** */
-        private readonly ReadOnlyCollection<IClusterNode> _topologyNodes;
+        private readonly ReadOnlyCollection<IClusterNode>? _topologyNodes;
 
         /// <summary>
         /// Constructor.
@@ -56,7 +56,7 @@ namespace Apache.Ignite.Core.Events
         /// event was recorded. For example, node A locally recorded the event that a remote node B joined the topology. 
         /// In this case this property will return node B. 
         /// </summary>
-        public IClusterNode EventNode { get { return _eventNode; } }
+        public IClusterNode? EventNode { get { return _eventNode; } }
 
         /// <summary>
         /// Gets topology version if this event is raised on topology change and configured discovery
@@ -68,7 +68,7 @@ namespace Apache.Ignite.Core.Events
         /// Gets topology nodes from topology snapshot. If SPI implementation does not support versioning, the best 
         /// effort snapshot will be captured. 
         /// </summary>
-        public ICollection<IClusterNode> TopologyNodes { get { return _topologyNodes; } }
+        public ICollection<IClusterNode>? TopologyNodes { get { return _topologyNodes; } }
 
         /// <summary>
         /// Gets shortened version of ToString result.
@@ -77,7 +77,7 @@ namespace Apache.Ignite.Core.Events
 	    {
             return string.Format(CultureInfo.InvariantCulture, 
                 "{0}: EventNode={1}, TopologyVersion={2}, TopologyNodes={3}", Name, EventNode, 
-                TopologyVersion, TopologyNodes.Count);
+                TopologyVersion, TopologyNodes?.Count);
 	    }
     }
 }

@@ -69,7 +69,7 @@ namespace Apache.Ignite.Core.Cache.Eviction
         /// <summary>
         /// Writes to the specified writer.
         /// </summary>
-        internal static void Write(IBinaryRawWriter writer, IEvictionPolicy policy)
+        internal static void Write(IBinaryRawWriter writer, IEvictionPolicy? policy)
         {
             if (policy == null)
             {
@@ -97,7 +97,7 @@ namespace Apache.Ignite.Core.Cache.Eviction
         /// <summary>
         /// Reads an instance.
         /// </summary>
-        internal static EvictionPolicyBase Read(IBinaryRawReader reader)
+        internal static EvictionPolicyBase? Read(IBinaryRawReader reader)
         {
             EvictionPolicyBase p;
 

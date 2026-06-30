@@ -44,7 +44,8 @@ public class MetadataListCommand
                 ", typeName=" + m.typeName() +
                 ", fields=" + m.fields().size() +
                 ", schemas=" + m.schemas().size() +
-                ", isEnum=" + m.isEnum());
+                ", isEnum=" + m.isEnum() +
+                (m.affinityKeyFieldName() != null ? ", affinityKeyFieldName=" + m.affinityKeyFieldName() : ""));
         }
     }
 

@@ -136,6 +136,8 @@ import org.apache.ignite.internal.processors.query.SqlNestedQuerySelfTest;
 import org.apache.ignite.internal.processors.query.SqlPushDownFunctionTest;
 import org.apache.ignite.internal.processors.query.SqlResultSetMetaSelfTest;
 import org.apache.ignite.internal.processors.query.SqlSchemaSelfTest;
+import org.apache.ignite.internal.processors.query.SqlSystemViewIndexedTypesAffinityColumnsTest;
+import org.apache.ignite.internal.processors.query.SqlSystemViewQeAffinityColumnsTest;
 import org.apache.ignite.internal.processors.query.h2.GridSubqueryJoinOptimizerSelfTest;
 import org.apache.ignite.internal.processors.query.h2.H2ResultSetIteratorNullifyOnEndSelfTest;
 import org.apache.ignite.internal.processors.query.h2.IgniteSqlBigIntegerKeyTest;
@@ -214,6 +216,11 @@ import org.junit.runners.Suite;
     DecimalIndexTest.class,
     BasicIndexMultinodeTest.class,
     IndexMetricsTest.class,
+
+    // SqlView affinity column test
+    SqlSystemViewIndexedTypesAffinityColumnsTest.class,
+    SqlSystemViewQeAffinityColumnsTest.ClassesTest.class,
+    SqlSystemViewQeAffinityColumnsTest.ClassNamesTest.class,
 
     // Misc tests.
     QueryEntityValidationSelfTest.class,

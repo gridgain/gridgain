@@ -41,6 +41,8 @@ import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.lang.IgniteBiTuple;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.internal.processors.cache.persistence.wal.IterationReason.PRINT;
+
 /**
  * Contains method for debugging data consistency issues.
  */
@@ -168,7 +170,7 @@ public class ConsistencyUtils {
 
         log.info(">>>> Dumping key history [name=" + grid.name() + ", key=" + testRow.key().value(ctx, false));
 
-        try (WALIterator iter0 = walMgr.replay(null)) {
+        try (WALIterator iter0 = walMgr.replay(null, PRINT)) {
             while (iter0.hasNext()) {
                 IgniteBiTuple<WALPointer, WALRecord> tup = iter0.next();
 

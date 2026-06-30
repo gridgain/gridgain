@@ -53,7 +53,7 @@ namespace Apache.Ignite.Core.Client.Services
         /// This parameter is optional and is set only when key-affinity service was deployed.
         /// </summary>
         /// <returns>Cache name, possibly null.</returns>
-        string CacheName { get; }
+        string? CacheName { get; }
 
         /// <summary>
         /// Gets ID of grid node that initiated the service deployment.

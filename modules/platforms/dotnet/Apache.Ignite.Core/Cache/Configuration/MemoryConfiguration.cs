@@ -19,7 +19,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
@@ -93,7 +92,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             SystemCacheMaxSize = reader.ReadLong();
             PageSize = reader.ReadInt();
             ConcurrencyLevel = reader.ReadInt();
-            DefaultMemoryPolicyName = reader.ReadString();
+            DefaultMemoryPolicyName = reader.ReadString()!;
 
             var count = reader.ReadInt();
 
@@ -111,8 +110,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="writer">The writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteLong(SystemCacheInitialSize);
             writer.WriteLong(SystemCacheMaxSize);
             writer.WriteInt(PageSize);
@@ -172,6 +169,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the memory policies.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<MemoryPolicyConfiguration> MemoryPolicies { get; set; }
+        public ICollection<MemoryPolicyConfiguration>? MemoryPolicies { get; set; }
     }
 }

@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneDirectoryTest;
+import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneInputStreamTest;
 import org.apache.ignite.internal.processors.query.h2.opt.GridLuceneTextIndex;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -26,7 +27,8 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        GridLuceneDirectoryTest.class
+        GridLuceneDirectoryTest.class,
+        GridLuceneInputStreamTest.class
 })
 public class GridLuceneTestSuite {
 }

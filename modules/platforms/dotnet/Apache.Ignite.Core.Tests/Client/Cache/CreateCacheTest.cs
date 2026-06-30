@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System;
     using System.Linq;
     using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Client;
@@ -75,6 +76,41 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
 
             Client.DestroyCache("a");
             Assert.AreEqual("b", Client.GetCacheNames().Single());
+        }
+
+        /// <summary>
+        /// Tests the async cache lifecycle APIs: CreateCacheAsync, GetOrCreateCacheAsync,
+        /// GetCacheNamesAsync, DestroyCacheAsync.
+        /// </summary>
+        [Test]
+        public async Task TestAsyncCacheLifecycle()
+        {
+            DestroyCaches();
+            Assert.AreEqual(0, (await Client.GetCacheNamesAsync()).Count);
+
+            var cacheA = await Client.CreateCacheAsync<int, int>("a");
+            Assert.AreEqual("a", cacheA.Name);
+            Assert.AreEqual("a", (await Client.GetCacheNamesAsync()).Single());
+
+            var cacheA2 = await Client.GetOrCreateCacheAsync<int, int>("a");
+            Assert.AreEqual("a", cacheA2.Name);
+
+            var cacheB = await Client.GetOrCreateCacheAsync<int, int>(
+                new CacheClientConfiguration { Name = "b" });
+            Assert.AreEqual("b", cacheB.Name);
+
+            var cacheC = await Client.CreateCacheAsync<int, int>(new CacheClientConfiguration { Name = "c" });
+            Assert.AreEqual("c", cacheC.Name);
+
+            // GetConfigurationAsync.
+            var cfgC = await cacheC.GetConfigurationAsync();
+            Assert.AreEqual("c", cfgC.Name);
+
+            Assert.AreEqual(
+                new[] {"a", "b", "c"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
+
+            await Client.DestroyCacheAsync("a");
+            Assert.AreEqual(new[] {"b", "c"}, (await Client.GetCacheNamesAsync()).OrderBy(x => x).ToArray());
         }
 
         /// <summary>

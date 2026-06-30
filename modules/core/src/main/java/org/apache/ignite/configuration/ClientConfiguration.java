@@ -32,6 +32,7 @@ import org.apache.ignite.client.ClientRetryPolicy;
 import org.apache.ignite.client.SslMode;
 import org.apache.ignite.client.SslProtocol;
 import org.apache.ignite.internal.client.thin.TcpIgniteClient;
+import org.apache.ignite.internal.util.typedef.internal.LT;
 import org.apache.ignite.internal.util.typedef.internal.S;
 
 /**
@@ -51,8 +52,11 @@ public final class ClientConfiguration implements Serializable {
     /** @serial Tcp no delay. */
     private boolean tcpNoDelay = true;
 
-    /** @serial Timeout. 0 means infinite. */
-    private int timeout;
+    /** @serial Handshake timeout in milliseconds. 0 means infinite. */
+    private int handshakeTimeout;
+
+    /** @serial Request timeout in milliseconds. 0 means infinite. */
+    private int reqTimeout;
 
     /** @serial Send buffer size. 0 means system default. */
     private int sndBufSize = 32 * 1024;
@@ -211,17 +215,65 @@ public final class ClientConfiguration implements Serializable {
     }
 
     /**
-     * @return Send/receive timeout in milliseconds.
+     * @deprecated Use {@link #getHandshakeTimeout()} and {@link #getRequestTimeout()} instead.
+     * @return Request timeout in milliseconds.
      */
+    @Deprecated
     public int getTimeout() {
-        return timeout;
+        if (reqTimeout != handshakeTimeout) {
+            LT.warn(logger, String.format(
+                "Deprecated getTimeout() API is used while request timeout (%d) differs from handshake timeout (%d). " +
+                    "Returning request timeout. Please use getRequestTimeout() and getHandshakeTimeout() instead.",
+                reqTimeout, handshakeTimeout
+            ));
+        }
+
+        return reqTimeout;
     }
 
     /**
+     * @deprecated Use {@link #setHandshakeTimeout(int)} and {@link #setRequestTimeout(int)} instead.
      * @param timeout Send/receive timeout in milliseconds.
+     * @return {@code this} for chaining.
      */
+    @Deprecated
     public ClientConfiguration setTimeout(int timeout) {
-        this.timeout = timeout;
+        handshakeTimeout = timeout;
+        reqTimeout = timeout;
+
+        return this;
+    }
+
+    /**
+     * @return Handshake timeout in milliseconds. 0 means infinite.
+     */
+    public int getHandshakeTimeout() {
+        return handshakeTimeout;
+    }
+
+    /**
+     * @param handshakeTimeout Handshake timeout in milliseconds. 0 means infinite.
+     * @return {@code this} for chaining.
+     */
+    public ClientConfiguration setHandshakeTimeout(int handshakeTimeout) {
+        this.handshakeTimeout = handshakeTimeout;
+
+        return this;
+    }
+
+    /**
+     * @return Request timeout in milliseconds. 0 means infinite.
+     */
+    public int getRequestTimeout() {
+        return reqTimeout;
+    }
+
+    /**
+     * @param reqTimeout Request timeout in milliseconds. 0 means infinite.
+     * @return {@code this} for chaining.
+     */
+    public ClientConfiguration setRequestTimeout(int reqTimeout) {
+        this.reqTimeout = reqTimeout;
 
         return this;
     }
@@ -505,10 +557,10 @@ public final class ClientConfiguration implements Serializable {
     /**
      * Gets a value indicating whether partition awareness should be enabled.
      * <p>
-     * Default is {@code true}: client sends requests directly to the primary node for the given cache key.
+     * When {@code true}, client sends requests directly to the primary node for the given cache key.
      * To do so, connection is established to every known server node.
      * <p>
-     * When {@code false}, only one connection is established at a given moment to a random server node.
+     * Default is {@code false}: only one connection is established at a given moment to a random server node.
      */
     public boolean isAffinityAwarenessEnabled() {
         return affinityAwarenessEnabled;
@@ -517,10 +569,10 @@ public final class ClientConfiguration implements Serializable {
     /**
      * Sets a value indicating whether partition awareness should be enabled.
      * <p>
-     * Default is {@code true}: client sends requests directly to the primary node for the given cache key.
+     * When {@code true}, client sends requests directly to the primary node for the given cache key.
      * To do so, connection is established to every known server node.
      * <p>
-     * When {@code false}, only one connection is established at a given moment to a random server node.
+     * Default is {@code false}: only one connection is established at a given moment to a random server node.
      *
      * @return {@code this} for chaining.
      */

@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+#nullable disable
+
 namespace Apache.Ignite.Core.Impl.Client.Cluster
 {
     using System;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client;
     using Apache.Ignite.Core.Impl.Common;
 
@@ -42,9 +45,21 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         }
 
         /** <inheritdoc /> */
+        public Task SetActiveAsync(bool isActive)
+        {
+            return DoOutInOpAsync<object>(ClientOp.ClusterChangeState, ctx => ctx.Stream.WriteBool(isActive), null);
+        }
+
+        /** <inheritdoc /> */
         public bool IsActive()
         {
             return DoOutInOp(ClientOp.ClusterIsActive, null, ctx => ctx.Stream.ReadBool());
+        }
+
+        /** <inheritdoc /> */
+        public Task<bool> IsActiveAsync()
+        {
+            return DoOutInOpAsync(ClientOp.ClusterIsActive, null, ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -52,13 +67,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<ClientRequestContext> action = ctx =>
-            {
-                ctx.Writer.WriteString(cacheName);
-                ctx.Writer.WriteBoolean(false);
-            };
-            
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, ctx => ctx.Stream.ReadBool());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, ctx => WriteWalState(ctx, cacheName, false),
+                ctx => ctx.Stream.ReadBool());
+        }
+
+        /** <inheritdoc /> */
+        public Task<bool> DisableWalAsync(string cacheName)
+        {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
+            return DoOutInOpAsync(ClientOp.ClusterChangeWalState, ctx => WriteWalState(ctx, cacheName, false),
+                ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -66,13 +85,17 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
         {
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
-            Action<ClientRequestContext> action = ctx =>
-            {
-                ctx.Writer.WriteString(cacheName);
-                ctx.Writer.WriteBoolean(true);
-            };
-            
-            return DoOutInOp(ClientOp.ClusterChangeWalState, action, ctx => ctx.Stream.ReadBool());
+            return DoOutInOp(ClientOp.ClusterChangeWalState, ctx => WriteWalState(ctx, cacheName, true),
+                ctx => ctx.Stream.ReadBool());
+        }
+
+        /** <inheritdoc /> */
+        public Task<bool> EnableWalAsync(string cacheName)
+        {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
+            return DoOutInOpAsync(ClientOp.ClusterChangeWalState, ctx => WriteWalState(ctx, cacheName, true),
+                ctx => ctx.Stream.ReadBool());
         }
 
         /** <inheritdoc /> */
@@ -81,6 +104,24 @@ namespace Apache.Ignite.Core.Impl.Client.Cluster
             IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
 
             return DoOutInOp(ClientOp.ClusterGetWalState, ctx => ctx.Writer.WriteString(cacheName), ctx => ctx.Stream.ReadBool());
+        }
+
+        /** <inheritdoc /> */
+        public Task<bool> IsWalEnabledAsync(string cacheName)
+        {
+            IgniteArgumentCheck.NotNullOrEmpty(cacheName, "cacheName");
+
+            return DoOutInOpAsync(ClientOp.ClusterGetWalState, ctx => ctx.Writer.WriteString(cacheName),
+                ctx => ctx.Stream.ReadBool());
+        }
+
+        /// <summary>
+        /// Writes the change WAL state request.
+        /// </summary>
+        private static void WriteWalState(ClientRequestContext ctx, string cacheName, bool enable)
+        {
+            ctx.Writer.WriteString(cacheName);
+            ctx.Writer.WriteBoolean(enable);
         }
     }
 }

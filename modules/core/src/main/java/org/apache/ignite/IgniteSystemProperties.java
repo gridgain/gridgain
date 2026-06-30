@@ -36,6 +36,8 @@ import org.apache.ignite.internal.client.GridClient;
 import org.apache.ignite.internal.marshaller.optimized.OptimizedMarshaller;
 import org.apache.ignite.internal.processors.cache.persistence.GridCacheDatabaseSharedManager;
 import org.apache.ignite.internal.processors.cache.persistence.checkpoint.CheckpointEntry;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.ThrottlingPolicy;
 import org.apache.ignite.internal.processors.metastorage.DistributedMetaStorage;
 import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.rest.GridRestCommand;
@@ -98,6 +100,7 @@ import static org.apache.ignite.internal.processors.cache.persistence.diagnostic
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.FullPageIdTable.DFLT_LONG_LONG_HASH_MAP_LOAD_FACTOR;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_DELAYED_REPLACED_PAGE_WRITE;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_LOADED_PAGES_BACKWARD_SHIFT_MAP;
+import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PageMemoryImpl.DFLT_MAX_DIRTY_PAGES_RATIO;
 import static org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWriteThrottlePolicy.DFLT_THROTTLE_LOG_THRESHOLD;
 import static org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree.IGNITE_BPLUS_TREE_LOCK_RETRIES_DEFAULT;
 import static org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManager.DFLT_CHECKPOINT_TRIGGER_ARCHIVE_SIZE_PERCENTAGE;
@@ -1142,7 +1145,7 @@ public final class IgniteSystemProperties {
      * index store is disabled. Ignored if inline size is provided when index is created.
      */
     @SystemProperty(
-        value = "Maximum auto-calcultated payload size in bytes for H2TreeIndex. 0 means that inline index store is disabled. " +
+        value = "Maximum auto-calculated payload size in bytes for H2TreeIndex. 0 means that inline index store is disabled. " +
             "Ignored if inline size is provided when index is created", type = Integer.class,
         defaults = "" + IGNITE_MAX_INDEX_PAYLOAD_SIZE_DEFAULT)
     public static final String IGNITE_MAX_INDEX_PAYLOAD_SIZE = "IGNITE_MAX_INDEX_PAYLOAD_SIZE";
@@ -1160,8 +1163,9 @@ public final class IgniteSystemProperties {
      * When cache has entries with expired TTL and/or tombstones, each user operation will also remove this amount of
      * expired entries. Defaults to {@code 5}. Setting the value to {@code 0} will disable this behavior.
      */
-    @SystemProperty(value = "When cache has entries with expired TTL, each user operation will also " +
-        "remove this amount of expired entries", type = Integer.class, defaults = "" + DFLT_TTL_EXPIRE_BATCH_SIZE)
+    @SystemProperty(value = "When cache has entries with expired TTL and/or tombstones, each user operation will " +
+        "also remove this amount of expired entries. Setting the value to 0 will disable this behavior",
+        type = Integer.class, defaults = "" + DFLT_TTL_EXPIRE_BATCH_SIZE)
     public static final String IGNITE_TTL_EXPIRE_BATCH_SIZE = "IGNITE_TTL_EXPIRE_BATCH_SIZE";
 
     /**
@@ -1212,17 +1216,17 @@ public final class IgniteSystemProperties {
      * This property is intended for integration or performance tests.
      * Default is {@code false}.
      */
-    @SystemProperty("Prefer historical rebalance if there's enough history regardless off all heuristics. " +
+    @SystemProperty("Prefer historical rebalance if there's enough history regardless of all heuristics. " +
         "This property is intended for integration or performance tests")
     public static final String IGNITE_PREFER_WAL_REBALANCE = "IGNITE_PREFER_WAL_REBALANCE";
 
     /**
      * Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot.
-     * After this thresold is reached, a snapshot of the earliest checkpoint map will be captured.
+     * After this threshold is reached, a snapshot of the earliest checkpoint map will be captured.
      * Default is {@code 5}.
      */
     @SystemProperty(value = "Threshold of the checkpoint quantity since the last earliest checkpoint map snapshot. " +
-        "After this thresold is reached, a snapshot of the earliest checkpoint map will be captured",
+        "After this threshold is reached, a snapshot of the earliest checkpoint map will be captured",
         type = Integer.class, defaults = "" + DFLT_IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD)
     public static final String IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD = "IGNITE_CHECKPOINT_MAP_SNAPSHOT_THRESHOLD";
 
@@ -1340,7 +1344,8 @@ public final class IgniteSystemProperties {
      * If this property is set, {@link DataStorageConfiguration#isWriteThrottlingEnabled()}
      * will be overridden to {@code true} regardless the initial value in the configuration.
      */
-    @SystemProperty(value = "Checkpoint throttling policy", type = String.class)
+    @SystemProperty(value = "If set, DataStorageConfiguration#isWriteThrottlingEnabled will be overridden to " +
+        "true regardless of the initial value in the configuration", type = String.class)
     public static final String IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED = "IGNITE_OVERRIDE_WRITE_THROTTLING_ENABLED";
 
     /**
@@ -1633,6 +1638,22 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_THROTTLE_LOG_THRESHOLD = "IGNITE_THROTTLE_LOG_THRESHOLD";
 
     /**
+     * Maximum fraction of a data region's page pool that can be dirty before checkpoint is
+     * scheduled. Gives more headroom for write bursts  at the cost of a larger pending checkpoint and
+     * more permissive <b>{@link ThrottlingPolicy#TARGET_RATIO_BASED}</b> / <b>{@link ThrottlingPolicy#SPEED_BASED}</b>
+     * throttling policy curves.
+     * <p>
+     * Allowed range: {@code (0.5, 0.99999]}. Invalid values fall back to {@link PageMemoryImpl#DFLT_MAX_DIRTY_PAGES_RATIO}
+     * with a warning.
+     * <p>
+     * <b>{@link ThrottlingPolicy#CHECKPOINT_BUFFER_ONLY}</b> is unaffected, doesn't use dirty-page ratio.
+     * <b>{@link ThrottlingPolicy#DISABLED}</b> ignores value, throttles at 2 / 3 of dirty pages to avoid CP buffer overflow.
+     */
+    @SystemProperty(value = "Maximum fraction of a data region that can be dirty before writers stall and a checkpoint is forced",
+        type = Double.class, defaults = "" + DFLT_MAX_DIRTY_PAGES_RATIO)
+    public static final String IGNITE_MAX_DIRTY_PAGES_RATIO = "IGNITE_THROTTLE_MAX_DIRTY_PAGES_RATIO";
+
+    /**
      * Number of concurrent operation for evict partitions.
      */
     @Deprecated
@@ -1741,7 +1762,7 @@ public final class IgniteSystemProperties {
         "IGNITE_DISABLE_TRIGGERING_CACHE_INTERCEPTOR_ON_CONFLICT";
 
     /**
-     * Sets default isk page compression.
+     * Sets default disk page compression.
      */
     @SystemProperty(value = "Disk page compression - CacheConfiguration#setDiskPageCompression",
         type = DiskPageCompression.class)
@@ -2293,6 +2314,16 @@ public final class IgniteSystemProperties {
     /** Sets a flag to force a checkpoint at node stop. */
     @SystemProperty(value = "Sets a flag to force a checkpoint at node stop", defaults = "false")
     public static final String IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP = "IGNITE_PDS_FORCED_CHECKPOINT_ON_NODE_STOP";
+
+    /**
+     * Defines a strategy to calculate a partition for atomic batch updates.
+     * The default value is "FIRST_KEY".
+     */
+    @SystemProperty(
+        value = "Defines a strategy to calculate a partition for atomic batch updates",
+        type = String.class,
+        defaults = "FIRST_KEY")
+    public static final String IGNITE_PARTITION_CALCULATION_STRATEGY = "IGNITE_PARTITION_CALCULATION_STRATEGY";
 
     /**
      * Enforces singleton.

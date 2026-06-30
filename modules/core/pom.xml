@@ -25,7 +25,7 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.10.127-SNAPSHOT</version>
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
@@ -58,6 +58,8 @@
             org.jsr166.*;version=1.0.0;
             {local-packages}
         </osgi.export.package>
+        <testcontainers.version>2.0.4</testcontainers.version>
+        <mariadb-java-client.version>3.5.5</mariadb-java-client.version>
     </properties>
 
     <dependencies>
@@ -237,6 +239,27 @@
             <version>${commons.lang3.version}</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>${mariadb-java-client.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mariadb</artifactId>
+            <version>${testcontainers.version}</version>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>

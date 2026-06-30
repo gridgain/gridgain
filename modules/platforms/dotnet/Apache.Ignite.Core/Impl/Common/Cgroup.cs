@@ -171,7 +171,7 @@ namespace Apache.Ignite.Core.Impl.Common
         /// <summary>
         /// Finds the cgroup path for the current process.
         /// </summary>
-        private static string FindCGroupPath(string subsystem)
+        private static string? FindCGroupPath(string subsystem)
         {
             var lines = File.ReadAllLines(ProcCGroupFileName);
 
@@ -189,7 +189,7 @@ namespace Apache.Ignite.Core.Impl.Common
         }
 
         [SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "Reviewed")]
-        private static string TryReadFile(string file)
+        private static string? TryReadFile(string file)
         {
             try
             {

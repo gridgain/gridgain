@@ -36,6 +36,7 @@ import org.apache.ignite.internal.processors.cache.persistence.pagemem.PagesWrit
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.SpeedBasedThrottleBreakdownTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTest;
 import org.apache.ignite.internal.processors.cache.persistence.pagemem.UsedPagesMetricTestPersistence;
+import org.apache.ignite.internal.processors.cache.persistence.pagemem.WalPageRecoveryTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.CpTriggeredWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.ExplicitWalDeltaConsistencyTest;
 import org.apache.ignite.internal.processors.cache.persistence.wal.FileWriteAheadLogManagerSelfTest;
@@ -97,6 +98,8 @@ public class IgnitePdsTestSuite5 {
         GridTestUtils.addTestIfNeeded(suite, CpTriggeredWalDeltaConsistencyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, ExplicitWalDeltaConsistencyTest.class, ignoredTests);
         GridTestUtils.addTestIfNeeded(suite, SysPropWalDeltaConsistencyTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, WalPageRecoveryTest.class, ignoredTests);
 
         // Binary meta tests.
         GridTestUtils.addTestIfNeeded(suite, IgnitePdsCacheObjectBinaryProcessorOnDiscoveryTest.class, ignoredTests);

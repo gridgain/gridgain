@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <AssemblyName>Apache.Ignite.Core</AssemblyName>
@@ -16,6 +16,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <CodeAnalysisRuleSet>..\Apache.Ignite.ruleset</CodeAnalysisRuleSet>
+
+    <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="4.5.0" />
@@ -47,6 +49,11 @@
     <None Include="GridGain.Ignite.targets" Pack="true" PackagePath="build" Link="build\%(Filename)%(Extension)" />
     <None Include="..\..\..\..\config\java.util.logging.properties" Pack="true" PackagePath="build\output\config" Link="build\output\config\%(Filename)%(Extension)" />
     <None Include="NuGet\LINQPad\*.*" Pack="true" PackagePath="linqpad-samples" Link="linqpad-samples\%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- Required for IAsyncDisposable and IAsyncEnumerable. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.8" />
   </ItemGroup>
 
 </Project>

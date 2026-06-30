@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Ssl
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
 
     /// <summary>
@@ -40,42 +39,42 @@ namespace Apache.Ignite.Core.Ssl
         /// <see cref="DefaultKeyAlgorithm"/> suites well, however, on Android platform this value need to be set 
         /// to X509.
         /// </summary>
-        public string KeyAlgorithm { get; set; }
+        public string? KeyAlgorithm { get; set; }
 
         /// <summary>
         /// Key store type used for context creation. <see cref="DefaultStoreType"/> by default.
         /// </summary>
-        public string KeyStoreType { get; set; }
+        public string? KeyStoreType { get; set; }
 
         /// <summary>
         /// Key store file path.
         /// </summary>
-        public string KeyStoreFilePath { get; set; }
+        public string? KeyStoreFilePath { get; set; }
 
         /// <summary>
         /// Key store file password.
         /// </summary>
-        public string KeyStorePassword { get; set; }
+        public string? KeyStorePassword { get; set; }
 
         /// <summary>
         /// Protocol for secure transport. <see cref="DefaultSslProtocol"/> by default.
         /// </summary>
-        public string Protocol { get; set; }
+        public string? Protocol { get; set; }
 
         /// <summary>
         /// Path to trust store file. Could be null if any SSL Certificate should be accepted/succeed.
         /// </summary>
-        public string TrustStoreFilePath { get; set; }
+        public string? TrustStoreFilePath { get; set; }
 
         /// <summary>
         /// Trust store password.
         /// </summary>
-        public string TrustStorePassword { get; set; }
+        public string? TrustStorePassword { get; set; }
 
         /// <summary>
         /// Trust store type used for context creation. <see cref="DefaultStoreType"/> by default.
         /// </summary>
-        public string TrustStoreType { get; set; }
+        public string? TrustStoreType { get; set; }
 
         /// <summary>
         /// Creates a new instance of the <see cref="SslContextFactory"/> class.
@@ -130,8 +129,6 @@ namespace Apache.Ignite.Core.Ssl
         /// <param name="reader">The reader.</param>
         private void Read(IBinaryRawReader reader)
         {
-            Debug.Assert(reader != null);
-
             KeyAlgorithm = reader.ReadString();
 
             KeyStoreType = reader.ReadString();
@@ -151,8 +148,6 @@ namespace Apache.Ignite.Core.Ssl
         /// <param name="writer">The writer.</param>
         internal void Write(IBinaryRawWriter writer)
         {
-            Debug.Assert(writer != null);
-
             writer.WriteString(KeyAlgorithm);
 
             writer.WriteString(KeyStoreType);

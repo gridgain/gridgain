@@ -58,7 +58,7 @@ namespace Apache.Ignite.Core
         /// for information on how to start named grids.
         /// </summary>
         /// <returns>Name of the grid, or <c>null</c> for default grid.</returns>
-        string Name { get; }
+        string? Name { get; }
 
         /// <summary>
         /// Gets an instance of <see cref="ICluster" /> interface.
@@ -93,7 +93,8 @@ namespace Apache.Ignite.Core
         /// <returns>Cache instance for given name.</returns>
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
-        ICache<TK, TV> GetCache<TK, TV>(string name);
+        ICache<TK, TV> GetCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using template configuration.
@@ -102,7 +103,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICache<TK, TV> GetOrCreateCache<TK, TV>(string name);
+        ICache<TK, TV> GetOrCreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -111,7 +113,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration);
+        ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -122,7 +125,8 @@ namespace Apache.Ignite.Core
         /// /// <param name="nearConfiguration">Near cache configuration for client.</param>
         /// <returns>Existing or newly created cache.</returns>
         ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration,
-            NearCacheConfiguration nearConfiguration);
+            NearCacheConfiguration nearConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing cache with the given name or creates new one using provided configuration.
@@ -136,7 +140,8 @@ namespace Apache.Ignite.Core
         /// <returns>Existing or newly created cache.</returns>
         [IgniteExperimental]
         ICache<TK, TV> GetOrCreateCache<TK, TV>(CacheConfiguration configuration,
-            NearCacheConfiguration nearConfiguration, PlatformCacheConfiguration platformCacheConfiguration);
+            NearCacheConfiguration nearConfiguration, PlatformCacheConfiguration platformCacheConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using template configuration.
@@ -145,7 +150,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="name">Cache name.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICache<TK, TV> CreateCache<TK, TV>(string name);
+        ICache<TK, TV> CreateCache<TK, TV>(string name)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -154,7 +160,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <param name="configuration">Cache configuration.</param>
         /// <returns>Existing or newly created cache.</returns>
-        ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration);
+        ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -165,7 +172,8 @@ namespace Apache.Ignite.Core
         /// <param name="nearConfiguration">Near cache configuration for client.</param>
         /// <returns>Existing or newly created cache.</returns>
         ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration,
-            NearCacheConfiguration nearConfiguration);
+            NearCacheConfiguration nearConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Dynamically starts new cache using provided configuration.
@@ -179,7 +187,8 @@ namespace Apache.Ignite.Core
         /// <returns>Existing or newly created cache.</returns>
         [IgniteExperimental]
         ICache<TK, TV> CreateCache<TK, TV>(CacheConfiguration configuration,
-            NearCacheConfiguration nearConfiguration, PlatformCacheConfiguration platformCacheConfiguration);
+            NearCacheConfiguration nearConfiguration, PlatformCacheConfiguration platformCacheConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Destroys dynamically created (with <see cref="CreateCache{TK,TV}(string)"/> or
@@ -195,7 +204,8 @@ namespace Apache.Ignite.Core
         /// </summary>
         /// <param name="cacheName">Cache name (<c>null</c> for default cache).</param>
         /// <returns>Data streamer.</returns>
-        IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName);
+        IDataStreamer<TK, TV> GetDataStreamer<TK, TV>(string cacheName)
+            where TK : notnull;
 
         /// <summary>
         /// Gets an instance of <see cref="IBinary"/> interface.
@@ -249,7 +259,7 @@ namespace Apache.Ignite.Core
         /// <param name="create">Flag indicating whether atomic long should be created if it does not exist.</param>
         /// <returns>Atomic long instance with the specified name,
         /// or null if it does not exist and <paramref name="create"/> is <c>false</c>.</returns>
-        IAtomicLong GetAtomicLong(string name, long initialValue, bool create);
+        IAtomicLong? GetAtomicLong(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic sequence with specified name from cache.
@@ -263,7 +273,7 @@ namespace Apache.Ignite.Core
         /// <returns>Atomic sequence instance with specified name,
         /// or null if it does not exist and <paramref name="create"/> flag is not set.</returns>
         /// <exception cref="IgniteException">If atomic sequence could not be fetched or created.</exception>
-        IAtomicSequence GetAtomicSequence(string name, long initialValue, bool create);
+        IAtomicSequence? GetAtomicSequence(string name, long initialValue, bool create);
 
         /// <summary>
         /// Gets an atomic reference with specified name from cache.
@@ -277,7 +287,7 @@ namespace Apache.Ignite.Core
         /// <returns>Atomic reference instance with specified name,
         /// or null if it does not exist and <paramref name="create"/> flag is not set.</returns>
         /// <exception cref="IgniteException">If atomic reference could not be fetched or created.</exception>
-        IAtomicReference<T> GetAtomicReference<T>(string name, T initialValue, bool create);
+        IAtomicReference<T>? GetAtomicReference<T>(string name, T initialValue, bool create);
 
         /// <summary>
         /// Gets the configuration of this Ignite instance.
@@ -294,7 +304,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <returns>Near cache instance.</returns>
-        ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration);
+        ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Starts a near cache on local client node if cache with specified was previously started.
@@ -309,7 +320,8 @@ namespace Apache.Ignite.Core
         /// <returns>Near cache instance.</returns>
         [IgniteExperimental]
         ICache<TK, TV> CreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration,
-            PlatformCacheConfiguration platformConfiguration);
+            PlatformCacheConfiguration platformConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing near cache with the given name or creates a new one.
@@ -319,7 +331,8 @@ namespace Apache.Ignite.Core
         /// <typeparam name="TK">Cache key type.</typeparam>
         /// <typeparam name="TV">Cache value type.</typeparam>
         /// <returns>Near cache instance.</returns>
-        ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration);
+        ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets existing near cache with the given name or creates a new one.
@@ -333,7 +346,8 @@ namespace Apache.Ignite.Core
         /// <returns>Near cache instance.</returns>
         [IgniteExperimental]
         ICache<TK, TV> GetOrCreateNearCache<TK, TV>(string name, NearCacheConfiguration configuration,
-            PlatformCacheConfiguration platformConfiguration);
+            PlatformCacheConfiguration platformConfiguration)
+            where TK : notnull;
 
         /// <summary>
         /// Gets the collection of names of currently available caches, or empty collection if there are no caches.
@@ -413,7 +427,7 @@ namespace Apache.Ignite.Core
         /// </summary>
         /// <param name="memoryPolicyName">Name of the memory policy.</param>
         [Obsolete("Use GetDataRegionMetrics.")]
-        IMemoryMetrics GetMemoryMetrics(string memoryPolicyName);
+        IMemoryMetrics? GetMemoryMetrics(string memoryPolicyName);
 
         /// <summary>
         /// Changes Ignite grid state to active or inactive.
@@ -454,7 +468,7 @@ namespace Apache.Ignite.Core
         /// use <see cref="DataStorageConfiguration.DefaultDataRegionName"/>.
         /// </summary>
         /// <param name="dataRegionName">Name of the data region.</param>
-        IDataRegionMetrics GetDataRegionMetrics(string dataRegionName);
+        IDataRegionMetrics? GetDataRegionMetrics(string dataRegionName);
 
         /// <summary>
         /// Gets the persistent store metrics.
@@ -485,6 +499,6 @@ namespace Apache.Ignite.Core
         /// <param name="configuration">Lock configuration.</param>
         /// <param name="create">Whether the lock should be created if it does not exist.</param>
         /// <returns><see cref="IIgniteLock"/></returns>
-        IIgniteLock GetOrCreateLock(LockConfiguration configuration, bool create);
+        IIgniteLock? GetOrCreateLock(LockConfiguration configuration, bool create);
     }
 }

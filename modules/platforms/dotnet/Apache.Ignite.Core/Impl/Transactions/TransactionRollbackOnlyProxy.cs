@@ -223,6 +223,16 @@ namespace Apache.Ignite.Core.Impl.Transactions
             }
         }
 
+        /** <inheritDoc /> */
+        public ValueTask DisposeAsync()
+        {
+            // There is no asynchronous counterpart for removing a rollback-only view (it is local cleanup,
+            // not a transaction outcome), so perform the synchronous dispose and return a completed task.
+            Dispose();
+
+            return default;
+        }
+
         /// <summary>
         /// Unique transaction view ID.
         /// </summary>

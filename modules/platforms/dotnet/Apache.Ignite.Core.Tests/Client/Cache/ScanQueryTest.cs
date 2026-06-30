@@ -20,6 +20,8 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
@@ -103,6 +105,26 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 query.Local = true;
                 var localRes = clientCache.Query(query).ToList();
                 Assert.Less(localRes.Count, cache.GetSize());
+            }
+        }
+
+        /// <summary>
+        /// Tests async scan query returns the same results as the sync one.
+        /// </summary>
+        [Test]
+        public async Task TestQueryAsync()
+        {
+            var cache = GetPersonCache();
+
+            using (var client = GetClient())
+            {
+                var clientCache = client.GetCache<int, Person>(CacheName);
+
+                var cursor = await clientCache.QueryAsync(new ScanQuery<int, Person>());
+
+                Assert.AreEqual(
+                    cache.Select(x => x.Value.Name).OrderBy(x => x).ToArray(),
+                    cursor.GetAll().Select(x => x.Value.Name).OrderBy(x => x).ToArray());
             }
         }
 
@@ -243,6 +265,223 @@ namespace Apache.Ignite.Core.Tests.Client.Cache
                 c3.Dispose();
             }
         }
+
+#if NETCOREAPP
+        /// <summary>
+        /// Tests that <c>await using</c> and <see cref="System.IAsyncDisposable.DisposeAsync"/> close the
+        /// server-side cursor asynchronously, freeing up a cursor slot just like synchronous disposal.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitUsingClosesServerCursor()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            // MaxCursors = 3: open the maximum number of cursors.
+            var c1 = clientCache.Query(qry);
+            var c2 = clientCache.Query(qry);
+            var c3 = clientCache.Query(qry);
+
+            Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+
+            // Async dispose frees a server-side cursor slot; awaiting guarantees the close completed.
+            await c1.DisposeAsync();
+
+            // A new cursor can be opened now, and exiting await using closes it again.
+            await using (clientCache.Query(qry))
+            {
+                Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+            }
+
+            // Idempotent: a second async dispose is a no-op.
+            await c1.DisposeAsync();
+
+            c1 = clientCache.Query(qry);
+
+            c1.Dispose();
+            c2.Dispose();
+            c3.Dispose();
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.IAsyncDisposable.DisposeAsync"/> is a no-op for a cursor that has
+        /// already been drained by <c>GetAll</c> (the server closes the cursor when the last page is read,
+        /// so no redundant resource-close request is sent).
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncAfterGetAllIsNoOp()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            var cursor = clientCache.Query(qry);
+
+            // GetAll drains all pages; the server-side cursor is closed automatically on the last page.
+            Assert.AreEqual(cache.GetSize(), cursor.GetAll().Count);
+
+            // DisposeAsync must not send a resource-close for the already-closed cursor (would throw otherwise).
+            await cursor.DisposeAsync();
+
+            // The slot was never leaked: all cursors can still be opened.
+            await using (clientCache.Query(qry))
+            await using (clientCache.Query(qry))
+            await using (clientCache.Query(qry))
+            {
+                Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+            }
+        }
+
+        /// <summary>
+        /// Tests that async and synchronous disposal can be mixed in any order on the same cursor:
+        /// the server-side cursor is closed exactly once and the slot is freed.
+        /// </summary>
+        [Test]
+        public async Task TestDisposeAsyncAndDisposeAreInterchangeable()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+            var qry = new ScanQuery<int, Person>();
+
+            // DisposeAsync first, then synchronous Dispose is a no-op.
+            var cursor = clientCache.Query(qry);
+            await cursor.DisposeAsync();
+            cursor.Dispose();
+
+            // Synchronous Dispose first, then DisposeAsync is a no-op.
+            cursor = clientCache.Query(qry);
+            cursor.Dispose();
+            await cursor.DisposeAsync();
+
+            // Both cursors were closed: the connection is back to zero open cursors.
+            var c1 = clientCache.Query(qry);
+            var c2 = clientCache.Query(qry);
+            var c3 = clientCache.Query(qry);
+            Assert.Throws<IgniteClientException>(() => clientCache.Query(qry));
+
+            c1.Dispose();
+            c2.Dispose();
+            c3.Dispose();
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor (<see cref="System.Collections.Generic.IAsyncEnumerable{T}"/>)
+        /// returns all entries, fetching multiple pages asynchronously from the server.
+        /// </summary>
+        [Test]
+        public async Task TestAwaitForeachReturnsAllEntries()
+        {
+            var cache = GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            var qry = new ScanQuery<int, Person> { PageSize = 128 };
+            var keys = new List<int>();
+
+            await foreach (var entry in await clientCache.QueryAsync(qry))
+            {
+                Assert.AreEqual(entry.Key.ToString(), entry.Value.Name);
+                keys.Add(entry.Key);
+            }
+
+            CollectionAssert.AreEquivalent(Enumerable.Range(1, cache.GetSize()), keys);
+        }
+
+        /// <summary>
+        /// Tests that <see cref="System.Collections.Generic.IAsyncEnumerable{T}.GetAsyncEnumerator"/> enforces the
+        /// same single-consumption rules as the synchronous enumerator: it can not be obtained after
+        /// <c>GetAll</c> or after the cursor has already been (asynchronously) enumerated.
+        /// </summary>
+        [Test]
+        public void TestGetAsyncEnumeratorAfterGetAllOrSecondCallThrows()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // GetAsyncEnumerator after GetAll throws.
+            var cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAll();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+
+            // Second GetAsyncEnumerator on the same cursor throws.
+            cursor = clientCache.Query(new ScanQuery<int, Person>());
+            cursor.GetAsyncEnumerator();
+            Assert.Throws<InvalidOperationException>(() => cursor.GetAsyncEnumerator());
+        }
+
+        /// <summary>
+        /// Tests that <c>await foreach</c> over a scan query cursor stops with an
+        /// <see cref="OperationCanceledException"/> when the enumeration token is cancelled mid-iteration.
+        /// </summary>
+        [Test]
+        public void TestAsyncEnumerationHonorsCancellation()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size so iteration spans multiple async batches.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+            var cts = new CancellationTokenSource();
+
+            var count = 0;
+
+            Assert.CatchAsync<OperationCanceledException>(async () =>
+            {
+                await foreach (var entry in (await clientCache.QueryAsync(qry)).WithCancellation(cts.Token))
+                {
+                    Assert.IsNotNull(entry);
+
+                    if (++count == 10)
+                    {
+                        await cts.CancelAsync();
+                    }
+                }
+            });
+
+            // Enumeration stopped right after cancellation, well before draining the whole cache.
+            Assert.AreEqual(10, count);
+        }
+
+        /// <summary>
+        /// Tests that a client scan query cursor that was not enumerated can be disposed synchronously without
+        /// throwing, and that <c>Dispose</c>/<c>DisposeAsync</c> are idempotent and can be mixed. Guards against
+        /// the cursor's synchronization primitive being disposed while it is still considered in use.
+        /// </summary>
+        [Test]
+        public async Task TestScanQueryCursorDisposeIsIdempotentWhenNotDrained()
+        {
+            GetPersonCache();
+
+            using var client = GetClient();
+            var clientCache = client.GetCache<int, Person>(CacheName);
+
+            // Small page size leaves the server-side cursor open (more pages remain) so _hasNext stays true.
+            var qry = new ScanQuery<int, Person> { PageSize = 32 };
+
+            // Sync Dispose of a never-enumerated cursor must not throw, and must be idempotent.
+            var cursor = clientCache.Query(qry);
+            Assert.DoesNotThrow(() => cursor.Dispose());
+            Assert.DoesNotThrow(() => cursor.Dispose());
+
+            // DisposeAsync of a non-drained cursor, then a second DisposeAsync and a sync Dispose, must all be safe.
+            cursor = clientCache.Query(qry);
+            await cursor.DisposeAsync();
+            await cursor.DisposeAsync();
+            Assert.DoesNotThrow(() => cursor.Dispose());
+        }
+#endif
 
         /// <summary>
         /// Gets the string cache.

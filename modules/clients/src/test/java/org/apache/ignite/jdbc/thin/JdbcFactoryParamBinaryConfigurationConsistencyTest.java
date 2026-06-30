@@ -1,0 +1,76 @@
+/*
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.jdbc.thin;
+
+import javax.cache.configuration.Factory;
+import org.apache.ignite.binary.BinaryBasicIdMapper;
+import org.apache.ignite.configuration.BinaryConfiguration;
+import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.IgniteEx;
+import org.junit.Test;
+
+public class JdbcFactoryParamBinaryConfigurationConsistencyTest extends AbstractJdbcBinaryConfigurationConsistencyTest {
+
+    @Test
+    public void assertCustomBinaryConfigFactoryProducesConsistentResults() throws Exception {
+        IgniteConfiguration ignCfg = getConfiguration("srv")
+            .setBinaryConfiguration(new BinaryConfiguration()
+                .setIdMapper(new ShiftingIdMapper())
+            );
+
+        IgniteEx ign = setupCluster(ignCfg);
+
+        prepareJdbcParamsAndRunQuery(ign, ShiftingBinaryConfigFactory.class.getName(), null, null);
+
+        verifyMarshallerFolder(ign);
+    }
+
+    @Test
+    public void assertThatIncorrectFactoryNameThrows() throws Exception {
+        IgniteConfiguration ignCfg = getConfiguration("srv");
+
+        IgniteEx ign = setupCluster(ignCfg);
+
+        String factoryName = "FooBarFactory";
+
+        assertThrowsSqlException(
+            "Could not instantiate binary configuration factory class: " + factoryName,
+            () -> prepareJdbcParamsAndRunQuery(ign, factoryName, null, null)
+        );
+
+        verifyMarshallerFolder(ign);
+    }
+
+    /** Custom factory that returns binary configuration with */
+    public static class ShiftingBinaryConfigFactory implements Factory<BinaryConfiguration> {
+        @Override public BinaryConfiguration create() {
+            return new BinaryConfiguration()
+                .setIdMapper(new ShiftingIdMapper());
+        }
+    }
+
+    /** Custom mapper that works like default {@link BinaryBasicIdMapper}, but adds constant to each id */
+    private static class ShiftingIdMapper extends BinaryBasicIdMapper {
+        @Override public int typeId(String typeName) {
+            return super.typeId(typeName) + 100500;
+        }
+
+        @Override public int fieldId(int typeId, String fieldName) {
+            return super.fieldId(typeId, fieldName) + 100500;
+        }
+    }
+}

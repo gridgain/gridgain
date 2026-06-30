@@ -73,7 +73,7 @@ class GridUriDeploymentSpringDocument {
                             try {
                                 taskCls = clsLdr.loadClass(clsName);
                             }
-                            catch (ClassNotFoundException e) {
+                            catch (ClassNotFoundException | NoClassDefFoundError e) {
                                 throw new IgniteSpiException("Failed to load task class [className=" + clsName + ']', e);
                             }
 

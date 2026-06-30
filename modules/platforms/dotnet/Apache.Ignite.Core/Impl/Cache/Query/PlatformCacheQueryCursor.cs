@@ -19,8 +19,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
     using System;
     using System.Collections;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Linq;
+    using System.Threading;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Impl.Cache.Platform;
@@ -34,10 +35,10 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         private readonly IPlatformCache _platformCache;
         
         /** */
-        private readonly Action _dispose;
+        private readonly Action? _dispose;
 
         /** */
-        private readonly ICacheEntryFilter<TK, TV> _filter;
+        private readonly ICacheEntryFilter<TK, TV>? _filter;
         
         /** */
         private readonly int? _partition;
@@ -55,11 +56,9 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         /// <param name="filter">Filter.</param>
         /// <param name="partition">Partition.</param>
         /// <param name="dispose">Dispose action.</param>
-        internal PlatformCacheQueryCursor(IPlatformCache platformCache, ICacheEntryFilter<TK, TV> filter = null, 
-            int? partition = null, Action dispose = null)
+        internal PlatformCacheQueryCursor(IPlatformCache platformCache, ICacheEntryFilter<TK, TV>? filter = null,
+            int? partition = null, Action? dispose = null)
         {
-            Debug.Assert(platformCache != null);
-            
             _platformCache = platformCache;
             _filter = filter;
             _partition = partition;
@@ -94,6 +93,15 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
         {
             ReleaseUnmanagedResources();
             GC.SuppressFinalize(this);
+        }
+
+        /** <inheritdoc /> */
+        public ValueTask DisposeAsync()
+        {
+            // Platform cache iteration is local: there is no asynchronous counterpart, so dispose synchronously.
+            Dispose();
+
+            return default;
         }
 
         /// <summary>
@@ -151,6 +159,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Query
                 {
                     _dispose();
                 }
+            }
+        }
+
+        /** <inheritdoc /> */
+        public async IAsyncEnumerator<ICacheEntry<TK, TV>> GetAsyncEnumerator(
+            CancellationToken cancellationToken = default)
+        {
+            // Platform cache iteration is local, so iterate synchronously within an async iterator.
+            await Task.CompletedTask.ConfigureAwait(false);
+
+            foreach (var entry in GetEnumerable())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                yield return entry;
             }
         }
 

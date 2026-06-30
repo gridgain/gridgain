@@ -35,7 +35,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <param name="entry">Entry.</param>
         /// <param name="processResult">Process result.</param>
         /// <param name="error">Error.</param>
-        public CacheEntryProcessorResultHolder(IMutableCacheEntryInternal entry, object processResult, Exception error)
+        public CacheEntryProcessorResultHolder(IMutableCacheEntryInternal? entry, object? processResult, Exception? error)
         {
             Entry = entry;
             ProcessResult = processResult;
@@ -45,17 +45,17 @@ namespace Apache.Ignite.Core.Impl.Cache
         /// <summary>
         /// Gets the entry.
         /// </summary>
-        public IMutableCacheEntryInternal Entry { get; private set; }
+        public IMutableCacheEntryInternal? Entry { get; private set; }
 
         /// <summary>
         /// Gets the process result.
         /// </summary>
-        public object ProcessResult { get; private set; }
+        public object? ProcessResult { get; private set; }
 
         /// <summary>
         /// Gets the error.
         /// </summary>
-        public Exception Error { get; private set; }
+        public Exception? Error { get; private set; }
 
         /// <summary>
         /// Writes this instance to the stream.
@@ -90,7 +90,7 @@ namespace Apache.Ignite.Core.Impl.Cache
             {
                 if (Error == null)
                 {
-                    writer.WriteByte((byte) Entry.State);
+                    writer.WriteByte((byte) Entry!.State);
 
                     if (Entry.State == MutableCacheEntryState.ValueSet)
                         writer.Write(Entry.Value);

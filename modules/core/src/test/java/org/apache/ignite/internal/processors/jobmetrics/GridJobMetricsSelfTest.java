@@ -69,10 +69,10 @@ public class GridJobMetricsSelfTest extends GridCommonAbstractTest {
     public void testGridJobWaitingRejectedMetrics() throws Exception {
         latch = new CountDownLatch(1);
 
-        GridTestCollision collisioinSpi = new GridTestCollision();
+        GridTestCollision collisionSpi = new GridTestCollision();
 
         IgniteConfiguration cfg = getConfiguration()
-            .setCollisionSpi(collisioinSpi);
+            .setCollisionSpi(collisionSpi);
 
         try (IgniteEx g = startGrid(cfg)) {
             MetricRegistry mreg = g.context().metric().registry(JOBS_METRICS);
@@ -124,8 +124,10 @@ public class GridJobMetricsSelfTest extends GridCommonAbstractTest {
             assertEquals(0, rejected.value());
             assertEquals(0, finished.value());
 
+            g.context().job().handleCollisions();
+
             // Activating 2 of 3 jobs. Rejecting 1 of them.
-            Iterator<CollisionJobContext> iter = collisioinSpi.jobs.values().iterator();
+            Iterator<CollisionJobContext> iter = collisionSpi.jobs.values().iterator();
 
             iter.next().cancel();
 

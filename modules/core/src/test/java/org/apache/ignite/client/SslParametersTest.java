@@ -304,7 +304,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
 
         ClientConfiguration cfg = getClientConfiguration()
                 .setAddresses("127.0.0.1:10901")
-                .setTimeout(3000);
+                .setHandshakeTimeout(3000);
 
         GridTestUtils.assertThrowsAnyCause(
                 null,
@@ -329,7 +329,7 @@ public class SslParametersTest extends GridCommonAbstractTest {
 
         ClientConfiguration cfg = getClientConfiguration()
                 .setAddresses("127.0.0.1:10902")
-                .setTimeout(100);
+                .setHandshakeTimeout(100);
 
         GridTestUtils.assertThrowsAnyCause(
                 null,

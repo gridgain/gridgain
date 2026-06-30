@@ -42,7 +42,6 @@ import org.gridgain.internal.h2.test.db.TestGeneralCommonTableQueries;
 import org.gridgain.internal.h2.test.db.TestIndex;
 import org.gridgain.internal.h2.test.db.TestIndexHints;
 import org.gridgain.internal.h2.test.db.TestLargeBlob;
-import org.gridgain.internal.h2.test.db.TestLinkedTable;
 import org.gridgain.internal.h2.test.db.TestListener;
 import org.gridgain.internal.h2.test.db.TestLob;
 import org.gridgain.internal.h2.test.db.TestMemoryUsage;
@@ -77,13 +76,11 @@ import org.gridgain.internal.h2.test.db.TestTableEngines;
 import org.gridgain.internal.h2.test.db.TestTempTables;
 import org.gridgain.internal.h2.test.db.TestTransaction;
 import org.gridgain.internal.h2.test.db.TestTwoPhaseCommit;
-import org.gridgain.internal.h2.test.db.TestUpgrade;
 import org.gridgain.internal.h2.test.db.TestUsingIndex;
 import org.gridgain.internal.h2.test.db.TestView;
 import org.gridgain.internal.h2.test.db.TestViewAlterTable;
 import org.gridgain.internal.h2.test.db.TestViewDropView;
 import org.gridgain.internal.h2.test.jdbc.TestBatchUpdates;
-import org.gridgain.internal.h2.test.jdbc.TestCallableStatement;
 import org.gridgain.internal.h2.test.jdbc.TestCancel;
 import org.gridgain.internal.h2.test.jdbc.TestConcurrentConnectionUsage;
 import org.gridgain.internal.h2.test.jdbc.TestConnection;
@@ -100,7 +97,6 @@ import org.gridgain.internal.h2.test.jdbc.TestMetaData;
 import org.gridgain.internal.h2.test.jdbc.TestNativeSQL;
 import org.gridgain.internal.h2.test.jdbc.TestPreparedStatement;
 import org.gridgain.internal.h2.test.jdbc.TestResultSet;
-import org.gridgain.internal.h2.test.jdbc.TestSQLXML;
 import org.gridgain.internal.h2.test.jdbc.TestStatement;
 import org.gridgain.internal.h2.test.jdbc.TestTransactionIsolation;
 import org.gridgain.internal.h2.test.jdbc.TestUpdatableResultSet;
@@ -135,7 +131,6 @@ import org.gridgain.internal.h2.test.unit.TestReader;
 import org.gridgain.internal.h2.test.unit.TestSampleApps;
 import org.gridgain.internal.h2.test.unit.TestScriptReader;
 import org.gridgain.internal.h2.test.unit.TestSecurity;
-import org.gridgain.internal.h2.test.unit.TestShell;
 import org.gridgain.internal.h2.test.unit.TestSort;
 import org.gridgain.internal.h2.test.unit.TestStringCache;
 import org.gridgain.internal.h2.test.unit.TestTimeStampWithTimeZone;
@@ -156,7 +151,6 @@ import org.gridgain.internal.h2.test.scripts.TestScript;
 import org.gridgain.internal.h2.test.server.TestAutoServer;
 import org.gridgain.internal.h2.test.server.TestInit;
 import org.gridgain.internal.h2.test.server.TestNestedLoop;
-import org.gridgain.internal.h2.test.server.TestWeb;
 import org.gridgain.internal.h2.test.store.TestCacheConcurrentLIRS;
 import org.gridgain.internal.h2.test.store.TestCacheLIRS;
 import org.gridgain.internal.h2.test.store.TestCacheLongKeyLIRS;
@@ -190,7 +184,6 @@ import org.gridgain.internal.h2.test.synth.TestLimit;
 import org.gridgain.internal.h2.test.synth.TestMultiThreaded;
 import org.gridgain.internal.h2.test.synth.TestNestedJoins;
 import org.gridgain.internal.h2.test.synth.TestOuterJoins;
-import org.gridgain.internal.h2.test.synth.TestRandomCompare;
 import org.gridgain.internal.h2.test.synth.TestRandomSQL;
 import org.gridgain.internal.h2.test.synth.TestStringAggCompatibility;
 import org.gridgain.internal.h2.test.synth.TestTimer;
@@ -220,7 +213,6 @@ import org.gridgain.internal.h2.test.unit.TestMemoryUnmapper;
 import org.gridgain.internal.h2.test.unit.TestObjectDeserialization;
 import org.gridgain.internal.h2.test.unit.TestOverflow;
 import org.gridgain.internal.h2.test.unit.TestPageStoreCoverage;
-import org.gridgain.internal.h2.test.unit.TestPgServer;
 import org.gridgain.internal.h2.test.unit.TestRecovery;
 import org.gridgain.internal.h2.test.unit.TestReopen;
 import org.gridgain.internal.h2.test.unit.TestStreams;
@@ -764,7 +756,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestIndex());
         addTest(new TestIndexHints());
         addTest(new TestLargeBlob());
-        addTest(new TestLinkedTable());
         addTest(new TestListener());
         addTest(new TestLob());
         addTest(new TestMergeUsing());
@@ -802,7 +793,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
 
         // jdbc
         addTest(new TestBatchUpdates());
-        addTest(new TestCallableStatement());
         addTest(new TestCancel());
         addTest(new TestConcurrentConnectionUsage());
         addTest(new TestConnection());
@@ -810,7 +800,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestJavaObject());
         addTest(new TestLimitUpdates());
         addTest(new TestLobApi());
-        addTest(new TestSQLXML());
         addTest(new TestManyJdbcObjects());
         addTest(new TestMetaData());
         addTest(new TestNativeSQL());
@@ -851,7 +840,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestCrashAPI());
         addTest(new TestFuzzOptimizations());
         addTest(new TestLimit());
-        addTest(new TestRandomCompare());
         addTest(new TestKillRestart());
         addTest(new TestKillRestartMulti());
         addTest(new TestMultiThreaded());
@@ -873,7 +861,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestRandomSQL());
         addTest(new TestQueryCache());
         addTest(new TestUrlJavaObjectSerializer());
-        addTest(new TestWeb());
 
         // other unsafe
         addTest(new TestOptimizations());
@@ -907,15 +894,12 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestMultiThreadedKernel());
         addTest(new TestPageStore());
         addTest(new TestPageStoreCoverage());
-        addTest(new TestPgServer());
         addTest(new TestRecovery());
         addTest(new RecoverLobTest());
         addTest(createTest("org.gridgain.internal.h2.test.unit.TestServlet"));
         addTest(new TestTimeStampWithTimeZone());
-        addTest(new TestUpgrade());
         addTest(new TestUsingIndex());
         addTest(new TestValue());
-        addTest(new TestWeb());
 
         runAddedTests();
 
@@ -983,7 +967,6 @@ kill -9 `jps -l | grep "org.gridgain.internal.h2.test." | cut -d " " -f 1`
         addTest(new TestReader());
         addTest(new TestScriptReader());
         addTest(new TestSecurity());
-        addTest(new TestShell());
         addTest(new TestSort());
         addTest(new TestStreams());
         addTest(new TestStringUtils());

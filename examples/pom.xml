@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.10.127-SNAPSHOT</version>
         <relativePath>../parent-internal/pom.xml</relativePath>
     </parent>
 
@@ -136,12 +136,6 @@
 
         <dependency>
             <groupId>org.gridgain</groupId>
-            <artifactId>ignite-hibernate_5.1</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.gridgain</groupId>
             <artifactId>ignite-schedule</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -188,6 +182,7 @@
         <!-- will be changed by profile activation. allows to combine profiles. -->
         <lgpl.folder>src/main/java</lgpl.folder>
         <lgpl.test.folder>src/test/java</lgpl.test.folder>
+        <syft.skip>true</syft.skip>
     </properties>
 
     <profiles>

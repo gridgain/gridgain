@@ -1704,14 +1704,7 @@ public class JdbcConnection extends TraceObject implements Connection, JdbcConne
      */
     @Override
     public SQLXML createSQLXML() throws SQLException {
-        try {
-            int id = getNextId(TraceObject.SQLXML);
-            debugCodeAssign("SQLXML", TraceObject.SQLXML, id, "createSQLXML()");
-            checkClosedForWrite();
-            return new JdbcSQLXML(this, ValueString.EMPTY, JdbcLob.State.NEW, id);
-        } catch (Exception e) {
-            throw logAndConvert(e);
-        }
+        throw unsupported("xml");
     }
 
     /**

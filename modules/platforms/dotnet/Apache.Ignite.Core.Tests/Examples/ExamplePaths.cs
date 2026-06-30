@@ -16,6 +16,8 @@
 
 namespace Apache.Ignite.Core.Tests.Examples
 {
+    using System;
+    using System.Collections.Generic;
     using System.IO;
     using System.Reflection;
     using System.Text.RegularExpressions;
@@ -67,7 +69,30 @@ namespace Apache.Ignite.Core.Tests.Examples
         /// </summary>
         public static string GetTargetFramework(string projFile)
         {
-            return Regex.Match(File.ReadAllText(projFile), "<TargetFramework>(.*?)</TargetFramework>").Groups[1].Value;
+            foreach (var proj in GetProjectPaths(projFile))
+            {
+                var match = Regex.Match(File.ReadAllText(proj), "<TargetFramework>(.*?)</TargetFramework>");
+
+                if (match.Success)
+                {
+                    return match.Groups[1].Value;
+                }
+            }
+
+            throw new InvalidOperationException("TargetFramework not found for project: " + projFile);
+        }
+
+        private static IEnumerable<string> GetProjectPaths(string projFile)
+        {
+            yield return projFile;
+
+            for (var dir = Path.GetDirectoryName(projFile); dir != null; dir = Path.GetDirectoryName(dir))
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, "Directory.Build.props"))
+                {
+                    yield return file;
+                }
+            }
         }
     }
 }

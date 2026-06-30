@@ -65,13 +65,13 @@ namespace Apache.Ignite.Core.Services
         /// </summary>
         /// <param name="name">Attribute name.</param>
         /// <returns>String attribute value.</returns>
-        string GetAttribute(string name);
+        string? GetAttribute(string name);
 
         /// <summary>
         /// Gets the binary attribute.
         /// </summary>
         /// <param name="name">Attribute name.</param>
         /// <returns>Binary attribute value.</returns>
-        byte[] GetBinaryAttribute(string name);
+        byte[]? GetBinaryAttribute(string name);
     }
 }

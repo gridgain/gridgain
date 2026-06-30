@@ -26,11 +26,15 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.10.127-SNAPSHOT</version>
         <relativePath>../../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-extdata-uri</artifactId>
+
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -234,7 +238,7 @@
 
                                 <signjar jar="${basedir}/target/file/bad-signed-deployfile.jar" keystore="${basedir}/config/signeddeploy/keystore" storepass="abc123" keypass="abc123" alias="business" />
 
-                                <sleep seconds="2" />
+                                <sleep seconds="5" />
 
                                 <touch file="${basedir}/target/classes/org/apache/ignite/spi/deployment/uri/tasks/GridUriDeploymentTestWithNameTask11.class" />
 
@@ -394,7 +398,7 @@
 
                                 <signjar jar="${basedir}/target/file/bad-signed-deployfile.gar" keystore="${basedir}/config/signeddeploy/keystore" storepass="abc123" keypass="abc123" alias="business" />
 
-                                <sleep seconds="2" />
+                                <sleep seconds="5" />
 
                                 <touch file="${basedir}/target/classes/org/apache/ignite/spi/deployment/uri/tasks/GridUriDeploymentTestWithNameTask6.class" />
 

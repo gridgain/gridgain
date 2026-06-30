@@ -586,9 +586,18 @@ public class GridTransactionsSystemUserTimeMetricsTest extends GridCommonAbstrac
                 applyJmxParameters(null, newCoefficient, newLimit);
                 applyJmxParameters(newThreshold, null, null, tmMxBean2, client2);
 
-                assertEquals(newLimit, tmMxBean2.getTransactionTimeDumpSamplesPerSecondLimit());
-                assertEquals(newThreshold, tmMxBean.getLongTransactionTimeDumpThreshold());
-                assertTrue(tmMxBean2.getTransactionTimeDumpSamplesCoefficient() - newCoefficient < 0.0001);
+                // Distributed metastorage updates do not arrive on all nodes simultaneously: each value is set on one
+                // node and asserted on the other, so wait until the update propagates instead of reading immediately.
+                assertTrue("Limit did not propagate to client2",
+                    GridTestUtils.waitForCondition(
+                        () -> tmMxBean2.getTransactionTimeDumpSamplesPerSecondLimit() == newLimit, 5_000));
+                assertTrue("Threshold did not propagate to client",
+                    GridTestUtils.waitForCondition(
+                        () -> tmMxBean.getLongTransactionTimeDumpThreshold() == newThreshold, 5_000));
+                assertTrue("Coefficient did not propagate to client2",
+                    GridTestUtils.waitForCondition(
+                        () -> Math.abs(tmMxBean2.getTransactionTimeDumpSamplesCoefficient() - newCoefficient) < 0.0001,
+                        5_000));
             }
             finally {
                 applyJmxParameters(oldThreshold, oldCoefficient, oldLimit);

@@ -1064,6 +1064,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
             GridCacheContextInfo cacheInfo = new GridCacheContextInfo(ctx, false);
 
+            long cleanupStartTimeMs = U.currentTimeMillis();
+
             if (clearDbObjects) {
                 boolean rmvIdx = !cache.context().group().persistenceEnabled() || callDestroy;
                 boolean clearIdx = !cache.context().group().persistenceEnabled() || clearCache;
@@ -1126,6 +1128,13 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                 U.error(log, "Failed to flush WAL data while destroying cache" +
                     "[cache=" + ctx.name() + "]", e);
             }
+
+            if (log.isInfoEnabled())
+                log.info("Cache data removing [cacheName=" + ctx.cache().name()
+                    + (ctx.group().sharedGroup() ? ", grpName=" + ctx.group().cacheOrGroupName() : "")
+                    + ", grpId=" + ctx.group().groupId()
+                    + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - cleanupStartTimeMs)
+                    + ']');
 
             try {
                 IgnitePageStoreManager pageStore;
@@ -1757,8 +1766,9 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     ctx.query().initQueryStructuresForNotStartedCache(cacheDesc);
                 }
                 catch (Exception e) {
+                    // See https://ggsystems.atlassian.net/browse/GG-29395
                     log.error("Can't initialize query structures for not started cache [cacheName=" +
-                        cacheDesc.cacheName() + "]", e);
+                        cacheDesc.cacheName() + ']', e);
                 }
             });
 
@@ -1788,14 +1798,27 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @return Started caches descriptors.
      * @throws IgniteCheckedException If failed.
      */
-    public Collection<DynamicCacheDescriptor> startReceivedCaches(UUID nodeId, AffinityTopologyVersion exchTopVer)
-        throws IgniteCheckedException {
+    public Collection<DynamicCacheDescriptor> startReceivedCaches(
+        UUID nodeId,
+        AffinityTopologyVersion exchTopVer
+    ) throws IgniteCheckedException {
         List<DynamicCacheDescriptor> receivedCaches = cachesInfo.cachesReceivedFromJoin(nodeId);
 
-        List<StartCacheInfo> startCacheInfos = receivedCaches.stream()
-            .filter(desc -> isLocalAffinity(desc.groupDescriptor().config()))
-            .map(desc -> new StartCacheInfo(desc, null, exchTopVer, false))
-            .collect(toList());
+        List<StartCacheInfo> startCacheInfos = new ArrayList<>(receivedCaches.size());
+        receivedCaches.forEach(desc -> {
+            if (isLocalAffinity(desc.groupDescriptor().config()))
+                startCacheInfos.add(new StartCacheInfo(desc, null, exchTopVer, false));
+            else {
+                try {
+                    ctx.query().initQueryStructuresForNotStartedCache(desc);
+                }
+                catch (IgniteCheckedException e) {
+                    // See https://ggsystems.atlassian.net/browse/GG-29395
+                    log.error("Can't initialize query structures for not started cache [cacheName=" +
+                        desc.cacheName() + ']', e);
+                }
+            }
+        });
 
         prepareStartCaches(startCacheInfos);
 
@@ -2809,7 +2832,10 @@ public class GridCacheProcessor extends GridProcessorAdapter {
      * @param topVer Topology version related to the given {@code exchActions}.
      * @param exchActions Change requests.
      */
-    private void processCacheStopRequestOnExchangeDone(AffinityTopologyVersion topVer, ExchangeActions exchActions) {
+    private void processCacheStopRequestOnExchangeDone(
+        AffinityTopologyVersion topVer,
+        ExchangeActions exchActions
+    ) {
         // Reserve at least 2 threads for system operations.
         int parallelismLvl = U.availableThreadCount(ctx, GridIoPolicy.SYSTEM_POOL, 2);
 
@@ -2847,6 +2873,8 @@ public class GridCacheProcessor extends GridProcessorAdapter {
                     }
 
                     for (ExchangeActions.CacheActionData action : cachesToStopByGrp.getValue()) {
+                        long rollbackStartTime = U.currentTimeMillis();
+
                         context().tm().rollbackTransactionsForStoppingCache(action.descriptor().cacheId());
 
                         stopGateway(action.request());
@@ -2857,6 +2885,15 @@ public class GridCacheProcessor extends GridProcessorAdapter {
 
                         if (cache != null)
                             cache.context().ttl().unregister();
+
+                        CacheGroupDescriptor grpDesc = action.descriptor().groupDescriptor();
+
+                        if (log.isDebugEnabled())
+                            log.debug("Rollback transactions for stopping cache [cacheName=" + cacheName
+                                + (grpDesc.sharedGroup() ? ", grpName=" + grpDesc.cacheOrGroupName() : "")
+                                + ", grpId=" + grpDesc.groupId()
+                                + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - rollbackStartTime)
+                                + ']');
                     }
 
                     return null;
@@ -2925,8 +2962,21 @@ public class GridCacheProcessor extends GridProcessorAdapter {
             cachesInfo.cleanupRemovedCaches(topVer);
         }
 
-        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop)
-            stopCacheGroup(grp.get1().groupId(), grp.get2());
+        for (IgniteBiTuple<CacheGroupContext, Boolean> grp : grpsToStop) {
+            CacheGroupContext gctx = grp.get1();
+
+            int grpId = gctx.groupId();
+
+            long beginCacheStopTimeMs = U.currentTimeMillis();
+
+            stopCacheGroup(grpId, grp.get2());
+
+            if (log.isDebugEnabled())
+                log.debug("Stopping cache group [grpName=" + gctx.cacheOrGroupName()
+                    + ", grpId=" + grpId
+                    + ", time=" + U.humanReadableDuration(U.currentTimeMillis() - beginCacheStopTimeMs)
+                    + ']');
+        }
 
         if (!sharedCtx.kernalContext().clientNode())
             sharedCtx.database().onCacheGroupsStopped(grpsToStop);
@@ -2954,7 +3004,7 @@ public class GridCacheProcessor extends GridProcessorAdapter {
     }
 
     /**
-     * @param grpToStop Group for which listener shuold be removed.
+     * @param grpToStop Group for which listener should be removed.
      */
     private void removeOffheapCheckpointListener(List<IgniteBiTuple<CacheGroupContext, Boolean>> grpToStop) {
         sharedCtx.database().checkpointReadLock();

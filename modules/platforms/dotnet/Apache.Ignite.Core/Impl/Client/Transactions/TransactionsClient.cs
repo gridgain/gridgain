@@ -34,7 +34,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         private readonly TransactionClientConfiguration _cfg;
 
         /** Transaction for this thread and client. */
-        private readonly ThreadLocal<TransactionClient> _currentTx = new ThreadLocal<TransactionClient>();
+        private readonly ThreadLocal<TransactionClient?> _currentTx = new ThreadLocal<TransactionClient?>();
 
         /** Ignite. */
         private readonly IgniteClient _ignite;
@@ -47,7 +47,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         /// </summary>
         /// <param name="ignite">Ignite.</param>
         /// <param name="cfg"></param>
-        public TransactionsClient(IgniteClient ignite, TransactionClientConfiguration cfg)
+        public TransactionsClient(IgniteClient ignite, TransactionClientConfiguration? cfg)
         {
             _ignite = ignite;
             _cfg = cfg ?? new TransactionClientConfiguration();
@@ -72,15 +72,12 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         }
 
         /** <inheritDoc /> */
-        ITransactionClient ITransactionsClient.Tx
-        {
-            get { return Tx; }
-        }
+        ITransactionClient? ITransactionsClient.Tx => Tx;
 
         /// <summary>
         /// Gets transaction started by this thread or null if this thread does not have a transaction.
         /// </summary>
-        internal TransactionClient Tx
+        internal TransactionClient? Tx
         {
             get
             {
@@ -151,7 +148,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
         private ITransactionClient TxStart(TransactionConcurrency concurrency,
             TransactionIsolation isolation,
             TimeSpan timeout,
-            string label)
+            string? label)
         {
             if (Tx != null)
             {
@@ -229,7 +226,7 @@ namespace Apache.Ignite.Core.Impl.Client.Transactions
             }
 
             /** <inheritDoc /> */
-            public ITransactionClient Tx
+            public ITransactionClient? Tx
             {
                 get { return _transactions.Tx; }
             }

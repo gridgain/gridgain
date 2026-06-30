@@ -102,7 +102,7 @@ namespace Apache.Ignite.Core.Compute
         /// <param name="taskArg">Optional argument of task execution, can be null.</param>
         /// <returns>Task result.</returns>
         /// <typeparam name="TRes">Type of task result.</typeparam>
-        TRes ExecuteJavaTask<TRes>(string taskName, object taskArg);
+        TRes ExecuteJavaTask<TRes>(string taskName, object? taskArg);
 
         /// <summary>
         /// Executes given Java task on the grid projection. If task for given name has not been deployed yet,
@@ -112,7 +112,7 @@ namespace Apache.Ignite.Core.Compute
         /// <param name="taskArg">Optional argument of task execution, can be null.</param>
         /// <returns>Task result.</returns>
         /// <typeparam name="TRes">Type of task result.</typeparam>
-        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object taskArg);
+        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object? taskArg);
 
         /// <summary>
         /// Executes given Java task on the grid projection. If task for given name has not been deployed yet,
@@ -125,7 +125,7 @@ namespace Apache.Ignite.Core.Compute
         /// <returns>
         /// Task result.
         /// </returns>
-        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object taskArg, CancellationToken cancellationToken);
+        Task<TRes> ExecuteJavaTaskAsync<TRes>(string taskName, object? taskArg, CancellationToken cancellationToken);
 
         /// <summary>
         /// Executes given task on the grid projection. For step-by-step explanation of task execution process

@@ -145,7 +145,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <summary>
         /// Gets or sets the data region name.
         /// </summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether disk persistence is enabled for this region.
@@ -172,7 +172,7 @@ namespace Apache.Ignite.Core.Configuration
         /// <para />
         /// Null for no swap.
         /// </summary>
-        public string SwapPath { get; set; }
+        public string? SwapPath { get; set; }
 
         /// <summary>
         /// Gets or sets the page eviction mode. If <see cref="DataPageEvictionMode.Disabled"/> is used (default)

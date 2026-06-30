@@ -19,6 +19,7 @@ namespace Apache.Ignite.Core.Client
     using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Client.Compute;
     using Apache.Ignite.Core.Client.Services;
 
@@ -80,19 +81,39 @@ namespace Apache.Ignite.Core.Client
         ICollection<IClientClusterNode> GetNodes();
 
         /// <summary>
+        /// Gets read-only collections of nodes in this projection.
+        /// </summary>
+        /// <returns>All nodes in this projection.</returns>
+        Task<ICollection<IClientClusterNode>> GetNodesAsync();
+
+        /// <summary>
         /// Gets a node for given ID from this grid projection.
         /// </summary>
         /// <param name="id">Node ID.</param>
         /// <returns>Node with given ID from this projection or null if such node does not
         /// exist in this projection.</returns>
-        IClientClusterNode GetNode(Guid id);
+        IClientClusterNode? GetNode(Guid id);
+
+        /// <summary>
+        /// Gets a node for given ID from this grid projection.
+        /// </summary>
+        /// <param name="id">Node ID.</param>
+        /// <returns>Node with given ID from this projection or null if such node does not
+        /// exist in this projection.</returns>
+        Task<IClientClusterNode?> GetNodeAsync(Guid id);
 
         /// <summary>
         /// Gets first node from the list of nodes in this projection.
         /// </summary>
         /// <returns>Node.</returns>
         [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate", Justification = "Semantics.")]
-        IClientClusterNode GetNode();
+        IClientClusterNode? GetNode();
+
+        /// <summary>
+        /// Gets first node from the list of nodes in this projection.
+        /// </summary>
+        /// <returns>Node.</returns>
+        Task<IClientClusterNode?> GetNodeAsync();
 
         /// <summary>
         /// Gets compute functionality over this grid projection. All operations

@@ -70,6 +70,8 @@ public class TestSecurityContext implements SecurityContext, Serializable {
             case ADMIN_CACHE:
             case ADMIN_QUERY:
             case ADMIN_OPS:
+            case ADMIN_READ_DISTRIBUTED_PROPERTY:
+            case ADMIN_WRITE_DISTRIBUTED_PROPERTY:
             case JOIN_AS_SERVER:
                 return systemOperationAllowed(perm);
 

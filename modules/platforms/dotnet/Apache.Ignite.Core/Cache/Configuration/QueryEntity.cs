@@ -20,7 +20,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
 {
     using System;
     using System.Collections.Generic;
-    using System.Diagnostics;
     using System.Diagnostics.CodeAnalysis;
     using System.Linq;
     using Apache.Ignite.Core.Binary;
@@ -35,22 +34,22 @@ namespace Apache.Ignite.Core.Cache.Configuration
     public sealed class QueryEntity : IQueryEntityInternal, IBinaryRawWriteAware
     {
         /** */
-        private Type _keyType;
+        private Type? _keyType;
 
         /** */
-        private Type _valueType;
+        private Type? _valueType;
 
         /** */
-        private string _valueTypeName;
+        private string? _valueTypeName;
 
         /** */
-        private string _keyTypeName;
+        private string? _keyTypeName;
 
         /** */
-        private Dictionary<string, string> _aliasMap;
+        private Dictionary<string, string>? _aliasMap;
 
         /** */
-        private ICollection<QueryAlias> _aliases;
+        private ICollection<QueryAlias>? _aliases;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="QueryEntity"/> class.
@@ -83,7 +82,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets key Java type name.
         /// </summary>
-        public string KeyTypeName
+        public string? KeyTypeName
         {
             get { return _keyTypeName; }
             set
@@ -101,7 +100,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Setting this property will overwrite <see cref="Fields"/> and <see cref="Indexes"/> according to
         /// <see cref="QuerySqlFieldAttribute"/>, if any.
         /// </summary>
-        public Type KeyType
+        public Type? KeyType
         {
             get { return _keyType ?? JavaTypes.GetDotNetType(KeyTypeName); }
             set
@@ -119,7 +118,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Gets or sets value Java type name.
         /// </summary>
-        public string ValueTypeName
+        public string? ValueTypeName
         {
             get { return _valueTypeName; }
             set
@@ -137,7 +136,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Setting this property will overwrite <see cref="Fields"/> and <see cref="Indexes"/> according to
         /// <see cref="QuerySqlFieldAttribute"/>, if any.
         /// </summary>
-        public Type ValueType
+        public Type? ValueType
         {
             get { return _valueType ?? JavaTypes.GetDotNetType(ValueTypeName); }
             set
@@ -157,27 +156,27 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <para />
         /// By default, entity key can be accessed with a special "_key" field name.
         /// </summary>
-        public string KeyFieldName { get; set; }
+        public string? KeyFieldName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the field that is used to denote the entire value.
         /// <para />
         /// By default, entity value can be accessed with a special "_val" field name.
         /// </summary>
-        public string ValueFieldName { get; set; }
+        public string? ValueFieldName { get; set; }
 
         /// <summary>
         /// Gets or sets the name of the SQL table.
         /// When not set, value type name is used.
         /// </summary>
-        public string TableName { get; set; }
+        public string? TableName { get; set; }
 
         /// <summary>
         /// Gets or sets query fields, a map from field name to Java type name. 
         /// The order of fields defines the order of columns returned by the 'select *' queries.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryField> Fields { get; set; }
+        public ICollection<QueryField>? Fields { get; set; }
 
         /// <summary>
         /// Gets or sets field name aliases: mapping from full name in dot notation to an alias 
@@ -185,7 +184,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Example: {"parent.name" -> "parentName"}.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryAlias> Aliases
+        public ICollection<QueryAlias>? Aliases
         {
             get { return _aliases; }
             set
@@ -199,13 +198,13 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// Gets or sets the query indexes.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<QueryIndex> Indexes { get; set; }
+        public ICollection<QueryIndex>? Indexes { get; set; }
 
         /// <summary>
         /// Gets the alias by field name, or null when no match found.
         /// This method constructs a dictionary lazily to perform lookups.
         /// </summary>
-        string IQueryEntityInternal.GetAlias(string fieldName)
+        string? IQueryEntityInternal.GetAlias(string fieldName)
         {
             if (Aliases == null || Aliases.Count == 0)
             {
@@ -223,8 +222,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
                 }
             }
 
-            string res;
-            return _aliasMap.TryGetValue(fieldName, out res) ? res : null;
+            return _aliasMap.TryGetValue(fieldName, out var res) ? res : null;
         }
 
         /// <summary>
@@ -246,7 +244,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
             count = reader.ReadInt();
             Aliases = count == 0 ? null : Enumerable.Range(0, count)
-                .Select(x=> new QueryAlias(reader.ReadString(), reader.ReadString())).ToList();
+                .Select(x=> new QueryAlias(reader.ReadString()!, reader.ReadString()!)).ToList();
 
             count = reader.ReadInt();
             Indexes = count == 0 ? null : Enumerable.Range(0, count).Select(x => new QueryIndex(reader)).ToList();
@@ -310,9 +308,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void Validate(ILogger log, string logInfo)
         {
-            Debug.Assert(log != null);
-            Debug.Assert(logInfo != null);
-
             logInfo += string.Format(", QueryEntity '{0}:{1}'", _keyTypeName ?? "", _valueTypeName ?? "");
 
             JavaTypes.LogIndirectMappingWarning(_keyType, log, logInfo);
@@ -331,8 +326,6 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// </summary>
         internal void CopyLocalProperties(QueryEntity entity)
         {
-            Debug.Assert(entity != null);
-
             if (entity._keyType != null)
             {
                 _keyType = entity._keyType;
@@ -349,9 +342,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
                 foreach (var field in Fields)
                 {
-                    QueryField src;
-
-                    if (fields.TryGetValue("_" + field.Name, out src))
+                    if (fields.TryGetValue("_" + field.Name, out var src))
                     {
                         field.CopyLocalProperties(src);
                     }
@@ -362,7 +353,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <summary>
         /// Rescans the attributes in <see cref="KeyType"/> and <see cref="ValueType"/>.
         /// </summary>
-        private void RescanAttributes(Type keyType, Type valType)
+        private void RescanAttributes(Type? keyType, Type? valType)
         {
             if (keyType == null && valType == null)
                 return;
@@ -391,7 +382,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
         private static IEnumerable<QueryIndex> GetGroupIndexes(List<QueryIndexEx> indexes)
         {
             return indexes.Where(idx => idx.IndexGroups != null)
-                .SelectMany(idx => idx.IndexGroups.Select(g => new {Index = idx, GroupName = g}))
+                .SelectMany(idx => idx.IndexGroups!.Select(g => new {Index = idx, GroupName = g}))
                 .GroupBy(x => x.GroupName)
                 .Select(g =>
                 {
@@ -399,7 +390,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
 
                     var first = idxs.First();
 
-                    return new QueryIndex(idxs.SelectMany(i => i.Fields).ToArray())
+                    return new QueryIndex(idxs.SelectMany(i => i.Fields!).ToArray())
                     {
                         IndexType = first.IndexType,
                         Name = first.Name
@@ -419,16 +410,12 @@ namespace Apache.Ignite.Core.Cache.Configuration
         /// <param name="isKey">Whether this is a key type.</param>
         /// <exception cref="System.InvalidOperationException">Recursive Query Field definition detected:  + type</exception>
         private static void ScanAttributes(Type type, List<QueryField> fields, List<QueryIndexEx> indexes, 
-            string parentPropName, ISet<Type> visitedTypes, bool isKey)
+            string? parentPropName, ISet<Type> visitedTypes, bool isKey)
         {
-            Debug.Assert(type != null);
-            Debug.Assert(fields != null);
-            Debug.Assert(indexes != null);
-
-            if (visitedTypes.Contains(type))
+            if (!visitedTypes.Add(type))
+            {
                 throw new InvalidOperationException("Recursive Query Field definition detected: " + type);
-
-            visitedTypes.Add(type);
+            }
 
             foreach (var memberInfo in ReflectionUtils.GetFieldsAndProperties(type))
             {
@@ -498,7 +485,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             /// <param name="indexType">Type of the index.</param>
             /// <param name="groups">The groups.</param>
             public QueryIndexEx(string fieldName, bool isDescending, QueryIndexType indexType, 
-                ICollection<string> groups) 
+                ICollection<string>? groups)
                 : base(isDescending, indexType, fieldName)
             {
                 IndexGroups = groups;
@@ -507,7 +494,7 @@ namespace Apache.Ignite.Core.Cache.Configuration
             /// <summary>
             /// Gets or sets the index groups.
             /// </summary>
-            public ICollection<string> IndexGroups { get; set; }
+            public ICollection<string>? IndexGroups { get; set; }
         }
     }
 }

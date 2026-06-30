@@ -37,6 +37,6 @@ namespace Apache.Ignite.Core.Cache.Query
         /// <summary>
         /// Gets the field type.
         /// </summary>
-        Type Type { get; }
+        Type? Type { get; }
     }
 }

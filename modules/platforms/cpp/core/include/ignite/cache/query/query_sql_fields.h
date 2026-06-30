@@ -387,6 +387,7 @@ namespace ignite
 
                     writer.WriteInt32Array(NULL, 0); // Partitions
                     writer.WriteInt32(1);                // UpdateBatchSize
+                    writer.WriteNull();                  // Label
                 }
 
             private:

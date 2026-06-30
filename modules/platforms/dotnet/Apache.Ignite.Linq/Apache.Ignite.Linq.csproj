@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net8.0;net10.0</TargetFrameworks>
 	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 	<AssemblyName>Apache.Ignite.Linq</AssemblyName>
 	<RootNamespace>Apache.Ignite.Linq</RootNamespace>
@@ -14,11 +14,12 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Description>Apache Ignite LINQ Provider. Query distributed in-memory data in a strongly-typed manner and with IDE support. All Ignite SQL features are supported: distributed joins, groupings, aggregates, field queries, and more.</Description>
     <CodeAnalysisRuleSet>..\Apache.Ignite.ruleset</CodeAnalysisRuleSet>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Include="..\SharedAssemblyInfo.cs" />
-    <PackageReference Include="Remotion.Linq" Version="2.1.2" />
+    <PackageReference Include="Remotion.Linq" Version="2.2.0" />
     <ProjectReference Include="..\Apache.Ignite.Core\Apache.Ignite.Core.csproj" />
 
     <!--

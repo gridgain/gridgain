@@ -16,12 +16,19 @@
 
 package org.apache.ignite.internal.processors.rest;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.util.Map;
 import org.apache.ignite.internal.processors.rest.protocols.http.jetty.GridJettyObjectMapper;
+import org.apache.ignite.internal.util.typedef.F;
 
 import static org.apache.ignite.IgniteSystemProperties.IGNITE_JETTY_PORT;
+import static org.apache.ignite.internal.processors.rest.GridRestResponse.STATUS_SUCCESS;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertThat;
 
 /**
  * Base class for testing Jetty REST protocol.
@@ -112,5 +119,43 @@ public abstract class JettyRestProcessorCommonSelfTest extends AbstractRestProce
      */
     protected String jsonField(String json, String field) throws IOException {
        return restClient.jsonField(json, field);
+    }
+
+    /**
+     * @param content Content to check.
+     * @param err Error message.
+     */
+    protected void assertResponseContainsError(String content, String err) throws IOException {
+        assertFalse(F.isEmpty(content));
+        assertNotNull(err);
+
+        JsonNode node = JSON_MAPPER.readTree(content);
+
+        assertThat(node.get("successStatus").asInt(), not(equalTo(STATUS_SUCCESS)));
+        assertTrue(node.get("response").isNull());
+        assertThat(node.get("error").asText(), containsString(err));
+    }
+
+    /**
+     * @param content Content to check.
+     * @return JSON node with actual response.
+     */
+    protected JsonNode assertResponseSucceeded(String content, boolean bulk) throws IOException {
+        assertNotNull(content);
+        assertFalse(content.isEmpty());
+
+        JsonNode node = JSON_MAPPER.readTree(content);
+
+        JsonNode affNode = node.get("affinityNodeId");
+
+        if (affNode != null)
+            assertEquals(bulk, affNode.isNull());
+
+        assertThat(node.get("successStatus").asInt(), equalTo(STATUS_SUCCESS));
+        assertTrue(node.get("error").isNull());
+
+        assertNotSame(securityEnabled(), node.get("sessionToken").isNull());
+
+        return node.get("response");
     }
 }

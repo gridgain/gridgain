@@ -17,7 +17,6 @@
 namespace Apache.Ignite.Core.Impl.Binary
 {
     using System;
-    using System.Diagnostics;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Impl.Binary.Metadata;
 
@@ -43,8 +42,6 @@ namespace Apache.Ignite.Core.Impl.Binary
         /// <param name="marsh">The marshaller.</param>
         public BinaryEnum(int typeId, int enumValue, Marshaller marsh)
         {
-            Debug.Assert(marsh != null);
-
             _typeId = typeId;
             _enumValue = enumValue;
             _marsh = marsh;
@@ -65,9 +62,9 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public TF GetField<TF>(string fieldName)
+        public TF? GetField<TF>(string fieldName)
         {
-            return default(TF);
+            return default;
         }
 
         /** <inheritdoc /> */
@@ -89,7 +86,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public string EnumName
+        public string? EnumName
         {
             get { return _marsh.GetBinaryType(_typeId).GetEnumName(_enumValue); }
         }
@@ -101,7 +98,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public bool Equals(BinaryEnum other)
+        public bool Equals(BinaryEnum? other)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -113,7 +110,7 @@ namespace Apache.Ignite.Core.Impl.Binary
         }
 
         /** <inheritdoc /> */
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             if (ReferenceEquals(null, obj))
                 return false;

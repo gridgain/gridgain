@@ -16,6 +16,7 @@
 
 namespace Apache.Ignite.Core.Events
 {
+    using System;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
     using Apache.Ignite.Core.Impl.Binary;
@@ -38,12 +39,12 @@ namespace Apache.Ignite.Core.Events
         /// Gets or sets the event types.
         /// </summary>
         [SuppressMessage("Microsoft.Usage", "CA2227:CollectionPropertiesShouldBeReadOnly")]
-        public ICollection<int> EventTypes { get; set; }
+        public ICollection<int>? EventTypes { get; set; }
 
         /// <summary>
         /// Gets the original user listener object.
         /// </summary>
-        internal abstract object ListenerObject { get; }
+        internal abstract object? ListenerObject { get; }
 
         /// <summary>
         /// Invokes the specified reader.
@@ -59,10 +60,10 @@ namespace Apache.Ignite.Core.Events
         /// <summary>
         /// Gets or sets the listener.
         /// </summary>
-        public IEventListener<T> Listener { get; set; }
+        public IEventListener<T>? Listener { get; set; }
 
         /** <inheritdoc /> */
-        internal override object ListenerObject
+        internal override object? ListenerObject
         {
             get { return Listener; }
         }
@@ -71,6 +72,9 @@ namespace Apache.Ignite.Core.Events
         internal override bool Invoke(BinaryReader reader)
         {
             var evt = EventReader.Read<T>(reader);
+
+            if (Listener == null)
+                throw new InvalidOperationException("Listener not initialized");
 
             return Listener.Invoke(evt);
         }

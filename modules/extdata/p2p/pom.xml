@@ -25,11 +25,15 @@
     <parent>
         <groupId>org.gridgain</groupId>
         <artifactId>ignite-parent-internal</artifactId>
-        <version>8.9.127-SNAPSHOT</version>
+        <version>8.10.127-SNAPSHOT</version>
         <relativePath>../../../parent-internal/pom.xml</relativePath>
     </parent>
 
     <artifactId>ignite-extdata-p2p</artifactId>
+
+    <properties>
+        <syft.skip>true</syft.skip>
+    </properties>
 
     <dependencies>
         <dependency>
