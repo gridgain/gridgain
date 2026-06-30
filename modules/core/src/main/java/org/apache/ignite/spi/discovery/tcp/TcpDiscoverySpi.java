@@ -1481,8 +1481,10 @@ public class TcpDiscoverySpi extends IgniteSpiAdapter implements IgniteDiscovery
             discoReg.register("Coordinator", () -> impl.getCoordinator(), UUID.class, "Coordinator ID");
 
             discoReg.register("CoordinatorSince", stats::coordinatorSinceTimestamp, "Coordinator since timestamp");
+        } else {
+            discoReg.register("ClientRouterNodeId", () -> String.valueOf(locNode.clientRouterNodeId()), String.class,
+                "Client router node ID.");
         }
-
     }
 
     /** {@inheritDoc} */
