@@ -17,11 +17,11 @@
 package org.apache.ignite.client;
 
 import org.apache.ignite.IgniteCheckedException;
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.apache.ignite.internal.util.HostAndPortRange;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -39,8 +39,6 @@ import java.util.List;
 public class DnsClientAddressFinder implements ClientAddressFinder {
     private final @Nullable String[] addrs;
 
-    private final IgniteLogger log;
-
     /** Parsed host/port-range entries; populated lazily on the first {@link #getAddresses()} call. */
     private List<HostAndPortRange> hosts = null;
 
@@ -49,18 +47,15 @@ public class DnsClientAddressFinder implements ClientAddressFinder {
      *
      * @param addrs Address strings to resolve; may be {@code null}, in which case {@link #getAddresses()}
      *              always returns an empty array.
-     * @param log   Logger used to emit warnings when a hostname cannot be resolved.
      */
-    public DnsClientAddressFinder(@Nullable String[] addrs, IgniteLogger log) {
+    public DnsClientAddressFinder(@Nullable String[] addrs) {
         this.addrs = addrs;
-        this.log = log;
     }
 
     /**
      * Resolves all configured hostnames via DNS and returns the resulting {@code "ip:portFrom..portTo"} strings.
      *
-     * <p>If a hostname cannot be resolved a warning is logged and that entry is silently skipped;
-     * other addresses are still returned.  If an address string cannot be parsed a
+     * <p>If a hostname cannot be resolved it is returned as is. If an address string cannot be parsed a
      * {@link ClientException} is thrown.</p>
      *
      * @return Array of resolved addresses in {@code "ip:portFrom..portTo"} format; never {@code null}.
@@ -68,8 +63,9 @@ public class DnsClientAddressFinder implements ClientAddressFinder {
      */
     @Override public String[] getAddresses() {
         if (hosts == null) {
-            if (addrs == null) {
+            if (addrs == null || addrs.length == 0) {
                 hosts = Collections.emptyList();
+                return new String[0];
             } else {
                 hosts = new ArrayList<>(addrs.length);
                 for (String addr : addrs) {
@@ -96,11 +92,17 @@ public class DnsClientAddressFinder implements ClientAddressFinder {
             try {
                 InetAddress[] addresses = InetAddress.getAllByName(host);
                 for (InetAddress address : addresses) {
-                    String e = address.getHostAddress() + ":" + hapr.portFrom() + ".." + hapr.portTo();
+                    String e;
+                    if (address instanceof Inet6Address) {
+                        e = "[" + address.getHostAddress() + "]:" + hapr.portFrom() + ".." + hapr.portTo();
+                    } else {
+                        e = address.getHostAddress() + ":" + hapr.portFrom() + ".." + hapr.portTo();
+                    }
+
                     ret.add(e);
                 }
             } catch (UnknownHostException e) {
-                log.warning("Failed to resolve address: " + host, e);
+                ret.add(hapr.toString());
             }
         }
 

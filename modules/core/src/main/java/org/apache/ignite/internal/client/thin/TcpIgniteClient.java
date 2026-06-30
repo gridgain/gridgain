@@ -149,7 +149,7 @@ public class TcpIgniteClient implements IgniteClient {
 
         // Add default addressFinder
         if (cfg.getAddressesFinder() == null) {
-            cfg.setAddressesFinder(new DnsClientAddressFinder(cfg.getAddresses(), log));
+            cfg.setAddressesFinder(new DnsClientAddressFinder(cfg.getAddresses()));
         }
 
         final ClientBinaryMetadataHandler metadataHnd = new ClientBinaryMetadataHandler();

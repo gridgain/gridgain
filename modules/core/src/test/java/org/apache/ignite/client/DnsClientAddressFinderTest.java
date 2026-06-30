@@ -16,35 +16,26 @@
 
 package org.apache.ignite.client;
 
-import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.configuration.ClientConnectorConfiguration;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
 
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.Arrays;
 
 import static org.apache.ignite.testframework.GridTestUtils.assertThrows;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.verify;
 
 /**
  * Unit tests for {@link DnsClientAddressFinder}.
  */
-@RunWith(MockitoJUnitRunner.class)
 public class DnsClientAddressFinderTest {
     private static final int DFLT = ClientConnectorConfiguration.DFLT_PORT;
-
-    @Mock
-    private IgniteLogger log;
 
     /** {@code null} addrs must yield an empty array without NPE. */
     @Test
     public void testNullAddrs() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(null, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(null);
         String[] result = finder.getAddresses();
 
         assertNotNull(result);
@@ -54,7 +45,7 @@ public class DnsClientAddressFinderTest {
     /** Empty addrs array must yield an empty array. */
     @Test
     public void testEmptyAddrs() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[0], log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[0]);
         String[] result = finder.getAddresses();
 
         assertNotNull(result);
@@ -64,7 +55,7 @@ public class DnsClientAddressFinderTest {
     /** Host without a port must use the default thin-client port. */
     @Test
     public void testHostOnlyUsesDefaultPort() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1"});
         String[] result = finder.getAddresses();
 
         assertNotNull(result);
@@ -75,7 +66,7 @@ public class DnsClientAddressFinderTest {
     /** {@code host:port} must produce {@code ip:port..port}. */
     @Test
     public void testExplicitSinglePort() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:9999"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:9999"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -85,7 +76,7 @@ public class DnsClientAddressFinderTest {
     /** {@code host:portFrom..portTo} must preserve the full port range. */
     @Test
     public void testPortRange() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:10800..10900"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:10800..10900"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -95,7 +86,7 @@ public class DnsClientAddressFinderTest {
     /** A bare IPv4 literal must be resolved to itself with the default port. */
     @Test
     public void testIpv4AddressDefaultPort() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"192.168.1.1"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"192.168.1.1"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -105,7 +96,7 @@ public class DnsClientAddressFinderTest {
     /** A bare IPv4 literal with an explicit port must use that port. */
     @Test
     public void testIpv4AddressExplicitPort() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"192.168.1.1:8080"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"192.168.1.1:8080"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -115,9 +106,9 @@ public class DnsClientAddressFinderTest {
     /** Bracketed IPv6 loopback without a port must resolve and use the default port. */
     @Test
     public void testIpv6LoopbackDefaultPort() throws Exception {
-        String expected = InetAddress.getByName("::1").getHostAddress();
+        String expected = quoteV6(InetAddress.getByName("::1").getHostAddress());
 
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"[::1]"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"[::1]"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -127,9 +118,9 @@ public class DnsClientAddressFinderTest {
     /** Bracketed IPv6 loopback with an explicit port must use that port. */
     @Test
     public void testIpv6LoopbackExplicitPort() throws Exception {
-        String expected = InetAddress.getByName("::1").getHostAddress();
+        String expected = quoteV6(InetAddress.getByName("::1").getHostAddress());
 
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"[::1]:8080"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"[::1]:8080"});
         String[] result = finder.getAddresses();
 
         assertEquals(1, result.length);
@@ -140,7 +131,7 @@ public class DnsClientAddressFinderTest {
     @Test
     public void testMultipleAddresses() {
         DnsClientAddressFinder finder = new DnsClientAddressFinder(
-                new String[]{"127.0.0.1:10800", "127.0.0.1:10801"}, log);
+                new String[]{"127.0.0.1:10800", "127.0.0.1:10801"});
         String[] result = finder.getAddresses();
 
         assertEquals(2, result.length);
@@ -151,37 +142,32 @@ public class DnsClientAddressFinderTest {
     // ── DNS resolution failure ─────────────────────────────────────────────
 
     /**
-     * A hostname that cannot be resolved must be skipped and a warning must be logged;
-     * other valid addresses must still be returned.
+     * A hostname that cannot be resolved must be returned as-is (original hostname with port range);
+     * other valid addresses must still be resolved and returned.
      *
      * <p>RFC 2606 / RFC 6761 guarantee that {@code .invalid} TLD never resolves.</p>
      */
     @Test
-    public void testUnresolvableHostLogsWarningAndContinues() {
+    public void testUnresolvableHostIsReturnedAsIs() {
         DnsClientAddressFinder finder = new DnsClientAddressFinder(
-                new String[]{"this-host-does-not-exist.invalid", "127.0.0.1"}, log);
+                new String[]{"this-host-does-not-exist.invalid", "127.0.0.1"});
         String[] result = finder.getAddresses();
 
-        // Only the resolvable address is returned.
-        assertEquals(1, result.length);
-        assertEquals("127.0.0.1:" + DFLT + ".." + DFLT, result[0]);
-
-        // A warning must have been logged for the unresolvable host.
-        verify(log).warning(
-                ArgumentMatchers.contains("this-host-does-not-exist.invalid"),
-                ArgumentMatchers.any(Throwable.class)
-        );
+        assertEquals(2, result.length);
+        assertEquals("this-host-does-not-exist.invalid:" + DFLT, result[0]);
+        assertEquals("127.0.0.1:" + DFLT + ".." + DFLT, result[1]);
     }
 
-    /** When all addresses fail to resolve the result is an empty array. */
+    /** When all addresses fail to resolve, each is returned as-is with its port range. */
     @Test
-    public void testAllUnresolvableReturnsEmpty() {
+    public void testAllUnresolvableReturnsOriginalHostnames() {
         DnsClientAddressFinder finder = new DnsClientAddressFinder(
-                new String[]{"totally-bogus.invalid"}, log);
+                new String[]{"totally-bogus.invalid"});
         String[] result = finder.getAddresses();
 
         assertNotNull(result);
-        assertEquals(0, result.length);
+        assertEquals(1, result.length);
+        assertEquals("totally-bogus.invalid:" + DFLT, result[0]);
     }
 
     // ── malformed address strings ──────────────────────────────────────────
@@ -189,35 +175,35 @@ public class DnsClientAddressFinderTest {
     /** An empty address string must throw {@link ClientException}. */
     @Test
     public void testEmptyAddressStringThrows() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{""}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{""});
         assertThrows(null, finder::getAddresses, ClientException.class, null);
     }
 
     /** A host-only address with a colon but no port must throw {@link ClientException}. */
     @Test
     public void testMissingPortAfterColonThrows() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"hostname:"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"hostname:"});
         assertThrows(null, finder::getAddresses, ClientException.class, null);
     }
 
     /** A non-numeric port must throw {@link ClientException}. */
     @Test
     public void testNonNumericPortThrows() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:abc"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:abc"});
         assertThrows(null, finder::getAddresses, ClientException.class, null);
     }
 
     /** A port out of range (> 65535) must throw {@link ClientException}. */
     @Test
     public void testPortOutOfRangeThrows() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:99999"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:99999"});
         assertThrows(null, finder::getAddresses, ClientException.class, null);
     }
 
     /** An inverted port range (from > to) must throw {@link ClientException}. */
     @Test
     public void testInvertedPortRangeThrows() {
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:10900..10800"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"127.0.0.1:10900..10800"});
         assertThrows(null, finder::getAddresses, ClientException.class, null);
     }
 
@@ -231,7 +217,7 @@ public class DnsClientAddressFinderTest {
     public void testHostnameResolvingToMultipleIps() throws Exception {
         InetAddress[] allByName = InetAddress.getAllByName("localhost");
 
-        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"localhost"}, log);
+        DnsClientAddressFinder finder = new DnsClientAddressFinder(new String[]{"localhost"});
         String[] result = finder.getAddresses();
 
         assertNotNull(result);
@@ -246,9 +232,19 @@ public class DnsClientAddressFinderTest {
 
         // All resolved IPs from the DNS lookup must appear in the result.
         for (InetAddress ia : allByName) {
-            String expected = ia.getHostAddress() + ":" + DFLT + ".." + DFLT;
+            String expected;
+            if (ia instanceof Inet6Address) {
+                expected = quoteV6(ia.getHostAddress()) + ":" + DFLT + ".." + DFLT;
+            } else {
+                expected = ia.getHostAddress() + ":" + DFLT + ".." + DFLT;
+            }
+
             assertTrue("Expected address not found: " + expected,
                     Arrays.asList(result).contains(expected));
         }
+    }
+
+    private static String quoteV6(String hostname) {
+        return "[" + hostname + "]";
     }
 }
