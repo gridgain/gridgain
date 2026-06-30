@@ -27,6 +27,7 @@ import org.apache.ignite.cluster.ClusterNode;
 import org.apache.ignite.cluster.ClusterStartNodeResult;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.internal.SupportFeaturesUtils;
 import org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustStatus;
 import org.apache.ignite.lang.IgniteAsyncSupport;
 import org.apache.ignite.lang.IgniteFuture;
@@ -614,11 +615,26 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public boolean isBaselineAutoAdjustEnabled();
 
     /**
+     * @param scaleUp To get status for scale up {@code true}, for scale down {@code false}.
+     * @return Value of manual baseline control or auto adjusting baseline. {@code True} If cluster in auto-adjust.
+     * {@code False} If cluster in manual.
+     */
+    public boolean isBaselineAutoAdjustEnabled(boolean scaleUp);
+
+    /**
      * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
      * cluster in auto-adjust. {@code False} If cluster in manuale.
      * @throws IgniteException If operation failed.
      */
     public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException;
+
+    /**
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @param baselineAutoAdjustEnabled Value of manual baseline control or auto adjusting baseline. {@code True} If
+     * cluster in auto-adjust for scale up. {@code False} If cluster in manuale.
+     * @throws IgniteException If operation failed.
+     */
+    public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineAutoAdjustEnabled) throws IgniteException;
 
     /**
      * @return Number of milliseconds to wait before the actual topology change since last server topology change
@@ -628,6 +644,16 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public long baselineAutoAdjustTimeout();
 
     /**
+     * @param scaleUp If {@code true}, the timeout for scaleUp will be return, if {@code false} - for scale down.
+     *                If the {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is false, then
+     *                the flag will be ignored.
+     * @return Number of milliseconds to wait before the actual topology change since last server topology change
+     * (node join/left/fail).
+     * @throws IgniteException If operation failed.
+     */
+    public long baselineAutoAdjustTimeout(boolean scaleUp);
+
+    /**
      * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
      * server topology change (node join/left/fail).
      * @throws IgniteException If failed.
@@ -635,9 +661,23 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
     public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException;
 
     /**
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @param baselineAutoAdjustTimeout Number of milliseconds to wait before the actual topology change since last
+     * server topology change (node left/fail).
+     * @throws IgniteException If failed.
+     */
+    public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineAutoAdjustTimeout) throws IgniteException;
+
+    /**
      * @return Status of baseline auto-adjust.
      */
     public BaselineAutoAdjustStatus baselineAutoAdjustStatus();
+
+    /**
+     * @param scaleUp If {@code true} for scale up, if {@code false} for scale down.
+     * @return Status of baseline auto-adjust.
+     */
+    public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp);
 
     /**
      * Returns a policy of shutdown or default value {@code IgniteConfiguration.DFLT_SHUTDOWN_POLICY}

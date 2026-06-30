@@ -31,6 +31,7 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /** */
 public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
@@ -81,6 +82,86 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
         assertTrue(Long.toString(timeUntilAutoAdjust), timeUntilAutoAdjust > 0 && timeUntilAutoAdjust < 60_000L);
 
         assertEquals("SCHEDULED", bltMxBean.getTaskState());
+    }
+
+    /** */
+    @Test
+    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
+    public void testTimeoutAndEnabledFlagForScaleUpAndScaleDownSeparately() throws Exception {
+        IgniteEx ignite = (IgniteEx)startGrid();
+
+        IgniteClusterEx cluster = ignite.cluster();
+
+        BaselineAutoAdjustMXBean bltMxBean = bltMxBean();
+
+        assertTrue(cluster.isBaselineAutoAdjustEnabled());
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled());
+
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(true));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(true));
+
+        assertEquals(0L, cluster.baselineAutoAdjustTimeout(true));
+        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(true));
+
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(false));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(false));
+
+        assertEquals(0L, cluster.baselineAutoAdjustTimeout(false));
+        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(false));
+
+        cluster.baselineAutoAdjustEnabled(true, false);
+        assertFalse(bltMxBean.isAutoAdjustmentEnabled(true));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(false));
+
+        cluster.baselineAutoAdjustTimeout(true, 31_000L);
+        cluster.baselineAutoAdjustTimeout(false, 32_000L);
+        assertEquals(31_000L, bltMxBean.getAutoAdjustmentTimeout(true));
+        assertEquals(32_000L, bltMxBean.getAutoAdjustmentTimeout(false));
+
+        bltMxBean.setAutoAdjustmentEnabled(true, true);
+        bltMxBean.setAutoAdjustmentEnabled(false, false);
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(true));
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(false));
+
+        bltMxBean.setAutoAdjustmentEnabled(true, false);
+        bltMxBean.setAutoAdjustmentEnabled(false, false);
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(true));
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(false));
+
+        bltMxBean.setAutoAdjustmentTimeout(true, 20_000L);
+        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(true));
+
+        bltMxBean.setAutoAdjustmentTimeout(false, 20_000L);
+        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(false));
+
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(true));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(false));
+
+        bltMxBean.setAutoAdjustmentEnabled(true, true);
+
+        startGrid(1);
+
+        long timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(true);
+        assertTrue(Long.toString(timeUntilAutoAdjust), timeUntilAutoAdjust > 0 && timeUntilAutoAdjust < 20_000L);
+
+        assertEquals("SCHEDULED", bltMxBean.getTaskState(true));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(false));
+
+        assertTrue(
+            "Failed to wait for changing baseline in " + 20_000 * 2 + " ms.",
+            waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 20_000 * 2)
+        );
+
+        bltMxBean.setAutoAdjustmentEnabled(true, false);
+        bltMxBean.setAutoAdjustmentEnabled(false, true);
+
+        stopGrid(1);
+
+        timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(false);
+        assertTrue(Long.toString(timeUntilAutoAdjust), timeUntilAutoAdjust > 0 && timeUntilAutoAdjust < 20_000L);
+
+        assertEquals("SCHEDULED", bltMxBean.getTaskState(false));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(true));
     }
 
     /** */

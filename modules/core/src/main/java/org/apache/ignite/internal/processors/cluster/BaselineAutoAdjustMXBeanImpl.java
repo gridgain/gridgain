@@ -49,8 +49,18 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isAutoAdjustmentEnabled(boolean scaleUp) {
+        return baselineConfiguration.isBaselineAutoAdjustEnabled(scaleUp);
+    }
+
+    /** {@inheritDoc} */
     @Override public long getAutoAdjustmentTimeout() {
         return baselineConfiguration.getBaselineAutoAdjustTimeout();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long getAutoAdjustmentTimeout(boolean scaleUp) {
+        return baselineConfiguration.getBaselineAutoAdjustTimeout(scaleUp);
     }
 
     /** {@inheritDoc} */
@@ -59,8 +69,18 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public long getTimeUntilAutoAdjust(boolean scaleUp) {
+        return state.baselineAutoAdjustStatus(scaleUp).getTimeUntilAutoAdjust();
+    }
+
+    /** {@inheritDoc} */
     @Override public String getTaskState() {
         return state.baselineAutoAdjustStatus().getTaskState().toString();
+    }
+
+    /** {@inheritDoc} */
+    @Override public String getTaskState(boolean scaleUp) {
+        return state.baselineAutoAdjustStatus(scaleUp).getTaskState().toString();
     }
 
     /** {@inheritDoc} */
@@ -74,9 +94,29 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
+    @Override public void setAutoAdjustmentEnabled(boolean scaleUp, boolean enabled) {
+        try {
+            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(scaleUp, ctx, enabled).get();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
     @Override public void setAutoAdjustmentTimeout(long timeout) {
         try {
             baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(ctx, timeout).get();
+        }
+        catch (IgniteCheckedException e) {
+            throw new IgniteException(e);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void setAutoAdjustmentTimeout(boolean scaleUp, long timeout) {
+        try {
+            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(scaleUp, ctx, timeout).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

@@ -395,6 +395,11 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
@@ -405,12 +410,32 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
     }
 
     /** {@inheritDoc} */
+    @Override public long baselineAutoAdjustTimeout(boolean scaleUp) {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
     /** {@inheritDoc} */
+    @Override public void baselineAutoAdjustTimeout(boolean scaleUp, long baselineScaleUpAutoAdjustTimeout) throws IgniteException {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineAutoAdjustEnabled(boolean scaleUp, boolean baselineScaleUpAutoAdjustEnabled) throws IgniteException {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
+        throw new UnsupportedOperationException("Operation is not supported yet.");
+    }
+
+    /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(boolean scaleUp) {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
