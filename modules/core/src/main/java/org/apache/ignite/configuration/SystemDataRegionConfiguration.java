@@ -1,0 +1,105 @@
+/*
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
+ *
+ * Licensed under the GridGain Community Edition License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     https://www.gridgain.com/products/software/community-edition/gridgain-community-edition-license
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.ignite.configuration;
+
+import org.apache.ignite.internal.util.typedef.internal.A;
+import org.apache.ignite.internal.util.typedef.internal.S;
+
+/**
+ * This class allows defining system data region configuration with various parameters for Apache Ignite
+ * page memory (see {@link DataStorageConfiguration}).
+ * This class is similar to {@link DataRegionConfiguration}, but with restricted set of properties.
+ * <p>
+ * Provided as a source-compatibility alias for Ignite-style configuration code. The canonical GridGain
+ * API exposes the same settings directly on {@link DataStorageConfiguration} via
+ * {@link DataStorageConfiguration#setSystemRegionInitialSize(long)} and
+ * {@link DataStorageConfiguration#setSystemRegionMaxSize(long)}.
+ * <p>
+ * This is a plain value holder: {@link DataStorageConfiguration#getSystemDataRegionConfiguration()} returns a
+ * snapshot of the current values, and {@link DataStorageConfiguration#setSystemDataRegionConfiguration(SystemDataRegionConfiguration)}
+ * copies the values into the configuration. Mutating an instance does not write through to a
+ * {@link DataStorageConfiguration} on its own.
+ */
+public class SystemDataRegionConfiguration {
+    /** Default initial size in bytes of a memory chunk for the system cache (40 MB). */
+    public static final long DFLT_SYS_REG_INIT_SIZE = 40L * 1024 * 1024;
+
+    /** Default max size in bytes of a memory chunk for the system cache (100 MB). */
+    public static final long DFLT_SYS_REG_MAX_SIZE = 100L * 1024 * 1024;
+
+    /** Initial size in bytes of a memory chunk reserved for system cache. */
+    private long initSize = DFLT_SYS_REG_INIT_SIZE;
+
+    /** Maximum size in bytes of a memory chunk reserved for system cache. */
+    private long maxSize = DFLT_SYS_REG_MAX_SIZE;
+
+    /**
+     * Initial size of a data region reserved for system cache.
+     *
+     * @return Size in bytes.
+     */
+    public long getInitialSize() {
+        return initSize;
+    }
+
+    /**
+     * Sets initial size of a data region reserved for system cache.
+     *
+     * Default value is {@link #DFLT_SYS_REG_INIT_SIZE}
+     *
+     * @param initSize Size in bytes.
+     * @return {@code this} for chaining.
+     */
+    public SystemDataRegionConfiguration setInitialSize(long initSize) {
+        A.ensure(initSize > 0, "System region initial size can not be less zero.");
+
+        this.initSize = initSize;
+
+        return this;
+    }
+
+    /**
+     * Maximum data region size in bytes reserved for system cache.
+     *
+     * @return Size in bytes.
+     */
+    public long getMaxSize() {
+        return maxSize;
+    }
+
+    /**
+     * Sets maximum data region size in bytes reserved for system cache. The total size should not be less than 10 MB
+     * due to internal data structures overhead.
+     *
+     * Default value is {@link #DFLT_SYS_REG_MAX_SIZE}.
+     *
+     * @param maxSize Maximum size in bytes for system cache data region.
+     * @return {@code this} for chaining.
+     */
+    public SystemDataRegionConfiguration setMaxSize(long maxSize) {
+        A.ensure(maxSize > 0, "System region max size can not be less zero.");
+
+        this.maxSize = maxSize;
+
+        return this;
+    }
+
+    /** {@inheritDoc} */
+    @Override public String toString() {
+        return S.toString(SystemDataRegionConfiguration.class, this);
+    }
+}
