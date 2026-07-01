@@ -308,8 +308,7 @@ class BaselineAutoAdjustScheduler {
             endTime = calculateEndTime(executionTimeout);
 
             long now = U.currentTimeMillis();
-            this.totalEndTime = (executionTimeout == Long.MAX_VALUE || Long.MAX_VALUE - executionTimeout < now)
-                ? Long.MAX_VALUE : now + executionTimeout;
+            this.totalEndTime = (Long.MAX_VALUE - executionTimeout < now) ? Long.MAX_VALUE : now + executionTimeout;
 
             this.mode = mode;
         }
