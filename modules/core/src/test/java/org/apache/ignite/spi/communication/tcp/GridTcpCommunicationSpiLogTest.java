@@ -175,7 +175,7 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
             .atLeast(1)
             .build();
 
-        LogListener logLsnr3 = LogListener.matches("The node client was replaced")
+        LogListener logLsnr3 = LogListener.matches("New Node client was added")
             .atLeast(1)
             .atMost(1)
             .build();

@@ -815,7 +815,7 @@ public class ConnectionClientPool {
 
             if (success) {
                 if (log.isDebugEnabled())
-                    log.debug("New node client were added [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+                    log.debug("New node client was added [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
 
                 break;
             }
