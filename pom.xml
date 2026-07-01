@@ -115,9 +115,9 @@
             </modules>
         </profile>
         <profile>
-            <id>java-21+</id>
+            <id>java-22+</id>
             <activation>
-                <jdk>[21,)</jdk>
+                <jdk>[22,)</jdk>
             </activation>
             <modules>
                 <module>modules/lucene-10</module>
