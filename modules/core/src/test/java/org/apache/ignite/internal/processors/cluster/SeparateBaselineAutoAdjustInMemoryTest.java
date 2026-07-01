@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
-import java.util.UUID;
 import org.apache.ignite.internal.IgniteEx;
-import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
-/** */
-@WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "false")
-public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
+import java.util.UUID;
+
+/**
+ * Checks existing scenarios for baseline auto adjust of in-memory clusters as well as new ones for scale up and scale
+ * down separately.
+ */
+public class SeparateBaselineAutoAdjustInMemoryTest extends SeparateBaselineAutoAdjustTest {
     /** {@inheritDoc} */
     @Override protected boolean isPersistent() {
         return false;
@@ -61,43 +63,5 @@ public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
         stopGrid(client.name());
 
         assertEquals(3, grid(0).cluster().currentBaselineTopology().size());
-    }
-
-    /**
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testSetBaselineManually() throws Exception {
-        IgniteEx ignite0 = startGrid(0);
-
-        ignite0.cluster().active(true);
-
-        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
-
-        ignite0.cluster().baselineAutoAdjustEnabled(false);
-
-        IgniteEx ignite1 = startGrid(1);
-
-        assertEquals(1, ignite0.cluster().currentBaselineTopology().size());
-        assertEquals(1, ignite1.cluster().currentBaselineTopology().size());
-
-        assertFalse(ignite1.cluster().isBaselineAutoAdjustEnabled());
-
-        ignite0.cluster().setBaselineTopology(ignite0.context().discovery().aliveServerNodes());
-
-        assertEquals(2, ignite0.cluster().currentBaselineTopology().size());
-        assertEquals(2, ignite1.cluster().currentBaselineTopology().size());
-    }
-
-    /**
-     * Tests that cluster with one server and client do not hung when activating
-     */
-    @Test
-    public void testActivatingIsNotHung() throws Exception {
-        IgniteEx ig = startGrid(0);
-
-        startClientGrid(1);
-
-        ig.cluster().active(true);
     }
 }

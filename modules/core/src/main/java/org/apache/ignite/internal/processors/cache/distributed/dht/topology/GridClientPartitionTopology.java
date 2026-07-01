@@ -61,6 +61,7 @@ import org.apache.ignite.internal.util.typedef.internal.S;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.EVICTED;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.LOST;
 import static org.apache.ignite.internal.processors.cache.distributed.dht.topology.GridDhtPartitionState.MOVING;
@@ -774,7 +775,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
                         if (log.isDebugEnabled())
                             log.debug("Overriding partition map in full update map [exchId=" + exchangeVer + ", curPart=" +
-                                    mapString(part) + ", newPart=" + mapString(newPart) + ']');
+                                mapString(part) + ", newPart=" + mapString(newPart) + ']');
                     }
                     else {
                         // If for some nodes current partition has a newer map,
@@ -808,7 +809,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             if (!fullMapUpdated) {
                 if (log.isDebugEnabled())
                     log.debug("No updates for full partition map (will ignore) [lastExch=" +
-                            lastExchangeVer + ", exch=" + exchangeVer + ", curMap=" + node2part + ", newMap=" + partMap + ']');
+                        lastExchangeVer + ", exch=" + exchangeVer + ", curMap=" + node2part + ", newMap=" + partMap + ']');
 
                 return false;
             }
@@ -951,7 +952,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             else if (isStaleUpdate(cur, parts)) {
                 if (log.isDebugEnabled())
                     log.debug("Stale update for single partition map update (will ignore) [exchId=" + exchId +
-                            ", curMap=" + cur + ", newMap=" + parts + ']');
+                        ", curMap=" + cur + ", newMap=" + parts + ']');
 
                 return false;
             }
@@ -1025,13 +1026,13 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
             final GridClusterStateProcessor state = cctx.kernalContext().state();
 
             boolean isInMemoryCluster = CU.isInMemoryCluster(
-                    cctx.kernalContext().discovery().allNodes(),
-                    cctx.kernalContext().marshallerContext().jdkMarshaller(),
-                    U.resolveClassLoader(cctx.kernalContext().config())
+                cctx.kernalContext().discovery().allNodes(),
+                cctx.kernalContext().marshallerContext().jdkMarshaller(),
+                U.resolveClassLoader(cctx.kernalContext().config())
             );
 
             boolean compatibleWithIgnorePlc = isInMemoryCluster
-                    && state.isBaselineAutoAdjustEnabled() && state.baselineAutoAdjustTimeout() == 0L;
+                && state.isBaselineAutoAdjustEnabled(SCALE_DOWN) && state.baselineAutoAdjustTimeout(SCALE_DOWN) == 0L;
 
             // Calculate how loss data is handled.
             boolean safe = partLossPlc != PartitionLossPolicy.IGNORE || !compatibleWithIgnorePlc;

@@ -39,6 +39,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_PME_FREE_SWITCH_DISABLED;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SPECIFIED_SEQ_PK_KEYS_DISABLED;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
@@ -275,7 +276,10 @@ public enum IgniteFeatures {
     TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73),
 
     /** New partition reconciliation algorithms. */
-    PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74);
+    PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74),
+
+    /** Support of separate baseline auto adjustment. */
+    SEPARATE_BASELINE_AUTO_ADJUSTMENT(75);
 
     /**
      * Unique feature identifier.
@@ -456,6 +460,9 @@ public enum IgniteFeatures {
                 continue;
 
             if (BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_BASELINE_AUTO_ADJUST_FEATURE))
+                continue;
+
+            if (SEPARATE_BASELINE_AUTO_ADJUSTMENT == value && !isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
                 continue;
 
             if (SPLITTED_CACHE_CONFIGURATIONS == value && isFeatureEnabled(IGNITE_USE_BACKWARD_COMPATIBLE_CONFIGURATION_SPLITTER))

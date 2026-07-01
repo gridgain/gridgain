@@ -25,6 +25,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteCluster;
@@ -101,11 +103,12 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ClusterStartNodeResult> startNodes(File file,
+    @Override public Collection<ClusterStartNodeResult> startNodes(
+        File file,
         boolean restart,
         int timeout,
-        int maxConn)
-    {
+        int maxConn
+    ) {
         try {
             return saveOrGet(cluster.startNodesAsync0(file, restart, timeout, maxConn));
         }
@@ -115,8 +118,11 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart,
-        int timeout, int maxConn) throws IgniteException {
+    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(
+        File file, boolean restart,
+        int timeout,
+        int maxConn
+    ) throws IgniteException {
         return cluster.startNodesAsync(file, restart, timeout, maxConn);
     }
 
@@ -394,6 +400,11 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
+    @Override public boolean isBaselineAutoAdjustEnabled(AutoAdjustMode mode) {
+        return cluster.isBaselineAutoAdjustEnabled(mode);
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustEnabled(boolean baselineAutoAdjustEnabled) throws IgniteException {
         cluster.baselineAutoAdjustEnabled(baselineAutoAdjustEnabled);
     }
@@ -404,13 +415,33 @@ public class IgniteClusterAsyncImpl extends AsyncSupportAdapter<IgniteCluster>
     }
 
     /** {@inheritDoc} */
+    @Override public long baselineAutoAdjustTimeout(AutoAdjustMode mode) {
+        return cluster.baselineAutoAdjustTimeout(mode);
+    }
+
+    /** {@inheritDoc} */
     @Override public void baselineAutoAdjustTimeout(long baselineAutoAdjustTimeout) throws IgniteException {
         cluster.baselineAutoAdjustTimeout(baselineAutoAdjustTimeout);
     }
 
     /** {@inheritDoc} */
+    @Override public void baselineAutoAdjustEnabled(AutoAdjustMode mode, boolean baselineAutoAdjustEnabled) throws IgniteException {
+        cluster.baselineAutoAdjustEnabled(mode, baselineAutoAdjustEnabled);
+    }
+
+    /** {@inheritDoc} */
+    @Override public void baselineAutoAdjustTimeout(AutoAdjustMode mode, long baselineAutoAdjustTimeout) throws IgniteException {
+        cluster.baselineAutoAdjustTimeout(mode, baselineAutoAdjustTimeout);
+    }
+
+    /** {@inheritDoc} */
     @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus() {
         return cluster.baselineAutoAdjustStatus();
+    }
+
+    /** {@inheritDoc} */
+    @Override public BaselineAutoAdjustStatus baselineAutoAdjustStatus(AutoAdjustMode mode) {
+        return cluster.baselineAutoAdjustStatus(mode);
     }
 
     /** {@inheritDoc} */

@@ -72,12 +72,13 @@ import static org.junit.Assume.assumeTrue;
  *
  */
 @GridCommonTest(group = "Kernal Self")
+@WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "false")
 public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     /** */
     private static final String TEST_NAME = "TEST_NAME";
 
     /** */
-    private static int autoAdjustTimeout = 5000;
+    protected static int autoAdjustTimeout = 5000;
 
     /** Lifecycle bean. */
     private LifecycleBean lifecycleBean;
@@ -320,7 +321,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
     public void testBaselineAutoAdjustSinceSecondNodeLeft() throws Exception {
         IgniteEx ignite0 = startGrids(3);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
+        ignite0.cluster().baselineAutoAdjustEnabled( true);
 
         ignite0.cluster().state(ACTIVE);
 
@@ -420,7 +421,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
 
         ignite0.cluster().state(ACTIVE);
 
-        ignite0.cluster().baselineAutoAdjustTimeout(3000L);
+        ignite0.cluster().baselineAutoAdjustTimeout(3_000);
 
         ignite0.cluster().state(INACTIVE);
 
@@ -482,6 +483,7 @@ public class BaselineAutoAdjustTest extends GridCommonAbstractTest {
             .map(BaselineNode::consistentId)
             .collect(Collectors.toSet());
 
+        ignite0.cluster().baselineAutoAdjustEnabled(true);
         ignite0.cluster().baselineAutoAdjustTimeout(autoAdjustTimeout);
 
         IgniteCache<Object, Object> cache = ignite0.getOrCreateCache(new CacheConfiguration<>(TEST_NAME)
