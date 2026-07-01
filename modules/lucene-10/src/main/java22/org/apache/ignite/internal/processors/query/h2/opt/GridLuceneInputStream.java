@@ -22,9 +22,11 @@ import org.apache.ignite.internal.util.GridUnsafe;
 import org.apache.ignite.internal.util.offheap.unsafe.GridUnsafeMemory;
 import org.apache.lucene.store.AlreadyClosedException;
 import org.apache.lucene.store.IndexInput;
+import org.apache.lucene.store.MemorySegmentAccessInput;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
@@ -32,7 +34,7 @@ import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutpu
 /**
  * A memory-resident {@link IndexInput} implementation.
  */
-public class GridLuceneInputStream extends IndexInput implements Cloneable {
+public class GridLuceneInputStream extends IndexInput implements MemorySegmentAccessInput {
     /** */
     private GridLuceneFile file;
 
@@ -109,8 +111,12 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
         }
     }
 
-    /** {@inheritDoc} */
-    @Override public IndexInput clone() {
+    /**
+     * {@inheritDoc}
+     * <p>Returns {@link GridLuceneInputStream} (a subtype of both {@link IndexInput} and
+     * {@link MemorySegmentAccessInput}) so it satisfies the covariant {@code clone()} of both.
+     */
+    @Override public GridLuceneInputStream clone() {
         GridLuceneInputStream clone = (GridLuceneInputStream) super.clone();
 
         if (closed)
@@ -217,6 +223,81 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
             for (int i = 0; i < len; i++)
                 dst[offset + i] = Float.intBitsToFloat(Integer.reverseBytes(Float.floatToRawIntBits(dst[offset + i])));
         }
+    }
+
+    // ---- RandomAccessInput / MemorySegmentAccessInput: no-copy vector scoring ----
+    // These read at an absolute logical position without disturbing the sequential cursor, so Lucene's
+    // memory-segment flat-vector scorer can read each candidate vector in place (off-heap) instead of
+    // copying it into a scratch float[] before every distance. All multi-byte reads are little-endian
+    // (Lucene 9+ index format).
+
+    /** Maps a position relative to this input to an absolute file offset (overridden by slices). */
+    long fileOffset(long pos) {
+        return pos;
+    }
+
+    /** {@inheritDoc} */
+    @Override public byte readByte(long pos) {
+        long a = fileOffset(pos);
+
+        return mem.readByte(file.getBuffer((int)(a / BUFFER_SIZE)) + (int)(a % BUFFER_SIZE));
+    }
+
+    /** {@inheritDoc} */
+    @Override public short readShort(long pos) throws IOException {
+        long a = fileOffset(pos);
+        int off = (int)(a % BUFFER_SIZE);
+
+        if (off + 2 <= BUFFER_SIZE) {
+            long base = file.getBuffer((int)(a / BUFFER_SIZE)) + off;
+
+            return (short)((mem.readByte(base) & 0xFF) | ((mem.readByte(base + 1) & 0xFF) << 8));
+        }
+
+        return (short)((readByte(pos) & 0xFF) | ((readByte(pos + 1) & 0xFF) << 8));
+    }
+
+    /** {@inheritDoc} */
+    @Override public int readInt(long pos) throws IOException {
+        long a = fileOffset(pos);
+        int off = (int)(a % BUFFER_SIZE);
+
+        if (off + 4 <= BUFFER_SIZE) {
+            long base = file.getBuffer((int)(a / BUFFER_SIZE)) + off;
+
+            return (mem.readByte(base) & 0xFF) | ((mem.readByte(base + 1) & 0xFF) << 8)
+                | ((mem.readByte(base + 2) & 0xFF) << 16) | ((mem.readByte(base + 3) & 0xFF) << 24);
+        }
+
+        return (readByte(pos) & 0xFF) | ((readByte(pos + 1) & 0xFF) << 8)
+            | ((readByte(pos + 2) & 0xFF) << 16) | ((readByte(pos + 3) & 0xFF) << 24);
+    }
+
+    /** {@inheritDoc} */
+    @Override public long readLong(long pos) throws IOException {
+        return (readInt(pos) & 0xFFFFFFFFL) | (((long)readInt(pos + 4)) << 32);
+    }
+
+    /**
+     * Returns a {@link MemorySegment} view over the off-heap bytes {@code [pos, pos+len)} using the file's
+     * contiguous mirror, so Lucene's memory-segment vector scorer can read vectors in place with no copy.
+     * Lucene requests the whole input ({@code segmentSliceOrNull(0, length())}) up front; that only
+     * succeeds against a single contiguous region, which {@link GridLuceneFile#contiguousAddr()} provides
+     * (the file is otherwise stored as discontiguous 32 KB pages). Returns {@code null} if the mirror is
+     * unavailable or the range is out of bounds, in which case Lucene falls back to its copy path.
+     */
+    @Override public MemorySegment segmentSliceOrNull(long pos, long len) throws IOException {
+        long base = file.contiguousAddr();
+
+        if (base == 0)
+            return null;
+
+        long a = fileOffset(pos);
+
+        if (a < 0 || a + len > length)
+            return null;
+
+        return MemorySegment.ofAddress(base + a).reinterpret(len);
     }
 
     /**
@@ -334,6 +415,11 @@ public class GridLuceneInputStream extends IndexInput implements Cloneable {
         /** {@inheritDoc} */
         @Override public long length() {
             return super.length() - offset;
+        }
+
+        /** {@inheritDoc} Positions in a slice are relative to the slice's start within the file. */
+        @Override long fileOffset(long pos) {
+            return offset + pos;
         }
 
         /** {@inheritDoc} */

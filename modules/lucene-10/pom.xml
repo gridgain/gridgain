@@ -33,8 +33,10 @@
     <version>8.10.127-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.target>22</maven.compiler.target>
-        <maven.compiler.release>22</maven.compiler.release>
+        <!-- Base classes compile at 21 (Lucene 10's floor). The FFM no-copy overlay in
+             src/main/java22 compiles at 22 into META-INF/versions/22 (see build/plugins). -->
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
     </properties>
 
     <dependencies>
@@ -137,6 +139,44 @@
                 <version>2.8.2</version>
                 <configuration>
                     <skip>false</skip>
+                </configuration>
+            </plugin>
+
+            <!-- Multi-release JAR. Base classes compile at release 21 (Lucene 10's floor, default-compile
+                 via maven.compiler.release). The FFM no-copy overlay in src/main/java22 compiles at release
+                 22 into META-INF/versions/22, so it is picked up only by a Java 22+ runtime; Java 21 loads
+                 the FFM-free base (readFloats, copy scorer). Requires JDK 22+ to build the overlay. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <executions>
+                    <execution>
+                        <id>compile-java22-nocopy</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                        <configuration>
+                            <release>22</release>
+                            <multiReleaseOutput>true</multiReleaseOutput>
+                            <compileSourceRoots>
+                                <compileSourceRoot>${project.basedir}/src/main/java22</compileSourceRoot>
+                            </compileSourceRoots>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Multi-Release>true</Multi-Release>
+                        </manifestEntries>
+                    </archive>
                 </configuration>
             </plugin>
         </plugins>
