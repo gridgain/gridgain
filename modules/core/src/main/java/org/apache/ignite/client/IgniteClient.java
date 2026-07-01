@@ -296,6 +296,19 @@ public interface IgniteClient extends AutoCloseable {
             throws IgniteException;
 
     /**
+     * Gets an atomic sequence from cache asynchronously. Creates one if it has not been created yet and {@code create}
+     * flag is {@code true}. Uses configuration from {@link IgniteConfiguration#getAtomicConfiguration()}.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if sequence could not be fetched or created.
+     *
+     * @param name Sequence name.
+     * @param initVal Initial value for sequence. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return a Future representing pending completion of the operation, which wraps the sequence for the given name.
+     */
+    public IgniteClientFuture<ClientAtomicSequence> atomicSequenceAsync(String name, long initVal, boolean create);
+
+    /**
      * Gets an atomic sequence from cache. Creates one if it has not been created yet and {@code create} flag
      * is {@code true}. Uses provided configuration.
      *
@@ -308,6 +321,21 @@ public interface IgniteClient extends AutoCloseable {
      */
     public ClientAtomicSequence atomicSequence(String name, ClientAtomicConfiguration cfg, long initVal, boolean create)
             throws IgniteException;
+
+    /**
+     * Gets an atomic sequence from cache asynchronously. Creates one if it has not been created yet and {@code create}
+     * flag is {@code true}. Uses provided configuration.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if sequence could not be fetched or created.
+     *
+     * @param name Sequence name.
+     * @param cfg Configuration.
+     * @param initVal Initial value for sequence. Ignored if {@code create} flag is {@code false}.
+     * @param create Boolean flag indicating whether data structure should be created if it does not exist.
+     * @return a Future representing pending completion of the operation, which wraps the sequence for the given name.
+     */
+    public IgniteClientFuture<ClientAtomicSequence> atomicSequenceAsync(String name, ClientAtomicConfiguration cfg,
+            long initVal, boolean create);
 
     /**
      * Closes this client's open connections and relinquishes all underlying resources.

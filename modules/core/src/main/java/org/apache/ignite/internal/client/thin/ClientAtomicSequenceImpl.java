@@ -19,12 +19,19 @@ package org.apache.ignite.internal.client.thin;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicSequence;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.tostring.GridToStringInclude;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.apache.ignite.internal.client.thin.ClientUtils.syncResult;
 
 /**
  * Client atomic sequence.
@@ -44,8 +51,11 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     /** Removed flag. */
     private volatile boolean rmvd;
 
+    @GridToStringExclude
+    private final AtomicReference<IgniteClientFuture<Long>> lastOp = new AtomicReference<>(IgniteClientFutureImpl.completedFuture(null));
+
     /**
-     * Constructor.
+     * Constructor. Fetches the current sequence value from the server.
      *
      * @param name Atomic long name.
      * @param groupName Cache group name.
@@ -67,6 +77,23 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
         upBound = locVal;
     }
 
+    /**
+     * Constructor with a pre-fetched initial value. Used by the async factory path to avoid a blocking network call.
+     *
+     * @param name Sequence name.
+     * @param groupName Cache group name.
+     * @param batchSize Batch size (reserved range).
+     * @param ch Channel.
+     * @param locVal Initial local value already obtained from the server.
+     */
+    ClientAtomicSequenceImpl(String name, @Nullable String groupName, int batchSize, ReliableChannel ch, long locVal) {
+        super(name, groupName, ch);
+
+        this.batchSize = batchSize;
+        this.locVal = locVal;
+        this.upBound = locVal;
+    }
+
     /** {@inheritDoc} */
     @Override public long get() throws IgniteException {
         checkRemoved();
@@ -76,26 +103,46 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
 
     /** {@inheritDoc} */
     @Override public long incrementAndGet() throws IgniteException {
-        return internalUpdate(1, true);
+        return syncResult(incrementAndGetAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> incrementAndGetAsync() throws IgniteException {
+        return internalUpdateAsync(1, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndIncrement() throws IgniteException {
-        return internalUpdate(1, false);
+        return syncResult(getAndIncrementAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndIncrementAsync() throws IgniteException {
+        return internalUpdateAsync(1, false);
     }
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) throws IgniteException {
+        return syncResult(addAndGetAsync(l));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> addAndGetAsync(long l) throws IgniteException {
         A.ensure(l > 0, " Parameter can't be less then 1: " + l);
 
-        return internalUpdate(l, true);
+        return internalUpdateAsync(l, true);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndAdd(long l) throws IgniteException {
+        return syncResult(getAndAddAsync(l));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndAddAsync(long l) throws IgniteException {
         A.ensure(l > 0, " Parameter can't be less then 1: " + l);
 
-        return internalUpdate(l, false);
+        return internalUpdateAsync(l, false);
     }
 
     /** {@inheritDoc} */
@@ -142,74 +189,106 @@ class ClientAtomicSequenceImpl extends AbstractClientAtomic implements ClientAto
     }
 
     /**
-     * Performs an update.
+     * Performs an async update.
      *
      * @param l Value to be added.
      * @param updated If {@code true}, will return updated value, if {@code false}, will return previous value.
-     * @return Previous or updated value.
+     * @return Future that resolves to previous or updated value.
      */
-    private synchronized long internalUpdate(final long l, final boolean updated) {
+    private IgniteClientFuture<Long> internalUpdateAsync(final long l, final boolean updated) {
         assert l > 0 : "l > 0";
-        checkRemoved();
 
-        long locVal0 = locVal;
-        long newLocVal = locVal0 + l;
+        CompletableFuture<Long> ret0 = new CompletableFuture<>();
+        IgniteClientFuture<Long> ret = new IgniteClientFutureImpl<>(ret0);
 
-        if (newLocVal <= upBound) {
-            // Local update within reserved range.
-            locVal = newLocVal;
-
-            return updated ? newLocVal : locVal0;
+        if (rmvd) {
+            ret0.completeExceptionally(removedError());
+            return ret;
         }
 
-        // Update is out of reserved range - reserve new range remotely.
-        // Remaining values in old range are accounted for.
-        // E.g. if old range is 10-20, locVal is 15, we add 10:
-        // locVal = 25
-        // upBound = 35
-        // globalVal = 36
-        long remainingOldRange = upBound - locVal0;
-        long newRangeOffset = batchSize + l - remainingOldRange;
-
-        long globalVal = remoteAddAndGet(newRangeOffset);
-        long oldGlobalVal = globalVal - newRangeOffset;
-
-        locVal = globalVal - batchSize;
-        upBound = globalVal - 1;
-
-        if (oldGlobalVal > locVal0) {
-            // Not an initial reservation, adjust.
-            locVal--;
+        IgniteClientFuture<Long> tail = lastOp.get();
+        while (!lastOp.compareAndSet(tail, ret)) {
+            tail = lastOp.get();
         }
 
-        return updated ? locVal : locVal0;
-    }
+        tail.whenComplete((v, ignored) -> {
+            if (rmvd) {
+                ret0.completeExceptionally(removedError());
+                return;
+            }
 
-    private long remoteAddAndGet(long l) {
-        try {
-            return ch.affinityService(
+            long locVal0 = locVal;
+            long newLocVal = locVal0 + l;
+
+            if (newLocVal <= upBound) {
+                // Local update within reserved range.
+                locVal = newLocVal;
+
+                long val = updated ? newLocVal : locVal0;
+                ret0.complete(val);
+                return;
+            }
+
+            // Update is out of reserved range - reserve new range remotely.
+            // Remaining values in old range are accounted for.
+            // E.g. if old range is 10-20, locVal is 15, we add 10:
+            // locVal = 25
+            // upBound = 35
+            // globalVal = 36
+            long remainingOldRange = upBound - locVal0;
+            long newRangeOffset = batchSize + l - remainingOldRange;
+
+            // Remote add and get.
+            ch.affinityServiceAsync(
                     cacheId,
                     affinityKey(),
                     ClientOperation.ATOMIC_SEQUENCE_VALUE_ADD_AND_GET,
                     out -> {
                         writeName(out);
-                        out.out().writeLong(l);
+                        out.out().writeLong(newRangeOffset);
                     },
-                    r -> r.in().readLong());
-        } catch (ClientException e) {
-            Throwable cause = e.getCause();
+                    r -> r.in().readLong()
+            )
+                    .thenApply(globalVal -> {
+                        long oldGlobalVal = globalVal - newRangeOffset;
 
-            if (cause instanceof ClientServerError &&
-                    ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
-                rmvd = true;
-            }
+                        locVal = globalVal - batchSize;
+                        upBound = globalVal - 1;
 
-            throw e;
-        }
+                        if (oldGlobalVal > locVal0) {
+                            // Not an initial reservation, adjust.
+                            locVal--;
+                        }
+
+                        return updated ? locVal : locVal0;
+                    }).whenComplete((v2, err) -> {
+                        if (err != null) {
+                            Throwable actual = err instanceof CompletionException ? err.getCause() : err;
+                            if (actual instanceof ClientException) {
+                                Throwable cause = actual.getCause();
+
+                                if (cause instanceof ClientServerError &&
+                                        ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
+                                    rmvd = true;
+                                }
+                            }
+
+                            ret0.completeExceptionally(err);
+                        } else {
+                            ret0.complete(v2);
+                        }
+                    });
+        });
+
+        return ret;
     }
 
     private void checkRemoved() {
         if (rmvd)
-            throw new IgniteException("Sequence was removed from cache: " + name);
+            throw removedError();
+    }
+
+    private IgniteException removedError() {
+        return new IgniteException("Sequence was removed from cache: " + name);
     }
 }

@@ -83,12 +83,30 @@ public interface ClientAtomicSequence extends Closeable {
     public long incrementAndGet() throws IgniteException;
 
     /**
+     * Increments and returns the value of atomic sequence asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if operation failed.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value after increment.
+     */
+    public IgniteClientFuture<Long> incrementAndGetAsync();
+
+    /**
      * Gets and increments current value of atomic sequence.
      *
      * @return Value of atomic sequence before increment.
      * @throws IgniteException If operation failed.
      */
     public long getAndIncrement() throws IgniteException;
+
+    /**
+     * Gets and increments current value of atomic sequence asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if operation failed.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value before increment.
+     */
+    public IgniteClientFuture<Long> getAndIncrementAsync();
 
     /**
      * Adds {@code l} elements to atomic sequence and gets value of atomic sequence.
@@ -100,6 +118,16 @@ public interface ClientAtomicSequence extends Closeable {
     public long addAndGet(long l) throws IgniteException;
 
     /**
+     * Adds {@code l} elements to atomic sequence and gets value of atomic sequence asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if operation failed.
+     *
+     * @param l Number of added elements.
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> addAndGetAsync(long l);
+
+    /**
      * Gets current value of atomic sequence and adds {@code l} elements.
      *
      * @param l Number of added elements.
@@ -107,6 +135,16 @@ public interface ClientAtomicSequence extends Closeable {
      * @throws IgniteException If operation failed.
      */
     public long getAndAdd(long l) throws IgniteException;
+
+    /**
+     * Gets current value of atomic sequence and adds {@code l} elements asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if operation failed.
+     *
+     * @param l Number of added elements.
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> getAndAddAsync(long l);
 
     /**
      * Gets local batch size for this atomic sequence.

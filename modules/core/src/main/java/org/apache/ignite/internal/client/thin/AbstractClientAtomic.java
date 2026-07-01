@@ -68,10 +68,7 @@ class AbstractClientAtomic {
      * @param out Output channel.
      */
     protected void writeName(PayloadOutputChannel out) {
-        try (BinaryRawWriterEx w = new BinaryWriterExImpl(null, out.out(), null, null)) {
-            w.writeString(name);
-            w.writeString(groupName);
-        }
+        writeName(out, name, groupName);
     }
 
     /**
@@ -82,5 +79,12 @@ class AbstractClientAtomic {
     protected String affinityKey() {
         // GridCacheInternalKeyImpl uses name as AffinityKeyMapped.
         return name;
+    }
+
+    static void writeName(PayloadOutputChannel out, String name, String groupName) {
+        try (BinaryRawWriterEx w = new BinaryWriterExImpl(null, out.out(), null, null)) {
+            w.writeString(name);
+            w.writeString(groupName);
+        }
     }
 }
