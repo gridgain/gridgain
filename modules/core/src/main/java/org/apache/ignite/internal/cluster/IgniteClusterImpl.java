@@ -79,7 +79,6 @@ import org.apache.ignite.lang.IgniteFuture;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.cluster.ClusterState.ACTIVE;
 import static org.apache.ignite.cluster.ClusterState.ACTIVE_READ_ONLY;
 import static org.apache.ignite.internal.IgniteFeatures.CLUSTER_READ_ONLY_MODE;
 import static org.apache.ignite.internal.IgniteFeatures.allNodesSupports;
@@ -485,7 +484,7 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
             ctx.state().validateBeforeBaselineChange(target);
 
-            ctx.state().changeGlobalState(ACTIVE, target, true, baselineAutoAdjust).get();
+            ctx.state().changeGlobalState(true, target, true, baselineAutoAdjust).get();
         }
         catch (IgniteCheckedException e) {
             throw U.convertException(e);
