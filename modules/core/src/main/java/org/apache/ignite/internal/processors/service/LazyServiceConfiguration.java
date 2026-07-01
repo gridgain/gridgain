@@ -24,13 +24,6 @@ import org.apache.ignite.services.ServiceConfiguration;
 
 /**
  * Lazy service configuration.
- *
- * <p>Note: this class (and its base {@link ServiceConfiguration}) must not gain new persistent fields without
- * a rolling-upgrade compatibility check ({@code IgniteFeatures.allNodesSupport}). It is marshalled with
- * {@code OptimizedMarshaller}, whose wire format is tied to the exact field layout of the class, so an unguarded
- * field addition breaks deserialization on older cluster peers during a rolling upgrade (see GG-49638). Data that
- * isn't understood by all versions in the wire-compat window belongs in a feature-gated subclass instead, e.g.
- * {@link LazyServiceConfigurationV2}.
  */
 public class LazyServiceConfiguration extends ServiceConfiguration {
     /** */

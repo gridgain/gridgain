@@ -23,12 +23,6 @@ import org.apache.ignite.services.ServiceConfiguration;
 
 /**
  * Lazy service configuration carrying marshalled service call interceptors.
- *
- * <p>Kept as a subclass of {@link LazyServiceConfiguration} instead of adding fields to it directly so that the
- * wire format of the base class stays unchanged for peers that don't support the
- * {@code IgniteFeatures#SERVICE_CALL_INTERCEPTORS} feature. Only construct this class once
- * {@code IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.SERVICE_CALL_INTERCEPTORS)} is {@code true} for the
- * whole cluster (see GG-49638).
  */
 public class LazyServiceConfigurationV2 extends LazyServiceConfiguration {
     /** */
