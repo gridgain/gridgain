@@ -59,7 +59,7 @@ public abstract class ServiceProcessorAdapter extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     protected void injectInterceptors(
-        LazyServiceConfiguration srvcCfg,
+        LazyServiceConfigurationV2 srvcCfg,
         ServiceContextImpl svcCtx,
         Marshaller marsh,
         ClassLoader clsLdr
