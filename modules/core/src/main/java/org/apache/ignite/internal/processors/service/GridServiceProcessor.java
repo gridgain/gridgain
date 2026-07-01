@@ -58,6 +58,7 @@ import org.apache.ignite.internal.GridClosureCallMode;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteClientDisconnectedCheckedException;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.IgniteFeatures;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.IgniteInterruptedCheckedException;
 import org.apache.ignite.internal.cluster.ClusterTopologyCheckedException;
@@ -588,12 +589,24 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
                 }
             }
 
+            if (err == null && !F.isEmpty(cfg.getInterceptors()) &&
+                !IgniteFeatures.allNodesSupport(ctx, IgniteFeatures.SERVICE_CALL_INTERCEPTORS)) {
+                err = new IgniteCheckedException("Failed to deploy service with interceptors: not all nodes " +
+                    "in the cluster support service call interceptors, try again once the rolling upgrade " +
+                    "is complete [name=" + cfg.getName() + ']');
+            }
+
             if (err == null) {
                 try {
                     byte[] srvcBytes = U.marshal(marsh, cfg.getService());
-                    byte[] interceptorsBytes = U.marshal(marsh, cfg.getInterceptors());
 
-                    cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes, interceptorsBytes));
+                    if (F.isEmpty(cfg.getInterceptors()))
+                        cfgsCp.add(new LazyServiceConfiguration(cfg, srvcBytes));
+                    else {
+                        byte[] interceptorsBytes = U.marshal(marsh, cfg.getInterceptors());
+
+                        cfgsCp.add(new LazyServiceConfigurationV2(cfg, srvcBytes, interceptorsBytes));
+                    }
                 }
                 catch (Exception e) {
                     U.error(log, "Failed to marshal service with configured marshaller [name=" + cfg.getName() +
@@ -1430,7 +1443,8 @@ public class GridServiceProcessor extends ServiceProcessorAdapter implements Ign
 
             ctx.resource().inject(srvc, svcCtx);
 
-            injectInterceptors(srvcCfg, svcCtx, m, clsLdr);
+            if (srvcCfg instanceof LazyServiceConfigurationV2)
+                injectInterceptors((LazyServiceConfigurationV2)srvcCfg, svcCtx, m, clsLdr);
 
             return srvc;
         }
