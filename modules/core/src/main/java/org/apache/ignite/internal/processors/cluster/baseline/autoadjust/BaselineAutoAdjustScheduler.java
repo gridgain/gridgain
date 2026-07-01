@@ -66,8 +66,11 @@ class BaselineAutoAdjustScheduler {
      * @param baselineAutoAdjustExecutor Executor of set baseline operation.
      * @param log Log object.
      */
-    public BaselineAutoAdjustScheduler(GridTimeoutProcessor timeoutProcessor,
-                                       BaselineAutoAdjustExecutor baselineAutoAdjustExecutor, IgniteLogger log) {
+    public BaselineAutoAdjustScheduler(
+        GridTimeoutProcessor timeoutProcessor,
+        BaselineAutoAdjustExecutor baselineAutoAdjustExecutor,
+        IgniteLogger log
+    ) {
         this.timeoutProcessor = timeoutProcessor;
         this.baselineAutoAdjustExecutor = baselineAutoAdjustExecutor;
         this.log = log;

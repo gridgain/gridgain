@@ -69,7 +69,7 @@ public class IgniteClusterProcessProxy implements IgniteClusterEx {
 
     /** {@inheritDoc} */
     @Override public ClusterGroup forCacheNodes(@Nullable String cacheName, boolean affNodes, boolean nearNodes,
-                                                boolean clientNodes) {
+        boolean clientNodes) {
         throw new UnsupportedOperationException("Operation is not supported yet.");
     }
 
