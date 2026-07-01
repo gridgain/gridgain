@@ -278,14 +278,15 @@ public class ConnectionClientPool {
      * @throws IgniteCheckedException Thrown if any exception occurs.
      */
     public GridCommunicationClient reserveClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
+        assert node != null;
+        assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
+
         NodeConnectionMetrics nodeMetrics = metrics.get(node.id());
 
         if (nodeMetrics != null)
             nodeMetrics.acquiringThreadsCnt.incrementAndGet();
 
         try {
-        assert node != null;
-        assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
 
         if (locNodeSupplier.get().isClient()) {
             if (node.isClient()) {
@@ -1144,7 +1145,7 @@ public class ConnectionClientPool {
             mreg.register(
                 METRIC_NAME_MAX_NET_IDLE_TIME,
                 this::maxConnectionsIdleTime,
-                "Maximal idle time of physical sending or receiving data in milliseconds.");
+                "Maximum idle time of physical sending or receiving data in milliseconds.");
             mreg.register(
                 METRIC_NAME_AVG_LIFE_TIME,
                 this::averageConnectionLifeTime,

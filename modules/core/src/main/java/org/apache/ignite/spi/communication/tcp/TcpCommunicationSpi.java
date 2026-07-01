@@ -424,14 +424,13 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     }
 
     /**
-     * @param metricName Metric name.
-     * @return {@code True} if the metric name is a pure TCP Communication metric. {@code False} if is other metric or
-     * metric of other TCP Communication component.
+     * @param registryName Metric registry name.
+     * @return {@code True} if {@code registryName} belongs to TCP communication metrics (excluding connection pool metrics).
      */
-    public static boolean isCommunicationMetrics(String metricName) {
-        return metricName.startsWith(COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR)
-            && !metricName.startsWith(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME + SEPARATOR)
-            && !metricName.equals(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME);
+    public static boolean isCommunicationMetrics(String registryName) {
+        return registryName.startsWith(COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR)
+            && !registryName.startsWith(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME + SEPARATOR)
+            && !registryName.equals(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME);
     }
 
     /**
