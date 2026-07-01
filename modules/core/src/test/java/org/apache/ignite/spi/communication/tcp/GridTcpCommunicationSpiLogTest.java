@@ -18,12 +18,14 @@ package org.apache.ignite.spi.communication.tcp;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.util.nio.GridCommunicationClient;
 import org.apache.ignite.internal.util.nio.GridNioRecoveryDescriptor;
 import org.apache.ignite.internal.util.nio.GridNioServerListener;
@@ -224,6 +226,18 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
         // will close connection too, but we want to keep the server
         // uninformed and force ping old connection.
         GridCommunicationClient[] clients0 = clients.remove(srv.cluster().localNode().id());
+
+        GridMetricManager metricMgr = GridTestUtils.getFieldValue(clientSpi, "clientPool", "metricsMgr");
+
+        if (metricMgr != null) {
+            Map<UUID, ?> metrics = GridTestUtils.getFieldValue(clientSpi, "clientPool", "metrics");
+
+            assert metrics != null;
+
+            metrics.remove(srv.cluster().localNode().id());
+
+            metricMgr.remove(ConnectionClientPool.nodeMetricsRegName(srv.cluster().localNode().id()));
+        }
 
         for (GridCommunicationClient commClient : clients0)
             lsnr.onDisconnected(((GridTcpNioCommunicationClient)commClient).session(), new IOException("Test exception"));

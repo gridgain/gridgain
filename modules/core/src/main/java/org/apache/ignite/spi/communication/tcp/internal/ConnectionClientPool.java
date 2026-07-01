@@ -868,6 +868,8 @@ public class ConnectionClientPool {
     private void createNodeMetrics(ClusterNode node) {
         MetricRegistry mreg = metricsMgr.registry(nodeMetricsRegName(node.id()));
 
+        assert !mreg.iterator().hasNext() : "Node connection pools metrics aren't empty.";
+
         mreg.register(METRIC_NAME_CONSIST_ID, () -> node.consistentId().toString(), String.class,
             "Consistent id of the remote node as string.");
 
