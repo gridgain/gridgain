@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 GridGain Systems, Inc. and Contributors.
+ * Copyright 2026 GridGain Systems, Inc. and Contributors.
  *
  * Licensed under the GridGain Community Edition License (the "License");
  * you may not use this file except in compliance with the License.
@@ -117,7 +117,6 @@ public class GridLuceneFile implements Accountable {
     void releaseRef() {
         refCnt.decrementAndGet();
 
-        // TODO https://ggsystems.atlassian.net/browse/GG-35086
         deferredDelete();
     }
 
