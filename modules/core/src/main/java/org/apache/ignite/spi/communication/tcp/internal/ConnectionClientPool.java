@@ -875,7 +875,7 @@ public class ConnectionClientPool {
             "Number of current connections to the remote node.");
 
         mreg.register(METRIC_NAME_MSG_QUEUE_SIZE, () -> updatedNodeMetrics(node.id()).msgsQueueSize,
-            "Overal number of pending messages to the remote node.");
+            "Overall number of pending messages to the remote node.");
 
         mreg.register(METRIC_NAME_MAX_NET_IDLE_TIME, () -> updatedNodeMetrics(node.id()).maxIdleTime,
             "Maximal idle time of physical sending or receiving data in milliseconds.");
