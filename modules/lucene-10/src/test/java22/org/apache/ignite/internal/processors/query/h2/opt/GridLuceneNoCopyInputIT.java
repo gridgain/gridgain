@@ -148,6 +148,36 @@ public class GridLuceneNoCopyInputIT {
         }
     }
 
+    /**
+     * Proves the "no-copy" property behaviourally, not just by byte-equality (which a copy would also pass):
+     * repeated whole-file slices return the <b>same</b> native address (the contiguous mirror is built once
+     * and reused, not re-copied per call), and a sub-range slice is a view at the exact offset into that same
+     * region ({@code base + pos}). A copy-based implementation would hand back fresh, unrelated addresses.
+     */
+    @Test
+    public void testSegmentSliceIsStableAliasNotCopy() throws IOException {
+        byte[] data = randomBytes(2000, 17);
+        writeBytes("alias", data);
+
+        try (IndexInput in = dir.openInput("alias", IOContext.DEFAULT)) {
+            assumeOverlay(in);
+
+            MemorySegmentAccessInput msai = (MemorySegmentAccessInput)in;
+
+            MemorySegment first = msai.segmentSliceOrNull(0, in.length());
+            MemorySegment again = msai.segmentSliceOrNull(0, in.length());
+            assertNotNull(first);
+            assertNotNull(again);
+            assertEquals("repeated whole-file slice must reuse the mirror, not re-copy",
+                first.address(), again.address());
+
+            MemorySegment sub = msai.segmentSliceOrNull(100, 50);
+            assertNotNull(sub);
+            assertEquals("sub-range must be a view at base + pos (aliased, not copied)",
+                first.address() + 100, sub.address());
+        }
+    }
+
     /** Out-of-bounds ranges must yield {@code null} (Lucene then falls back to its copy path), never a bad segment. */
     @Test
     public void testSegmentSliceOutOfBoundsReturnsNull() throws IOException {
