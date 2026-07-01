@@ -534,8 +534,8 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Nullable @Override public List<ClusterNode> nodes(int p,
-                                                       AffinityAssignment affAssignment,
-                                                       List<ClusterNode> affNodes) {
+        AffinityAssignment affAssignment,
+        List<ClusterNode> affNodes) {
         throw new UnsupportedOperationException();
     }
 
@@ -1434,7 +1434,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
      * @return Filter for owners of this partition.
      */
     private boolean hasState(final int p, @Nullable UUID nodeId, final GridDhtPartitionState match,
-                             final GridDhtPartitionState... matches) {
+        final GridDhtPartitionState... matches) {
         if (nodeId == null)
             return false;
 
