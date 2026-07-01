@@ -232,10 +232,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ClusterStartNodeResult> startNodes(File file,
-                                                                   boolean restart,
-                                                                   int timeout,
-                                                                   int maxConn)
+    @Override public Collection<ClusterStartNodeResult> startNodes(
+        File file,
+        boolean restart,
+        int timeout,
+        int maxConn
+    )
         throws IgniteException {
         try {
             return startNodesAsync0(file, restart, timeout, maxConn).get();
@@ -246,18 +248,23 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
     }
 
     /** {@inheritDoc} */
-    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart,
-                                                                                      int timeout, int maxConn) throws IgniteException {
+    @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(
+        File file,
+        boolean restart,
+        int timeout,
+        int maxConn
+    ) throws IgniteException {
         return new IgniteFutureImpl<>(startNodesAsync0(file, restart, timeout, maxConn));
     }
 
     /** {@inheritDoc} */
-    @Override public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-                                                                   @Nullable Map<String, Object> dflts,
-                                                                   boolean restart,
-                                                                   int timeout,
-                                                                   int maxConn)
-        throws IgniteException {
+    @Override public Collection<ClusterStartNodeResult> startNodes(
+        Collection<Map<String, Object>> hosts,
+        @Nullable Map<String, Object> dflts,
+        boolean restart,
+        int timeout,
+        int maxConn
+    ) throws IgniteException {
         try {
             return startNodesAsync0(hosts, dflts, restart, timeout, maxConn).get();
         }
@@ -268,8 +275,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
 
     /** {@inheritDoc} */
     @Override public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(
-        Collection<Map<String, Object>> hosts, @Nullable Map<String, Object> dflts,
-        boolean restart, int timeout, int maxConn) throws IgniteException {
+        Collection<Map<String, Object>> hosts,
+        @Nullable Map<String, Object> dflts,
+        boolean restart,
+        int timeout,
+        int maxConn
+    ) throws IgniteException {
         return new IgniteFutureImpl<>(startNodesAsync0(hosts, dflts, restart, timeout, maxConn));
     }
 
@@ -493,32 +504,28 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * will be removed from the current baseline.
      */
     private Collection<BaselineNode> getTargetTopology(AutoAdjustMode mode, Collection<ClusterNode> topology) {
-        List<BaselineNode> curBlt = Optional.ofNullable(ctx.state().clusterState().baselineTopology()).
-            map(BaselineTopology::currentBaseline)
-            .orElse(Collections.emptyList());
+        BaselineTopology curBlt = ctx.state().clusterState().baselineTopology();
+        List<BaselineNode> curBltTop = curBlt == null ? Collections.emptyList() : curBlt.currentBaseline();
 
-        Collection<BaselineNode> target = new HashSet<>(curBlt);
+        Collection<BaselineNode> target = new HashSet<>(curBltTop);
 
         switch (mode) {
             case SCALE_UP:
-                Set<Object> curBltConsistentIds = curBlt
-                    .stream()
-                    .map(BaselineNode::consistentId)
-                    .collect(Collectors.toSet());
+                Set<Object> consistentIds = curBlt == null ? Collections.emptySet() : curBlt.consistentIdMapping().keySet();
 
                 for (ClusterNode node : topology) {
-                    if (!curBltConsistentIds.contains(node.consistentId()) && !node.isClient() && !node.isDaemon())
+                    if (!consistentIds.contains(node.consistentId()) && !node.isClient() && !node.isDaemon())
                         target.add(node);
                 }
 
                 return target;
-
             case SCALE_DOWN:
-                Set<Object> topConsistentIds = topology.stream()
+                Set<Object> topConsistentIds = topology
+                    .stream()
                     .map(ClusterNode::consistentId)
                     .collect(Collectors.toSet());
 
-                for (BaselineNode node : curBlt) {
+                for (BaselineNode node : curBltTop) {
                     if (!topConsistentIds.contains(node.consistentId()))
                         target.remove(node);
                 }
@@ -875,10 +882,12 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * @return Future with results.
      * @see IgniteCluster#startNodes(java.io.File, boolean, int, int)
      */
-    IgniteInternalFuture<Collection<ClusterStartNodeResult>> startNodesAsync0(File file,
-                                                                              boolean restart,
-                                                                              int timeout,
-                                                                              int maxConn) {
+    IgniteInternalFuture<Collection<ClusterStartNodeResult>> startNodesAsync0(
+        File file,
+        boolean restart,
+        int timeout,
+        int maxConn
+    ) {
         A.notNull(file, "file");
         A.ensure(file.exists(), "file doesn't exist.");
         A.ensure(file.isFile(), "file is a directory.");
@@ -1035,10 +1044,11 @@ public class IgniteClusterImpl extends ClusterGroupAdapter implements IgniteClus
      * @param cnt Atomic counter to check if all futures are added to compound future.
      * @return {@code True} if task was started, {@code false} if queue was empty.
      */
-    private boolean runNextNodeCallable(final ConcurrentLinkedQueue<StartNodeCallable> queue,
-                                        final GridCompoundFuture<ClusterStartNodeResult, Collection<ClusterStartNodeResult>>
-                                            comp,
-                                        final AtomicInteger cnt) {
+    private boolean runNextNodeCallable(
+        final ConcurrentLinkedQueue<StartNodeCallable> queue,
+        final GridCompoundFuture<ClusterStartNodeResult, Collection<ClusterStartNodeResult>> comp,
+        final AtomicInteger cnt
+    ) {
         StartNodeCallable call = queue.poll();
 
         if (call == null)
