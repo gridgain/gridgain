@@ -238,6 +238,8 @@ public class CommunicationWorker extends GridWorker {
         if (doMaintenance)
             cleanupRecovery();
 
+        clientPool.cleanupNodeMetrics();
+
         for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
             UUID nodeId = e.getKey();
 
