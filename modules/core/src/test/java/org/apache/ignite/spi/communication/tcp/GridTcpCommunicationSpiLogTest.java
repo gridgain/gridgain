@@ -201,6 +201,7 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
 
         TcpCommunicationSpi clientSpi = (TcpCommunicationSpi) ((IgniteEx)client).context().config().getCommunicationSpi();
 
+        ConnectionClientPool connPool = GridTestUtils.getFieldValue(clientSpi, "clientPool");
         ConcurrentMap<UUID, GridCommunicationClient[]> clients = GridTestUtils.getFieldValue(clientSpi, "clientPool","clients");
         ConcurrentMap<?, GridNioRecoveryDescriptor> recoveryDescs = GridTestUtils.getFieldValue(clientSpi, "nioSrvWrapper","recoveryDescs");
         ConcurrentMap<?, GridNioRecoveryDescriptor> outRecDescs = GridTestUtils.getFieldValue(clientSpi, "nioSrvWrapper", "outRecDescs");
@@ -226,7 +227,9 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
         // uninformed and force ping old connection.
         UUID srvNodeId = srv.cluster().localNode().id();
 
-        GridCommunicationClient[] clients0 = clients.remove(srvNodeId);;
+        GridCommunicationClient[] clients0 = clients.remove(srvNodeId);
+
+        connPool.unregisterNodeMetrics(srvNodeId);
 
         for (GridCommunicationClient commClient : clients0)
             lsnr.onDisconnected(((GridTcpNioCommunicationClient)commClient).session(), new IOException("Test exception"));

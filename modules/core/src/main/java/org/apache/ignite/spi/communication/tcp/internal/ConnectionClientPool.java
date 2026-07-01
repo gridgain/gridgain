@@ -815,7 +815,7 @@ public class ConnectionClientPool {
 
             if (success) {
                 if (log.isDebugEnabled()) {
-                    String prefix = curClients == null ? "The node client was replaced" : "New node client was added";
+                    String prefix = curClients == null ? "New node client was added" : "The node client was replaced";
 
                     log.debug(prefix + " [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
                 }

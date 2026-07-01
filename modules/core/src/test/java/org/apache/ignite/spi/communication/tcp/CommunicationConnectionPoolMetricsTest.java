@@ -302,10 +302,13 @@ public class CommunicationConnectionPoolMetricsTest extends GridCommonAbstractTe
             if (!node.cluster().localNode().isClient() && --srvrCnt == 0)
                 break;
 
+            String nodeId = ((IgniteEx)node).context().localNodeId().toString();
+
             assertTrue(G.stop(node.name(), true));
 
             assertTrue(waitForCondition(() -> {
-                MetricRegistry mreg = metricsForCommunicationConnection(ldr, node);
+                MetricRegistry mreg = ((IgniteEx)ldr).context().metric()
+                    .registry(metricName(SHARED_METRICS_REGISTRY_NAME, nodeId));
 
                 return mreg == null || !mreg.iterator().hasNext();
             }, getTestTimeout()));
