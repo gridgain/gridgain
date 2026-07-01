@@ -138,7 +138,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public Collection<ClusterStartNodeResult> startNodes(File file, boolean restart, int timeout,
-                                                         int maxConn) throws IgniteException;
+        int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -165,7 +165,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(File file, boolean restart, int timeout,
-                                                                            int maxConn) throws IgniteException;
+        int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s).
@@ -266,7 +266,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public Collection<ClusterStartNodeResult> startNodes(Collection<Map<String, Object>> hosts,
-                                                         Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Starts one or more nodes on remote host(s) asynchronously.
@@ -364,7 +364,7 @@ public interface IgniteCluster extends ClusterGroup, IgniteAsyncSupport {
      * @throws IgniteException In case of error.
      */
     public IgniteFuture<Collection<ClusterStartNodeResult>> startNodesAsync(Collection<Map<String, Object>> hosts,
-                                                                            Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
+        Map<String, Object> dflts, boolean restart, int timeout, int maxConn) throws IgniteException;
 
     /**
      * Stops nodes satisfying optional set of predicates.
