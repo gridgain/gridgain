@@ -22,6 +22,7 @@ namespace Apache.Ignite.Core.Cache
     using System.Diagnostics.CodeAnalysis;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Query.Continuous;
@@ -803,6 +804,16 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="qry">Continuous query.</param>
         /// <returns>Handle to stop query execution.</returns>
         IContinuousQueryHandle QueryContinuous(ContinuousQuery<TK, TV> qry);
+
+        /// <summary>
+        /// Start continuous query execution.
+        /// </summary>
+        /// <param name="options">Continuous query options.</param>
+        /// <param name="filter">Optional server-side filter.</param>
+        /// <returns>Handle to stop query execution.</returns>
+        IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null); // TODO: What can we do with initial query?
 
         /// <summary>
         /// Start continuous query execution.
