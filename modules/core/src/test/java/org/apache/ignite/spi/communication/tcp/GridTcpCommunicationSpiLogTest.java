@@ -162,27 +162,27 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
     @Test
     public void testClientHalfOpenedConnectionDebugLogMessage() throws Exception {
         LogListener logLsnr0 = LogListener.matches("The session change request was offered [req=NioOperationFuture [op=CLOSE")
-            .atLeast(1)
-            .atMost(1)
+            .times(1)
             .build();
 
         LogListener logLsnr1 = LogListener.matches("The session request will be processed [req=NioOperationFuture [op=CLOSE")
-            .atLeast(1)
-            .atMost(1)
+            .times(1)
             .build();
 
-        LogListener logLsnr2 = LogListener.matches("The client was removed")
+        LogListener logLsnr2 = LogListener.matches("New node client was added")
+            .times(1)
+            .build();
+
+        LogListener logLsnr3 = LogListener.matches("The client was removed")
             .atLeast(1)
             .build();
 
-        LogListener logLsnr3 = LogListener.matches("New Node client was added")
-            .atLeast(1)
-            .atMost(1)
+        LogListener logLsnr4 = LogListener.matches("The node client was replaced")
+            .times(1)
             .build();
 
-        LogListener logLsnr4 = LogListener.matches("Closing stale connection")
-            .atLeast(1)
-            .atMost(1)
+        LogListener logLsnr5 = LogListener.matches("Closing stale connection")
+            .times(1)
             .build();
 
         srvTestLog.registerListener(logLsnr0);
@@ -190,6 +190,7 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
         srvTestLog.registerListener(logLsnr2);
         srvTestLog.registerListener(logLsnr3);
         srvTestLog.registerListener(logLsnr4);
+        srvTestLog.registerListener(logLsnr5);
 
         Ignite srv = startGrid(0);
         Ignite client = startClientGrid(1);
@@ -225,11 +226,7 @@ public class GridTcpCommunicationSpiLogTest extends GridCommonAbstractTest {
         // uninformed and force ping old connection.
         UUID srvNodeId = srv.cluster().localNode().id();
 
-        GridCommunicationClient[] clients0 = clients.remove(srvNodeId);
-
-        ConnectionClientPool connPool = GridTestUtils.getFieldValue(clientSpi, "clientPool");
-
-        connPool.unregisterNodeMetrics(srvNodeId);
+        GridCommunicationClient[] clients0 = clients.remove(srvNodeId);;
 
         for (GridCommunicationClient commClient : clients0)
             lsnr.onDisconnected(((GridTcpNioCommunicationClient)commClient).session(), new IOException("Test exception"));

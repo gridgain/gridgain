@@ -814,8 +814,11 @@ public class ConnectionClientPool {
                 success = clients.replace(node.id(), curClients, newClients);
 
             if (success) {
-                if (log.isDebugEnabled())
-                    log.debug("New node client was added [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+                if (log.isDebugEnabled()) {
+                    String prefix = curClients == null ? "The node client was replaced" : "New node client was added";
+
+                    log.debug(prefix + " [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+                }
 
                 break;
             }
