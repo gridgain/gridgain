@@ -139,6 +139,32 @@
                     <skip>false</skip>
                 </configuration>
             </plugin>
+
+            <!-- The GridLucene* classes are identical across Lucene 9.10 and 10.4; they live once in
+                 ../lucene-9-10-common and are compiled here against Lucene 9.10. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-shared-lucene-source</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources><source>${project.basedir}/../lucene-9-10-common/src/main/java</source></sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-shared-lucene-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals><goal>add-test-source</goal></goals>
+                        <configuration>
+                            <sources><source>${project.basedir}/../lucene-9-10-common/src/test/java</source></sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>

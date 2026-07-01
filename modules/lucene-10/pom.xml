@@ -142,6 +142,33 @@
                 </configuration>
             </plugin>
 
+            <!-- Shared GridLucene* base sources (identical across Lucene 9.10 and 10.4) live once in
+                 ../lucene-9-10-common and are compiled here against Lucene 10.4. The FFM no-copy overlay
+                 in src/main/java22 (below) is the only lucene-10-specific code. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>add-shared-lucene-source</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources><source>${project.basedir}/../lucene-9-10-common/src/main/java</source></sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>add-shared-lucene-test-source</id>
+                        <phase>generate-test-sources</phase>
+                        <goals><goal>add-test-source</goal></goals>
+                        <configuration>
+                            <sources><source>${project.basedir}/../lucene-9-10-common/src/test/java</source></sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Multi-release JAR. Base classes compile at release 21 (Lucene 10's floor, default-compile
                  via maven.compiler.release). The FFM no-copy overlay in src/main/java22 compiles at release
                  22 into META-INF/versions/22, so it is picked up only by a Java 22+ runtime; Java 21 loads
