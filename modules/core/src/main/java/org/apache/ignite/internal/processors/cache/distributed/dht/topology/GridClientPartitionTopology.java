@@ -297,14 +297,14 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Override public boolean initPartitionsWhenAffinityReady(AffinityTopologyVersion affVer,
-                                                             GridDhtPartitionsExchangeFuture exchFut) {
+        GridDhtPartitionsExchangeFuture exchFut) {
         return false;
     }
 
     /** {@inheritDoc} */
     @Override public void beforeExchange(GridDhtPartitionsExchangeFuture exchFut,
-                                         boolean initParts,
-                                         boolean updateMoving)
+        boolean initParts,
+        boolean updateMoving)
         throws IgniteCheckedException
     {
         ClusterNode loc = cctx.localNode();
@@ -465,7 +465,7 @@ public class GridClientPartitionTopology implements GridDhtPartitionTopology {
 
     /** {@inheritDoc} */
     @Nullable @Override public GridDhtLocalPartition localPartition(int p, AffinityTopologyVersion topVer,
-                                                                    boolean create, boolean showRenting) throws GridDhtInvalidPartitionException {
+        boolean create, boolean showRenting) throws GridDhtInvalidPartitionException {
         return localPartition(p, topVer, create);
     }
 
