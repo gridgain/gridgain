@@ -118,7 +118,9 @@ public class ReliableChannelTest {
 
             rc.channelsInit();
 
-            usedChannels.add(F.first(rc.getChannelHolders().get(rc.getCurrentChannelIndex()).getAddresses()).toString());
+            java.net.InetSocketAddress a = F.first(rc.getChannelHolders().get(rc.getCurrentChannelIndex()).getAddresses());
+
+            usedChannels.add(a.getHostString() + ":" + a.getPort());
         }
 
         return usedChannels;
@@ -143,7 +145,10 @@ public class ReliableChannelTest {
         ReliableChannel rc = new ReliableChannel(chFactory, ccfg, null);
 
         Supplier<List<String>> holderAddresses = () -> rc.getChannelHolders().stream()
-            .map(h -> F.first(h.getAddresses()).toString())
+            .map(h -> {
+                java.net.InetSocketAddress a = F.first(h.getAddresses());
+                return a.getHostString() + ":" + a.getPort();
+            })
             .sorted()
             .collect(Collectors.toList());
 

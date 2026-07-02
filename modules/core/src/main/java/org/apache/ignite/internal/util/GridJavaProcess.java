@@ -144,7 +144,19 @@ public final class GridJavaProcess {
         String javaBin = resolveJavaBin(javaHome);
 
         procCommands.add(javaBin);
-        procCommands.addAll(jvmArgs == null ? U.jvmArgs() : jvmArgs);
+
+        if (jvmArgs == null)
+            procCommands.addAll(U.jvmArgs());
+        else {
+            // A caller-supplied jvmArgs list replaces the driver's args. For a same-JDK fork
+            // (javaHome == null) that drops the driver's --add-opens, so a JDK 9+ node can't reflect
+            // into JDK internals (GridUnsafe/marshaller) and fails to start; re-add them. With an
+            // explicit javaHome (possibly an older JDK that rejects the flags) the caller owns them.
+            if (javaHome == null)
+                procCommands.addAll(moduleAccessArgs());
+
+            procCommands.addAll(jvmArgs);
+        }
 
         if (jvmArgs == null || (!jvmArgs.contains("-cp") && !jvmArgs.contains("-classpath"))) {
             String classpath = System.getProperty("java.class.path");

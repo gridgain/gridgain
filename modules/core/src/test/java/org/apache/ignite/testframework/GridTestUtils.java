@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.annotation.Annotation;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.SoftReference;
 import java.lang.reflect.Field;
@@ -1851,7 +1853,7 @@ public final class GridTestUtils {
 
             boolean isStatic = (field.getModifiers() & Modifier.STATIC) != 0;
 
-            /**
+            /*
              * http://java.sun.com/docs/books/jls/third_edition/html/memory.html#17.5.3
              * If a final field is initialized to a compile-time constant in the field declaration,
              *   changes to the final field may not be observed.
@@ -1860,11 +1862,11 @@ public final class GridTestUtils {
                 throw new IgniteException("Modification of static final field through reflection.");
 
             if (isFinal) {
-                Field modifiersField = Field.class.getDeclaredField("modifiers");
+                MethodHandles.Lookup lookup = MethodHandles.privateLookupIn(Field.class, MethodHandles.lookup());
 
-                modifiersField.setAccessible(true);
+                VarHandle varHandle = lookup.findVarHandle(Field.class, "modifiers", int.class);
 
-                modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                varHandle.set(field, field.getModifiers() & ~Modifier.FINAL);
             }
 
             field.set(obj, val);

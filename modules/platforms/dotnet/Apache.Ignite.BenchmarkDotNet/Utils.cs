@@ -34,7 +34,6 @@ namespace Apache.Ignite.BenchmarkDotNet
         public static IgniteConfiguration GetIgniteConfiguration(bool client = false)
         {
             Environment.SetEnvironmentVariable("IGNITE_NATIVE_TEST_CLASSPATH", "true");
-            Environment.SetEnvironmentVariable("IGNITE_NET_SUPPRESS_JAVA_ILLEGAL_ACCESS_WARNINGS", "true");
 
             return new IgniteConfiguration
             {

@@ -34,30 +34,19 @@ getJavaSpecificOpts() {
   current_value=$2
   value=""
 
-  if [ "$version" -eq 8 ]; then
-      # Keep options minimal and avoid deprecated ones for Java 8
-      value="-XX:+AggressiveOpts $current_value"
-
-  elif [ "$version" -ge 9 ] && [ "$version" -lt 11 ]; then
-      # Java 9 and 10 require additional modules due to removed Java EE modules
-      value="-XX:+AggressiveOpts \
-          --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
-          --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
-          --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
-          --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
-          --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
-          --illegal-access=permit \
-          $current_value"
-
-  elif [ "$version" -ge 11 ]; then
-      # From Java 11 onwards, reduce the use of aggressive exports and opens, focusing on necessary access only
+  # The floor is JDK 17; the >= 11 guard is kept for custom-script callers passing an
+  # explicit version. Keep this list identical to bin/include/jvmdefaults.bat and
+  # FeatureChecker.JAVA_OPTIONS (the canonical runtime list).
+  if [ "$version" -ge 11 ]; then
       value="--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-exports=java.base/sun.nio.ch=ALL-UNNAMED \
           --add-exports=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
           --add-exports=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
           --add-exports=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
+          --add-opens=java.base/jdk.internal.access=ALL-UNNAMED \
           --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED \
           --add-opens=java.base/sun.nio.ch=ALL-UNNAMED \
+          --add-opens=java.base/sun.util.calendar=ALL-UNNAMED \
           --add-opens=java.management/com.sun.jmx.mbeanserver=ALL-UNNAMED \
           --add-opens=jdk.internal.jvmstat/sun.jvmstat.monitor=ALL-UNNAMED \
           --add-opens=java.base/sun.reflect.generics.reflectiveObjects=ALL-UNNAMED \
@@ -72,10 +61,15 @@ getJavaSpecificOpts() {
           --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED \
           --add-opens=java.base/java.lang=ALL-UNNAMED \
           --add-opens=java.base/java.lang.invoke=ALL-UNNAMED \
+          --add-opens=java.base/java.lang.reflect=ALL-UNNAMED \
           --add-opens=java.base/java.math=ALL-UNNAMED \
           --add-opens=java.base/java.time=ALL-UNNAMED \
+          --add-opens=java.base/java.text=ALL-UNNAMED \
           --add-opens=java.base/sun.security.ssl=ALL-UNNAMED \
           --add-opens=java.base/sun.security.x509=ALL-UNNAMED \
+          --add-opens=java.logging/java.util.logging=ALL-UNNAMED \
+          --add-opens=java.management/sun.management=ALL-UNNAMED \
+          --add-opens=java.desktop/java.awt.font=ALL-UNNAMED \
           --add-opens=java.sql/java.sql=ALL-UNNAMED \
           ${current_value}"
   fi

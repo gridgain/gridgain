@@ -270,8 +270,12 @@ public class StartNodeCallableImpl implements StartNodeCallable {
 
                 shell(ses, prepareStartCmd);
 
+                String javaHome = System.getProperty("java.home");
+
                 String startNodeCmd = new SB()
                     // Console output is consumed, started nodes must use Ignite file appenders for log.
+                    // Propagate JAVA_HOME so the remote ignite.sh uses the same JDK as the coordinator.
+                    .a(javaHome != null ? "JAVA_HOME=\"" + javaHome + "\" " : "")
                     .a("nohup ")
                     .a("\"").a(igniteHome).a('/').a(scriptPath).a("\"")
                     .a(" ").a(scriptArgs)

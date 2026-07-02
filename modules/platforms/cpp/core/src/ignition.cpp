@@ -173,6 +173,7 @@ namespace ignite
                 opts.push_back(CopyChars("--add-opens=java.base/sun.security.ssl=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.base/sun.security.x509=ALL-UNNAMED"));
                 opts.push_back(CopyChars("--add-opens=java.sql/java.sql=ALL-UNNAMED"));
+                opts.push_back(CopyChars("--add-opens=java.logging/java.util.logging=ALL-UNNAMED"));
             }
         }
 
