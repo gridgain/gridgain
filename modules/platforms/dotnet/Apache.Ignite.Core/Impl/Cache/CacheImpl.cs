@@ -1710,14 +1710,9 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             try
             {
-                var reader = channel.Reader;
-
-                while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                await foreach (var evt in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                 {
-                    while (reader.TryRead(out var evt))
-                    {
-                        yield return evt;
-                    }
+                    yield return evt;
                 }
             }
             finally

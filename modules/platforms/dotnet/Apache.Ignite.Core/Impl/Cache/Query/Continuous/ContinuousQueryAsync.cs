@@ -18,8 +18,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 {
     using System;
     using System.Collections.Generic;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
     using System.Threading.Channels;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Event;
@@ -70,24 +68,6 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
             }
 
             return qry;
-        }
-
-        /// <summary>
-        /// Reads events from the channel until it is completed (query stopped / handle disposed) or the
-        /// enumeration is cancelled. The <see cref="EnumeratorCancellationAttribute"/> makes cancellation
-        /// flow through <c>await foreach (... .WithCancellation(token))</c>.
-        /// </summary>
-        public static async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> ReadEvents<TK, TV>(
-            ChannelReader<ICacheEntryEvent<TK, TV>> reader,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
-            {
-                while (reader.TryRead(out var evt))
-                {
-                    yield return evt;
-                }
-            }
         }
 
         /// <summary>

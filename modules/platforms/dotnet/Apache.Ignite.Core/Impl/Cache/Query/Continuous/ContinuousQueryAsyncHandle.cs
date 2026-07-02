@@ -48,7 +48,7 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
                 throw new InvalidOperationException("GetEvents can be called only once.");
             }
 
-            return ContinuousQueryAsync.ReadEvents(channel.Reader);
+            return channel.Reader.ReadAllAsync();
         }
 
         /** <inheritdoc /> */
