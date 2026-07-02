@@ -1728,6 +1728,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritdoc /> */
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "False positive, handle is wrapped.")]
         public IContinuousQueryHandleAsync<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>> QueryContinuousAsync(
             ScanQuery<TK, TV> initialQry,
             ContinuousQueryOptions? options = null,
@@ -1744,6 +1745,7 @@ namespace Apache.Ignite.Core.Impl.Cache
         }
 
         /** <inheritdoc /> */
+        [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "False positive, handle is wrapped.")]
         public IContinuousQueryHandleAsync<TK, TV, IFieldsQueryCursor> QueryContinuousAsync(
             SqlFieldsQuery initialQry,
             ContinuousQueryOptions? options = null,

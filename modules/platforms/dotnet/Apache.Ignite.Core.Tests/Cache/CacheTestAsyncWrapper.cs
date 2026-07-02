@@ -20,9 +20,11 @@ namespace Apache.Ignite.Core.Tests.Cache
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Query.Continuous;
@@ -509,6 +511,21 @@ namespace Apache.Ignite.Core.Tests.Cache
         IContinuousQueryHandle ICache<TK, TV>.QueryContinuous(ContinuousQuery<TK, TV> qry)
         {
             return _cache.QueryContinuous(qry);
+        }
+
+        public IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(ContinuousQueryOptions options = null, ICacheEntryFilter<TK, TV> filter = null, CancellationToken cancellationToken = default)
+        {
+            return _cache.QueryContinuousAsync(options, filter, cancellationToken);
+        }
+
+        public IContinuousQueryHandleAsync<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>> QueryContinuousAsync(ScanQuery<TK, TV> initialQry, ContinuousQueryOptions options = null, ICacheEntryFilter<TK, TV> filter = null)
+        {
+            return _cache.QueryContinuousAsync(initialQry, options, filter);
+        }
+
+        public IContinuousQueryHandleAsync<TK, TV, IFieldsQueryCursor> QueryContinuousAsync(SqlFieldsQuery initialQry, ContinuousQueryOptions options = null, ICacheEntryFilter<TK, TV> filter = null)
+        {
+            return _cache.QueryContinuousAsync(initialQry, options, filter);
         }
 
         /** <inheritDoc /> */
