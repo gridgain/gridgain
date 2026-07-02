@@ -31,6 +31,7 @@ import org.junit.Test;
 /**
  * Tests BPlusTree metrics for H2 indexes.
  */
+@WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED, value = "true")
 public class BPlusTreeMetricsTest extends AbstractIndexingCommonTest {
     /** */
     private static final String INSERT_CNT = "InsertCount";
@@ -124,67 +125,55 @@ public class BPlusTreeMetricsTest extends AbstractIndexingCommonTest {
     }
 
     /**
-     * Test metrics when cache statistics is disabled.
-     *
-     * @throws Exception If failed.
-     */
-    @Test
-    public void testDisableStatistics() throws Exception {
-        IgniteEx ignite = startGrid(0);
-
-        IgniteCache<Integer, TestClass> cache = ignite.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME));
-
-        ReadOnlyMetricRegistry intFieldReg = findRegistry(ignite, "intField");
-
-        cache.enableStatistics(false);
-
-        cache.put(0, new TestClass(0));
-
-        assertEquals(0, metric(intFieldReg, INSERT_CNT));
-        assertEquals(0, metric(intFieldReg, INSERT_TIME));
-
-        cache.query(new SqlFieldsQuery("SELECT * FROM TESTCLASS WHERE INTFIELD = ?").setArgs(0)).getAll();
-
-        assertEquals(0, metric(intFieldReg, SEARCH_CNT));
-        assertEquals(0, metric(intFieldReg, SEARCH_TIME));
-
-        cache.remove(0);
-
-        assertEquals(0, metric(intFieldReg, REMOVE_CNT));
-        assertEquals(0, metric(intFieldReg, REMOVE_TIME));
-
-        cache.enableStatistics(true);
-
-        cache.put(0, new TestClass(0));
-
-        assertTrue(metric(intFieldReg, INSERT_CNT) > 0);
-        assertTrue(metric(intFieldReg, INSERT_TIME) > 0);
-
-        cache.query(new SqlFieldsQuery("SELECT * FROM TESTCLASS WHERE INTFIELD = ?").setArgs(0)).getAll();
-
-        assertTrue(metric(intFieldReg, SEARCH_CNT) > 0);
-        assertTrue(metric(intFieldReg, SEARCH_TIME) > 0);
-
-        cache.remove(0);
-
-        assertTrue(metric(intFieldReg, REMOVE_CNT) > 0);
-        assertTrue(metric(intFieldReg, REMOVE_TIME) > 0);
-    }
-
-    /**
      * Test disable metrics by system property.
      *
      * @throws Exception If failed.
      */
     @Test
-    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_BPLUS_TREE_DISABLE_METRICS, value = "true")
-    public void testDisableMetrics() throws Exception {
+    @WithSystemProperty(key = IgniteSystemProperties.IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED, value = "false")
+    public void testDisableMetricsBySystemProperty() throws Exception {
         IgniteEx ignite = startGrid(0);
 
         ignite.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME));
 
         for (ReadOnlyMetricRegistry reg : ignite.context().metric())
             assertFalse(reg.name().startsWith(H2Tree.INDEX_METRIC_PREFIX));
+    }
+
+    /**
+     * Test that index operation metrics can be disabled/enabled at runtime via the distributed
+     * property and that a single property change affects every index (H2Tree instance) at once.
+     *
+     * @throws Exception If failed.
+     */
+    @Test
+    public void testDisableMetricsByDistributedProperty() throws Exception {
+        IgniteEx ignite = startGrid(0);
+
+        IgniteCache<Integer, TestClass> cache = ignite.getOrCreateCache(cacheConfiguration(DEFAULT_CACHE_NAME));
+
+        ReadOnlyMetricRegistry intFieldReg = findRegistry(ignite, "intField");
+        ReadOnlyMetricRegistry strFieldReg = findRegistry(ignite, "strField");
+
+        ((org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing)ignite.context().query().getIndexing())
+            .distributedConfiguration().disableSqlIndexOperationMetrics(true).get();
+
+        cache.put(0, new TestClass(0));
+
+        assertEquals(0, metric(intFieldReg, INSERT_CNT));
+        assertEquals(0, metric(strFieldReg, INSERT_CNT));
+        assertEquals(0, metric(intFieldReg, INSERT_TIME));
+        assertEquals(0, metric(strFieldReg, INSERT_TIME));
+
+        ((org.apache.ignite.internal.processors.query.h2.IgniteH2Indexing)ignite.context().query().getIndexing())
+            .distributedConfiguration().disableSqlIndexOperationMetrics(false).get();
+
+        cache.put(1, new TestClass(1));
+
+        assertTrue(metric(intFieldReg, INSERT_CNT) > 0);
+        assertTrue(metric(strFieldReg, INSERT_CNT) > 0);
+        assertTrue(metric(intFieldReg, INSERT_TIME) > 0);
+        assertTrue(metric(strFieldReg, INSERT_TIME) > 0);
     }
 
     /** */

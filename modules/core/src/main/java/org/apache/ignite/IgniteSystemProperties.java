@@ -1534,12 +1534,6 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_BPLUS_TREE_LOCK_RETRIES = "IGNITE_BPLUS_TREE_LOCK_RETRIES";
 
     /**
-     * Disables secondary indexes B+Tree metrics.
-     */
-    @SystemProperty(value = "Disables secondary indexes B+Tree metrics", defaults = "false")
-    public static final String IGNITE_BPLUS_TREE_DISABLE_METRICS = "IGNITE_BPLUS_TREE_DISABLE_METRICS";
-
-    /**
      * Amount of memory reserved in the heap at node start, which can be dropped to increase the chances of success when
      * handling OutOfMemoryError.
      *
@@ -2235,6 +2229,12 @@ public final class IgniteSystemProperties {
      */
     @SystemProperty(value = "Use TreeMap instead of HashMap to hold distinct values", defaults = "false")
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
+
+    /**
+     * Enables secondary index B+Tree metrics.
+     */
+    @SystemProperty(value = "Enables secondary index B+Tree operation metrics", defaults = "false")
+    public static final String IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED = "IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED";
 
     /**
      * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.

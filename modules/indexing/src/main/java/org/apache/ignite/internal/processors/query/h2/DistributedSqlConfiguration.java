@@ -24,6 +24,7 @@ import java.util.TimeZone;
 import java.util.stream.Collectors;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
+import org.apache.ignite.IgniteSystemProperties;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.processors.configuration.distributed.DistributePropertyListener;
@@ -32,6 +33,7 @@ import org.apache.ignite.internal.processors.configuration.distributed.Distribut
 import org.apache.ignite.internal.processors.configuration.distributed.DistributedPropertyDispatcher;
 import org.apache.ignite.internal.processors.configuration.distributed.SimpleDistributedProperty;
 import org.apache.ignite.internal.processors.metastorage.ReadableDistributedMetaStorage;
+import org.apache.ignite.internal.processors.query.h2.database.H2Tree;
 import org.apache.ignite.internal.util.future.GridFutureAdapter;
 import org.apache.ignite.internal.util.typedef.internal.A;
 import org.apache.ignite.lang.IgniteInClosure;
@@ -89,6 +91,14 @@ public class DistributedSqlConfiguration {
     private final DistributedBooleanProperty disableCreateLuceneIndexForStringValueType =
         DistributedBooleanProperty.detachedBooleanProperty("sql.disableCreateLuceneIndexForStringValueType");
 
+    /**
+     * Runtime switcher for secondary index (H2Tree) operation count/time metrics. In contrast to
+     * {@link IgniteSystemProperties#IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED} (which takes effect only at index
+     * creation time), this property can be changed at any time and disables/enables metrics collection.
+     */
+    private final DistributedBooleanProperty disableSqlIndexOperationMetrics =
+        DistributedBooleanProperty.detachedBooleanProperty("sql.disableSqlIndexOperationMetrics");
+
     /** Context. */
     private final GridKernalContext ctx;
 
@@ -115,6 +125,11 @@ public class DistributedSqlConfiguration {
 
                     dispatcher.registerProperties(disabledSqlFuncs, timeZone, dfltQueryTimeout);
                     dispatcher.registerProperties(disableCreateLuceneIndexForStringValueType);
+
+                    disableSqlIndexOperationMetrics.addListener((name, oldVal, newVal) ->
+                        H2Tree.disableIndexMetrics(newVal != null && newVal));
+
+                    dispatcher.registerProperties(disableSqlIndexOperationMetrics);
                 }
 
                 @Override public void onReadyToWrite() {
@@ -135,6 +150,11 @@ public class DistributedSqlConfiguration {
                             disableCreateLuceneIndexForStringValueType,
                             false,
                             log);
+
+                        setDefaultValue(
+                            disableSqlIndexOperationMetrics,
+                            false,
+                            log);
                     }
                     else {
                         log.warning("Distributed metastorage is not supported. " +
@@ -144,6 +164,7 @@ public class DistributedSqlConfiguration {
                         disabledSqlFuncs.localUpdate(null);
                         dfltQueryTimeout.localUpdate((int)ctx.config().getSqlConfiguration().getDefaultQueryTimeout());
                         disableCreateLuceneIndexForStringValueType.localUpdate(false);
+                        disableSqlIndexOperationMetrics.localUpdate(false);
                     }
                 }
             }
@@ -254,5 +275,17 @@ public class DistributedSqlConfiguration {
     public GridFutureAdapter<?> disableCreateLuceneIndexForStringValueType(boolean disableCreateIdx)
         throws IgniteCheckedException {
         return disableCreateLuceneIndexForStringValueType.propagateAsync(disableCreateIdx);
+    }
+
+    /** */
+    public boolean isDisableSqlIndexOperationMetrics() {
+        Boolean ret = disableSqlIndexOperationMetrics.get();
+
+        return ret != null && ret;
+    }
+
+    /** */
+    public GridFutureAdapter<?> disableSqlIndexOperationMetrics(boolean disable) throws IgniteCheckedException {
+        return disableSqlIndexOperationMetrics.propagateAsync(disable);
     }
 }

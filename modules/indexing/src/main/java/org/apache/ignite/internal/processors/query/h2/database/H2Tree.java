@@ -49,10 +49,10 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoRes
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
 import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
-import org.apache.ignite.internal.processors.metric.MetricRegistry;
-import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
@@ -74,7 +74,7 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
-import static org.apache.ignite.IgniteSystemProperties.IGNITE_BPLUS_TREE_DISABLE_METRICS;
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED;
 import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
@@ -97,6 +97,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @SystemProperty(value = "How often real invocation of inline size calculation will be skipped.", type = Long.class,
         defaults = "" + DFLT_THROTTLE_INLINE_SIZE_CALCULATION)
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
+
+    /**
+     * Runtime switcher for index operation metrics that is shared by all {@link H2Tree} instances.
+     * Updated by the {@code sql.disableSqlIndexOperationMetrics} distributed property listener so that
+     * a single property change disables/enables metrics collection across the whole cluster node
+     * without the need to reconstruct existing trees.
+     *
+     * @see org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration
+     */
+    private static volatile boolean indexMetricsDisabled;
 
     /** Cache context. */
     private final GridCacheContext<?, ?> cctx;
@@ -1117,6 +1127,15 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         return table;
     }
 
+    /**
+     * Enables/disables collecting of index operation metrics on the local node.
+     *
+     * @param disable {@code true} to disable index operation metrics collection, {@code false} to enable it.
+     */
+    public static void disableIndexMetrics(boolean disable) {
+        indexMetricsDisabled = disable;
+    }
+
     /** */
     private static PageHandlerWrapper<Result> wrapper(
         @Nullable GridCacheContext<?, ?> cctx,
@@ -1127,7 +1146,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
         if (cctx == null || table == null)
             return null;
 
-        if (IgniteSystemProperties.getBoolean(IGNITE_BPLUS_TREE_DISABLE_METRICS))
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED))
             return null;
 
         return new PageHandlerWrapper<Result>() {
@@ -1156,7 +1175,7 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
                         int intArg,
                         IoStatisticsHolder statHolder
                     ) throws IgniteCheckedException {
-                        if (!cctx.statisticsEnabled()) {
+                        if (indexMetricsDisabled) {
                             return ((PageHandler<Object, Result>)hnd).run(cacheId, pageId, page, pageAddr, io, walPlc,
                                 arg, intArg, statHolder);
                         }
