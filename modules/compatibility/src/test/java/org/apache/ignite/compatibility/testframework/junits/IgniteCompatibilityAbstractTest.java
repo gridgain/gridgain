@@ -34,11 +34,13 @@ import org.apache.ignite.compatibility.testframework.util.MavenUtils;
 import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.processors.resource.GridSpringResourceContext;
+import org.apache.ignite.internal.util.GridJavaProcess;
 import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgniteInClosure;
 import org.apache.ignite.lang.IgniteProductVersion;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.testframework.junits.multijvm.IgniteProcessProxy;
+import org.apache.ignite.testframework.junits.multijvm.JdkForkResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -159,7 +161,15 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
             }
 
             @Override protected Collection<String> filteredJvmArgs() throws Exception {
-                return getProcessProxyJvmArgs(ver);
+                return getProcessProxyJvmArgs(ver, remoteJdkMajor());
+            }
+
+            @Override protected String resolveRemoteJavaHome() {
+                return new JdkForkResolver().resolveRemoteJavaHome(ver);
+            }
+
+            @Override protected boolean acceptLegacyJdk8Remote() {
+                return true; // Compat forks load a previous release's JDK 8 class files.
             }
         };
 
@@ -189,8 +199,11 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
 
     /**
      * Creates list of JVM arguments to be used to start new Ignite process in separate JVM.
+     *
+     * @param ver Previous-release version being tested.
+     * @param remoteJdkMajor The fork's JDK major version (validated by the proxy).
      */
-    protected Collection<String> getProcessProxyJvmArgs(String ver) throws Exception {
+    protected Collection<String> getProcessProxyJvmArgs(String ver, int remoteJdkMajor) throws Exception {
         Collection<String> filteredJvmArgs = new ArrayList<>();
 
         filteredJvmArgs.add("-ea");
@@ -199,6 +212,10 @@ public abstract class IgniteCompatibilityAbstractTest extends GridCommonAbstract
             if (arg.startsWith("-Xmx") || arg.startsWith("-Xms"))
                 filteredJvmArgs.add(arg);
         }
+
+        // JDK 9+ forks need the driver's module-access flags; a JDK 8 launcher rejects them.
+        if (remoteJdkMajor >= 9)
+            filteredJvmArgs.addAll(GridJavaProcess.moduleAccessArgs());
 
         final Collection<Dependency> dependencies = getDependencies(ver);
 

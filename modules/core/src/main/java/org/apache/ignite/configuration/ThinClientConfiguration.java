@@ -135,6 +135,22 @@ public class ThinClientConfiguration {
         return this;
     }
 
+    /**
+     * Sets a value indicating whether full exception stack trace should be sent to the client.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code.
+     *
+     * @param sendStackTrace If {@code true} sends full server exception stack to the client side;
+     *                       otherwise, sends only exception message.
+     * @return {@code this} for chaining.
+     * @deprecated Use {@link #setSendServerExceptionStackTraceToClient(boolean)} instead.
+     * @see #setSendServerExceptionStackTraceToClient(boolean)
+     */
+    @Deprecated
+    public ThinClientConfiguration setServerToClientExceptionStackTraceSending(boolean sendStackTrace) {
+        return setSendServerExceptionStackTraceToClient(sendStackTrace);
+    }
+
     /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(ThinClientConfiguration.class, this);

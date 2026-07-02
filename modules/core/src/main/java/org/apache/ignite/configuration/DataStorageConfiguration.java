@@ -394,6 +394,46 @@ public class DataStorageConfiguration implements Serializable {
     }
 
     /**
+     * Gets the configuration of a data region reserved for system cache.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code. The canonical GridGain API exposes
+     * the same settings directly via {@link #getSystemRegionInitialSize()} and {@link #getSystemRegionMaxSize()}.
+     *
+     * @return System data region configuration assembled from {@link #getSystemRegionInitialSize()} and
+     * {@link #getSystemRegionMaxSize()}.
+     * @deprecated Use {@link #getSystemRegionInitialSize()} and {@link #getSystemRegionMaxSize()} instead.
+     * @see #getSystemRegionInitialSize()
+     * @see #getSystemRegionMaxSize()
+     */
+    @Deprecated
+    public SystemDataRegionConfiguration getSystemDataRegionConfiguration() {
+        return new SystemDataRegionConfiguration()
+            .setInitialSize(sysRegionInitSize)
+            .setMaxSize(sysRegionMaxSize);
+    }
+
+    /**
+     * Sets the configuration of a data region reserved for system cache.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code. The canonical GridGain API exposes
+     * the same settings directly via {@link #setSystemRegionInitialSize(long)} and
+     * {@link #setSystemRegionMaxSize(long)}.
+     *
+     * @param sysDataRegConf System data region configuration.
+     * @return {@code this} for chaining.
+     * @deprecated Use {@link #setSystemRegionInitialSize(long)} and {@link #setSystemRegionMaxSize(long)} instead.
+     * @see #setSystemRegionInitialSize(long)
+     * @see #setSystemRegionMaxSize(long)
+     */
+    @Deprecated
+    public DataStorageConfiguration setSystemDataRegionConfiguration(SystemDataRegionConfiguration sysDataRegConf) {
+        setSystemRegionInitialSize(sysDataRegConf.getInitialSize());
+        setSystemRegionMaxSize(sysDataRegConf.getMaxSize());
+
+        return this;
+    }
+
+    /**
      * The page memory consists of one or more expandable data regions defined by {@link DataRegionConfiguration}.
      * Every data region is split on pages of fixed size that store actual cache entries.
      *

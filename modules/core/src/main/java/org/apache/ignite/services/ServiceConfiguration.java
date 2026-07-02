@@ -78,9 +78,15 @@ public class ServiceConfiguration implements Serializable {
     @GridToStringExclude
     protected IgnitePredicate<ClusterNode> nodeFilter;
 
-    /** Interceptor. */
+    /**
+     * Interceptors. Transient: not part of the wire format of this class (or of
+     * {@link org.apache.ignite.internal.processors.service.LazyServiceConfiguration}) so that adding this field
+     * doesn't break {@code OptimizedMarshaller} compatibility with older cluster nodes during a rolling upgrade.
+     * Interceptors are shipped separately, see
+     * {@link org.apache.ignite.internal.processors.service.LazyServiceConfigurationV2}.
+     */
     @GridToStringExclude
-    protected ServiceCallInterceptor[] interceptors;
+    protected transient ServiceCallInterceptor[] interceptors;
 
     /**
      * Gets service name.

@@ -29,7 +29,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Utility to work with 'java -version' command.
  */
-class JavaVersionCommand {
+public class JavaVersionCommand {
     /**
      * Obtains major Java version for Java located at the given path.
      *
@@ -37,7 +37,7 @@ class JavaVersionCommand {
      * @return Major Java version (like 8 or 11).
      * @throws IOException If something goes wrong.
      */
-    int majorVersion(String javaHome) throws IOException, InterruptedException {
+    public int majorVersion(String javaHome) throws IOException, InterruptedException {
         Process process = new ProcessBuilder(GridJavaProcess.resolveJavaBin(javaHome), "-version").start();
         assertTrue(process.waitFor(10, TimeUnit.SECONDS));
 

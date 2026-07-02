@@ -583,6 +583,35 @@ public final class ClientConfiguration implements Serializable {
     }
 
     /**
+     * Gets a value indicating whether partition awareness should be enabled.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code.
+     *
+     * @return {@code true} if partition awareness is enabled.
+     * @deprecated Use {@link #isAffinityAwarenessEnabled()} instead.
+     * @see #isAffinityAwarenessEnabled()
+     */
+    @Deprecated
+    public boolean isPartitionAwarenessEnabled() {
+        return isAffinityAwarenessEnabled();
+    }
+
+    /**
+     * Sets a value indicating whether partition awareness should be enabled.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code.
+     *
+     * @param partitionAwarenessEnabled Whether partition awareness should be enabled.
+     * @return {@code this} for chaining.
+     * @deprecated Use {@link #setAffinityAwarenessEnabled(boolean)} instead.
+     * @see #setAffinityAwarenessEnabled(boolean)
+     */
+    @Deprecated
+    public ClientConfiguration setPartitionAwarenessEnabled(boolean partitionAwarenessEnabled) {
+        return setAffinityAwarenessEnabled(partitionAwarenessEnabled);
+    }
+
+    /**
      * Gets a value indicating whether cluster discovery should be enabled.
      * <p>
      * Default is {@code true}: client get addresses of server nodes from the cluster and connects to all of them.

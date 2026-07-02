@@ -3743,6 +3743,42 @@ public class IgniteConfiguration {
     }
 
     /**
+     * Gets the default query timeout.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code. The canonical GridGain API exposes
+     * this setting on {@link SqlConfiguration}.
+     *
+     * @return Default query timeout in milliseconds.
+     * @deprecated Use {@link #getSqlConfiguration()} and {@link SqlConfiguration#getDefaultQueryTimeout()} instead.
+     * @see SqlConfiguration#getDefaultQueryTimeout()
+     */
+    @Deprecated
+    public long getDefaultQueryTimeout() {
+        return (sqlCfg != null ? sqlCfg : new SqlConfiguration()).getDefaultQueryTimeout();
+    }
+
+    /**
+     * Sets the default query timeout.
+     * <p>
+     * Source-compatibility alias for Ignite-style configuration code. The canonical GridGain API exposes
+     * this setting on {@link SqlConfiguration}.
+     *
+     * @param dfltQryTimeout Default query timeout in milliseconds.
+     * @return {@code this} for chaining.
+     * @deprecated Use {@link #getSqlConfiguration()} and {@link SqlConfiguration#setDefaultQueryTimeout(long)} instead.
+     * @see SqlConfiguration#setDefaultQueryTimeout(long)
+     */
+    @Deprecated
+    public IgniteConfiguration setDefaultQueryTimeout(long dfltQryTimeout) {
+        if (sqlCfg == null)
+            sqlCfg = new SqlConfiguration();
+
+        sqlCfg.setDefaultQueryTimeout(dfltQryTimeout);
+
+        return this;
+    }
+
+    /**
      * Gets the continuation executor for cache async APIs.
      * <p />
      * When <code>null</code> (default), {@link ForkJoinPool#commonPool()} is used.

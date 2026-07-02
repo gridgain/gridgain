@@ -17,6 +17,7 @@
 package org.apache.ignite.testsuites;
 
 import org.apache.ignite.GridSuppressedExceptionSelfTest;
+import org.apache.ignite.configuration.SourceCompatibilityAliasesTest;
 import org.apache.ignite.internal.ClusterGroupHostsSelfTest;
 import org.apache.ignite.internal.ClusterGroupSelfTest;
 import org.apache.ignite.internal.ClusterProcessorCheckGlobalStateComputeRequestTest;
@@ -91,6 +92,8 @@ import org.junit.runners.Suite;
     IgnitePlatformsTestSuite.class,
 
     SecurityTestSuite.class,
+
+    SourceCompatibilityAliasesTest.class,
 
     GridSelfTest.class,
     ClusterGroupHostsSelfTest.class,
