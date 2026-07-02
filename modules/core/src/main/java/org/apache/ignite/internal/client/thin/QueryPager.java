@@ -24,7 +24,7 @@ import org.apache.ignite.client.ClientException;
  */
 interface QueryPager<T> extends AutoCloseable {
     /**
-     * Reads next page. Call {@link this#hasNext()} to check if there is data to read before calling this method.
+     * Reads next page. Call {@link #hasNext()} to check if there is data to read before calling this method.
      */
     public Collection<T> next() throws ClientException;
 

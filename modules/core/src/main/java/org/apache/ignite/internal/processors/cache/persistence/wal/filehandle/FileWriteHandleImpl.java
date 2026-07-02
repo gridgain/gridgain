@@ -61,8 +61,6 @@ import static org.apache.ignite.internal.processors.cache.persistence.wal.serial
 import static org.apache.ignite.internal.processors.cache.persistence.wal.serializer.RecordV1Serializer.HEADER_RECORD_SIZE;
 import static org.apache.ignite.internal.util.IgniteUtils.findField;
 import static org.apache.ignite.internal.util.IgniteUtils.findNonPublicMethod;
-import static org.apache.ignite.internal.util.IgniteUtils.jdkVersion;
-import static org.apache.ignite.internal.util.IgniteUtils.majorJavaVersion;
 
 /**
  * File handle for one log segment.
@@ -621,12 +619,7 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
      * @return FSyncer suitable for the current JRE.
      */
     private static MMapFSyncer pickFsyncer() {
-        int javaVersion = majorJavaVersion(jdkVersion());
-
-        if (javaVersion >= 15)
-            return new JDK15FSyncer();
-
-        return new LegacyFSyncer();
+        return new JDK15FSyncer();
     }
 
     /**
@@ -690,45 +683,4 @@ class FileWriteHandleImpl extends AbstractFileHandle implements FileWriteHandle 
         }
     }
 
-    /**
-     * Runs fsync on pre-java15 JVMs that don't offer a possibility to fsync mapped byte buffers in an aligned way.
-     */
-    private static class LegacyFSyncer implements MMapFSyncer {
-        /** {@link MappedByteBuffer#force0(java.io.FileDescriptor, long, long)}. */
-        private static final Method force0 = findNonPublicMethod(
-            MappedByteBuffer.class, "force0",
-            java.io.FileDescriptor.class, long.class, long.class
-        );
-
-        /** {@link MappedByteBuffer#mappingOffset()}. */
-        private static final Method mappingOffset = findNonPublicMethod(MappedByteBuffer.class, "mappingOffset");
-
-        /** {@link MappedByteBuffer#mappingAddress(long)}. */
-        private static final Method mappingAddress = findNonPublicMethod(
-            MappedByteBuffer.class, "mappingAddress", long.class
-        );
-
-        /** {@inheritDoc} */
-        @Override public void fsync(MappedByteBuffer buf, int index, int len) throws IgniteCheckedException {
-            try {
-                long mappedOff = (Long)mappingOffset.invoke(buf);
-
-                assert mappedOff == 0 : mappedOff;
-
-                long addr = (Long)mappingAddress.invoke(buf, mappedOff);
-
-                long alignmentDelta = (addr + index) % PAGE_SIZE;
-
-                // Given an alignment delta calculate the largest page aligned address
-                // of the mapping less than or equal to the address of the buffer
-                // element identified by the index.
-                long alignedAddr = (addr + index) - alignmentDelta;
-
-                force0.invoke(buf, fd.get(buf), alignedAddr, len + alignmentDelta);
-            }
-            catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IgniteCheckedException(e);
-            }
-        }
-    }
 }

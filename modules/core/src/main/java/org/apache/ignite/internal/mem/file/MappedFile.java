@@ -139,13 +139,11 @@ public class MappedFile implements Closeable, DirectMemoryRegion {
     private static Mapper pickMapper() {
         int javaVersion = majorJavaVersion(jdkVersion());
 
-        if (javaVersion >= 19)
+        if (javaVersion >= 19) {
             return new JDK19Mapper();
+        }
 
-        if (javaVersion >= 14)
-            return new JDK14Mapper();
-
-        return new LegacyMapper();
+        return new JDK14Mapper();
     }
 
     /** */
@@ -158,18 +156,18 @@ public class MappedFile implements Closeable, DirectMemoryRegion {
     }
 
     /** */
-    private static class LegacyMapper implements Mapper {
-        /** */
-        private static final Method map0 = U.findNonPublicMethod(FileChannelImpl.class, "map0", int.class, long.class, long.class);
+    private static class JDK14Mapper implements Mapper {
+        /** Method {@link FileChannelImpl#map0} has additional parameter since JDK 14, isSync, {@code false} by default. */
+        private static final Method map0 = U.findNonPublicMethod(FileChannelImpl.class, "map0", int.class, long.class,
+                long.class, boolean.class);
 
         /** */
         private static final Method unmap0 = U.findNonPublicMethod(FileChannelImpl.class, "unmap0", long.class, long.class);
 
-
         /** {@inheritDoc} */
         @Override public long map(RandomAccessFile f, int mode, long start, long size) throws IOException {
             try {
-                return (Long)map0.invoke(f.getChannel(), mode, start, size);
+                return (Long)map0.invoke(f.getChannel(), mode, start, size, false);
             }
             catch (IllegalAccessException e) {
                 throw new IllegalStateException(e);
@@ -190,27 +188,6 @@ public class MappedFile implements Closeable, DirectMemoryRegion {
             }
             catch (InvocationTargetException e) {
                 throw new IllegalStateException(e.getTargetException());
-            }
-        }
-    }
-
-    /** */
-    private static class JDK14Mapper extends LegacyMapper {
-        /** Method {@link FileChannelImpl#map0} has additional parameter since JDK 14, isSync, {@code false} by default. */
-        private static final Method map0 = U.findNonPublicMethod(FileChannelImpl.class, "map0", int.class, long.class,
-                long.class, boolean.class);
-
-        /** {@inheritDoc} */
-        @Override public long map(RandomAccessFile f, int mode, long start, long size) throws IOException {
-            try {
-                return (Long)map0.invoke(f.getChannel(), mode, start, size, false);
-            }
-            catch (IllegalAccessException e) {
-                throw new IllegalStateException(e);
-            }
-            catch (InvocationTargetException e) {
-                Throwable target = e.getTargetException();
-                throw (target instanceof IOException) ? (IOException)target : new IOException(target);
             }
         }
     }

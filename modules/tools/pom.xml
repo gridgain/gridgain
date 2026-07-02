@@ -37,61 +37,9 @@
         <syft.skip>true</syft.skip>
     </properties>
 
-    <profiles>
-        <profile>
-            <id>java-11+</id>
-            <activation>
-                <jdk>[11,15)</jdk>
-            </activation>
-            <properties>
-                <src.javaspecific.dir>src/main/java11</src.javaspecific.dir>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>java-15+</id>
-            <activation>
-                <jdk>[15,)</jdk>
-            </activation>
-            <properties>
-                <src.javaspecific.dir>src/main/java15</src.javaspecific.dir>
-            </properties>
-        </profile>
-
-        <profile>
-            <id>java-8</id>
-            <activation>
-                <jdk>1.8</jdk>
-            </activation>
-            <properties>
-                <src.javaspecific.dir>src/main/java8</src.javaspecific.dir>
-            </properties>
-        </profile>
-    </profiles>
-
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
         <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.0.0</version>
-                <executions>
-                    <execution>
-                        <id>add-source</id>
-                        <phase>generate-sources</phase>
-                        <goals>
-                            <goal>add-source</goal>
-                        </goals>
-                        <configuration>
-                            <sources>
-                                <source>${src.javaspecific.dir}</source>
-                            </sources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>

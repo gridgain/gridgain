@@ -31,3 +31,9 @@ fork requirement fails fast with a clear message rather than silently misbehavin
 If a JDK 8 fork is required but the property is unset, the test FAILS with a message
 naming the version and the property to set. If the property points at
 a JDK other than 8, the test also FAILS with a corrective message.
+
+Why this module's testCompile pins release=8: the JDK 8 fork's classpath
+keeps the current modules/compatibility/target/test-classes alongside the
+swapped-in previous-release ignite-core test-jar. Test class files must
+remain class file version 52 to be loadable by the JDK 8 launcher. See
+modules/compatibility/pom.xml for the configuration.
