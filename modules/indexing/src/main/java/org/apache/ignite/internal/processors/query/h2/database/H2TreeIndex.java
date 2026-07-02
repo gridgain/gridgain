@@ -116,6 +116,7 @@ import static java.util.Collections.singletonList;
 import static org.apache.ignite.cluster.ClusterState.INACTIVE;
 import static org.apache.ignite.failure.FailureType.CRITICAL_ERROR;
 import static org.apache.ignite.internal.metric.IoStatisticsType.SORTED_INDEX;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_ERROR;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_NOT_FOUND;
 import static org.apache.ignite.internal.processors.query.h2.twostep.msg.GridH2IndexRangeResponse.STATUS_OK;
@@ -697,6 +698,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
                 }
 
                 ctx.metric().remove(stats.metricRegistryName());
+                ctx.metric().remove(metricName(H2Tree.INDEX_METRIC_PREFIX,
+                    ((GridH2Table)getTable()).getSchema().getName(), tblName, idxName));
 
                 if (renamed.get()) {
                     // Already renamed, this means that DurableBackgroundCleanupIndexTreeTaskV2 was already started

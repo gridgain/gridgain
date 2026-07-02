@@ -44,10 +44,15 @@ import org.apache.ignite.internal.processors.cache.persistence.tree.BPlusTree;
 import org.apache.ignite.internal.processors.cache.persistence.tree.CorruptedTreeException;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.BPlusMetaIO;
+import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIO;
 import org.apache.ignite.internal.processors.cache.persistence.tree.io.PageIoResolver;
 import org.apache.ignite.internal.processors.cache.persistence.tree.reuse.ReuseList;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandler;
+import org.apache.ignite.internal.processors.cache.persistence.tree.util.PageHandlerWrapper;
 import org.apache.ignite.internal.processors.cache.tree.mvcc.data.MvccDataRow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.query.h2.H2RowCache;
 import org.apache.ignite.internal.processors.query.h2.H2Utils;
 import org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.InlineIndexColumnFactory;
@@ -69,6 +74,8 @@ import org.gridgain.internal.h2.table.IndexColumn;
 import org.gridgain.internal.h2.value.Value;
 import org.jetbrains.annotations.Nullable;
 
+import static org.apache.ignite.IgniteSystemProperties.IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.metricName;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.computeInlineSize;
 import static org.apache.ignite.internal.processors.query.h2.database.H2TreeIndexBase.getAvailableInlineColumns;
 import static org.apache.ignite.internal.processors.query.h2.database.inlinecolumn.AbstractInlineIndexColumn.CANT_BE_COMPARE;
@@ -80,6 +87,9 @@ import static org.apache.ignite.internal.util.IgniteUtils.MAX_INLINE_SIZE;
  * H2 tree index implementation.
  */
 public class H2Tree extends BPlusTree<H2Row, H2Row> {
+    /** Prefix for index operation metric registry names. */
+    public static final String INDEX_METRIC_PREFIX = "index";
+
     /** @see #IGNITE_THROTTLE_INLINE_SIZE_CALCULATION */
     public static final int DFLT_THROTTLE_INLINE_SIZE_CALCULATION = 1_000;
 
@@ -87,6 +97,16 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
     @SystemProperty(value = "How often real invocation of inline size calculation will be skipped.", type = Long.class,
         defaults = "" + DFLT_THROTTLE_INLINE_SIZE_CALCULATION)
     public static final String IGNITE_THROTTLE_INLINE_SIZE_CALCULATION = "IGNITE_THROTTLE_INLINE_SIZE_CALCULATION";
+
+    /**
+     * Runtime switcher for index operation metrics that is shared by all {@link H2Tree} instances.
+     * Updated by the {@code sql.disableSqlIndexOperationMetrics} distributed property listener so that
+     * a single property change disables/enables metrics collection across the whole cluster node
+     * without the need to reconstruct existing trees.
+     *
+     * @see org.apache.ignite.internal.processors.query.h2.DistributedSqlConfiguration
+     */
+    private static volatile boolean indexMetricsDisabled;
 
     /** Cache context. */
     private final GridCacheContext<?, ?> cctx;
@@ -237,7 +257,8 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
             PageIdAllocator.FLAG_IDX,
             failureProcessor,
             pageLockTrackerManager,
-            pageIoRslvr
+            pageIoRslvr,
+            wrapper(cctx, table, tblName, idxName)
         );
 
         this.cctx = cctx;
@@ -1104,5 +1125,86 @@ public class H2Tree extends BPlusTree<H2Row, H2Row> {
      */
     public GridH2Table table() {
         return table;
+    }
+
+    /**
+     * Enables/disables collecting of index operation metrics on the local node.
+     *
+     * @param disable {@code true} to disable index operation metrics collection, {@code false} to enable it.
+     */
+    public static void disableIndexMetrics(boolean disable) {
+        indexMetricsDisabled = disable;
+    }
+
+    /** */
+    private static PageHandlerWrapper<Result> wrapper(
+        @Nullable GridCacheContext<?, ?> cctx,
+        @Nullable GridH2Table table,
+        String tblName,
+        String idxName
+    ) {
+        if (cctx == null || table == null)
+            return null;
+
+        if (!IgniteSystemProperties.getBoolean(IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED))
+            return null;
+
+        return new PageHandlerWrapper<Result>() {
+            @Override public PageHandler<?, Result> wrap(BPlusTree<?, ?> tree, PageHandler<?, Result> hnd) {
+                String schemaName = table.getSchema().getName();
+
+                MetricRegistry mreg = cctx.shared().kernalContext().metric().registry(
+                    metricName(INDEX_METRIC_PREFIX, schemaName, tblName, idxName));
+
+                String opName = hnd.getClass().getSimpleName();
+
+                LongAdderMetric cnt = mreg.longAdderMetric( opName + "Count",
+                    "Count of " + opName + " operations");
+                LongAdderMetric time = mreg.longAdderMetric(opName + "Time",
+                    "Total time of " + opName + " operations (nanoseconds)");
+
+                return new PageHandler<Object, Result>() {
+                    @Override public Result run(
+                        int cacheId,
+                        long pageId,
+                        long page,
+                        long pageAddr,
+                        PageIO io,
+                        Boolean walPlc,
+                        Object arg,
+                        int intArg,
+                        IoStatisticsHolder statHolder
+                    ) throws IgniteCheckedException {
+                        if (indexMetricsDisabled) {
+                            return ((PageHandler<Object, Result>)hnd).run(cacheId, pageId, page, pageAddr, io, walPlc,
+                                arg, intArg, statHolder);
+                        }
+
+                        long ts = System.nanoTime();
+
+                        try {
+                            return ((PageHandler<Object, Result>)hnd).run(cacheId, pageId, page, pageAddr, io, walPlc,
+                                arg, intArg, statHolder);
+                        }
+                        finally {
+                            cnt.increment();
+                            time.add(System.nanoTime() - ts);
+                        }
+                    }
+
+                    @Override public boolean releaseAfterWrite(
+                        int cacheId,
+                        long pageId,
+                        long page,
+                        long pageAddr,
+                        Object arg,
+                        int intArg
+                    ) {
+                        return ((PageHandler<Object, Result>)hnd).releaseAfterWrite(cacheId, pageId, page, pageAddr,
+                            arg, intArg);
+                    }
+                };
+            }
+        };
     }
 }

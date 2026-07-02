@@ -2231,6 +2231,12 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP = "IGNITE_SQL_DISTINCT_RESULTS_USE_TREE_MAP";
 
     /**
+     * Enables secondary index B+Tree metrics.
+     */
+    @SystemProperty(value = "Enables secondary index B+Tree operation metrics", defaults = "false")
+    public static final String IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED = "IGNITE_SQL_INDEX_OPERATIONS_METRICS_ENABLED";
+
+    /**
      * Count of rows, being processed within a single checkpoint lock when indexes are rebuilt.
      * The default value is 1000.
      */
