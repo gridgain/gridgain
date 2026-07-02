@@ -29,17 +29,20 @@ import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.testcontainers.mariadb.MariaDBContainer;
 
-import java.sql.Connection;
 import java.sql.Date;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.Types;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+
+import static org.apache.ignite.cache.store.jdbc.MariaDBImages.executeQuery;
+import static org.apache.ignite.cache.store.jdbc.MariaDBImages.executeUpdate;
 
 /**
  * Integration tests for the MariaDB cache store ({@link MariaDBCacheStore} via
@@ -53,24 +56,27 @@ import java.util.Set;
  * assertion against the database is wrapped in {@link GridTestUtils#waitForCondition} rather than
  * checked inline.
  */
+@RunWith(Parameterized.class)
 public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
     /**
-     * MariaDB container — started once for the whole test class.
-     * MariaDB image pinned to current LTS — supports {@code INSERT ... ON DUPLICATE KEY UPDATE}.
+     * MariaDB image under test, injected by {@link Parameterized}. One value per
+     * {@link MariaDBImages#lts()} row, so every test runs once per MariaDB version.
      */
-    private static MariaDBContainer container = new MariaDBContainer("mariadb:11.8");
+    @Parameterized.Parameter
+    public String image;
 
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
+    /**
+     * MariaDB container for the {@link #image} currently under test. Started lazily and swapped in
+     * {@link #beforeTest()} when {@link #image} changes;
+     */
+    private static MariaDBContainer container;
 
-        container.start();
-
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement()
-        ) {
-            stmt.executeUpdate("CREATE TABLE Person (id INT PRIMARY KEY, org_id INT, birthday DATE, name VARCHAR(50), gender VARCHAR(50))");
-        }
+    /**
+     * @return MariaDB image tags to run every test against (the LTS matrix).
+     */
+    @Parameterized.Parameters(name = "{0}")
+    public static Collection<Object[]> images() {
+        return MariaDBImages.lts();
     }
 
     /** {@inheritDoc} */
@@ -89,11 +95,32 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement()
-        ) {
-            stmt.executeUpdate("DELETE FROM Person");
+        containerStart();
+    }
+
+    /**
+     * Starts the MariaDB {@link #container} for the {@link #image} currently under test is
+     * running, (re)starting it when the parameter changes, so at most one container is alive at a time.
+     */
+    private void containerStart() throws Exception {
+        if (container != null && image.equals(container.getDockerImageName())) {
+            executeUpdate(container,
+                    "DELETE FROM Person"
+            );
+
+            return;
         }
+
+        if (container != null) {
+            container.stop();
+        }
+
+        container = new MariaDBContainer(image);
+        container.start();
+
+        executeUpdate(container,
+                "CREATE TABLE Person (id INT PRIMARY KEY, org_id INT, birthday DATE, name VARCHAR(50), gender VARCHAR(50))"
+        );
     }
 
     /** {@inheritDoc} */
@@ -358,20 +385,15 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
      * @return Current number of rows in the {@code Person} table.
      */
     private int personRowCount() {
-        int[] cnt = {0};
-
         try {
-            executeQueryInContainer("SELECT COUNT(*) FROM Person", rs -> {
+            return executeQuery(container, "SELECT COUNT(*) FROM Person", rs -> {
                 rs.next();
-
-                cnt[0] = rs.getInt(1);
+                return rs.getInt(1);
             });
         }
         catch (Exception e) {
             throw new IgniteException("Failed to count Person rows", e);
         }
-
-        return cnt[0];
     }
 
     /**
@@ -379,34 +401,14 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
      * @return {@code name} column for the given id in MariaDB, or {@code null} if absent.
      */
     private String personName(int id) {
-        String[] name = {null};
-
         try {
-            executeQueryInContainer("SELECT name FROM Person WHERE id = " + id, rs -> {
-                if (rs.next())
-                    name[0] = rs.getString(1);
+            return executeQuery(container, "SELECT name FROM Person WHERE id = " + id, rs -> {
+                rs.next();
+                return rs.getString(1);
             });
         }
         catch (Exception e) {
             throw new IgniteException("Failed to read Person name", e);
         }
-
-        return name[0];
-    }
-
-    /**
-     * Runs the given query against the live MariaDB container and hands the result set to the consumer.
-     */
-    private static void executeQueryInContainer(String query, ThrowingConsumer<ResultSet> consumer) throws Exception {
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)
-        ) {
-            consumer.accept(rs);
-        }
-    }
-
-    interface ThrowingConsumer<T> {
-        void accept(T t) throws Exception;
     }
 }
