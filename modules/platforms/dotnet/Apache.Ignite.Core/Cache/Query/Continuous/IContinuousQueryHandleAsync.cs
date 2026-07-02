@@ -14,44 +14,43 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Cache.Query.Continuous
+namespace Apache.Ignite.Core.Cache.Query.Continuous;
+
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using Apache.Ignite.Core.Cache.Event;
+
+/// <summary>
+/// Represents an asynchronous continuous query handle.
+/// <para />
+/// Disposing the handle stops the continuous query and releases the associated server-side resources.
+/// </summary>
+/// <typeparam name="TK">Key type.</typeparam>
+/// <typeparam name="TV">Value type.</typeparam>
+/// <typeparam name="TInitial">Initial query cursor type.</typeparam>
+public interface IContinuousQueryHandleAsync<out TK, out TV, out TInitial> : IAsyncDisposable
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics.CodeAnalysis;
-    using Apache.Ignite.Core.Cache.Event;
+    /// <summary>
+    /// Gets the stream of cache entry events.
+    /// <para />
+    /// Enumeration continues until the handle is disposed or enumeration is stopped by the caller.
+    /// Can be called only once, throws exception on consequent calls.
+    /// </summary>
+    /// <returns>Async stream of cache entry events.</returns>
+    [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
+        Justification = "Semantics: result differs from call to call.")]
+    IAsyncEnumerable<ICacheEntryEvent<TK, TV>> GetEvents();
 
     /// <summary>
-    /// Represents an asynchronous continuous query handle.
+    /// Gets the cursor for the initial query. The initial query is executed before the continuous
+    /// listener is registered, which allows to iterate through entries that already existed at the
+    /// time the continuous query was started.
     /// <para />
-    /// Disposing the handle stops the continuous query and releases the associated server-side resources.
+    /// Can be called only once, throws exception on consequent calls.
     /// </summary>
-    /// <typeparam name="TK">Key type.</typeparam>
-    /// <typeparam name="TV">Value type.</typeparam>
-    /// <typeparam name="TInitial">Initial query cursor type.</typeparam>
-    public interface IContinuousQueryHandleAsync<out TK, out TV, out TInitial> : IAsyncDisposable
-    {
-        /// <summary>
-        /// Gets the stream of cache entry events.
-        /// <para />
-        /// Enumeration continues until the handle is disposed or enumeration is stopped by the caller.
-        /// Can be called only once, throws exception on consequent calls.
-        /// </summary>
-        /// <returns>Async stream of cache entry events.</returns>
-        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
-            Justification = "Semantics: result differs from call to call.")]
-        IAsyncEnumerable<ICacheEntryEvent<TK, TV>> GetEvents();
-
-        /// <summary>
-        /// Gets the cursor for the initial query. The initial query is executed before the continuous
-        /// listener is registered, which allows to iterate through entries that already existed at the
-        /// time the continuous query was started.
-        /// <para />
-        /// Can be called only once, throws exception on consequent calls.
-        /// </summary>
-        /// <returns>Initial query cursor.</returns>
-        [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
-            Justification = "Semantics: result differs from call to call.")]
-        TInitial GetInitialQueryCursor();
-    }
+    /// <returns>Initial query cursor.</returns>
+    [SuppressMessage("Microsoft.Design", "CA1024:UsePropertiesWhereAppropriate",
+        Justification = "Semantics: result differs from call to call.")]
+    TInitial GetInitialQueryCursor();
 }

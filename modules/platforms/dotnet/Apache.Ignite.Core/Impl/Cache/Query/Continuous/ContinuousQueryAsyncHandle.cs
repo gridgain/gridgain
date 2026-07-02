@@ -14,89 +14,88 @@
  * limitations under the License.
  */
 
-namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
+namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous;
+
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using System.Threading.Channels;
+using System.Threading.Tasks;
+using Apache.Ignite.Core.Cache.Event;
+using Apache.Ignite.Core.Cache.Query.Continuous;
+
+/// <summary>
+/// Asynchronous continuous query handle that wraps a synchronous
+/// <see cref="IContinuousQueryHandle"/> executed with an initial query, exposing the initial query
+/// cursor and the event stream. The query is stopped and server-side resources are released when the
+/// handle is disposed or when event enumeration ends (via break, cancellation, or completion), whichever
+/// happens first.
+/// </summary>
+/// <typeparam name="TK">Key type.</typeparam>
+/// <typeparam name="TV">Value type.</typeparam>
+/// <typeparam name="TInitial">Initial query cursor type.</typeparam>
+internal sealed class ContinuousQueryAsyncHandle<TK, TV, TInitial>(
+    IDisposable handle,
+    Channel<ICacheEntryEvent<TK, TV>> channel,
+    Func<TInitial> initialCursor)
+    : IContinuousQueryHandleAsync<TK, TV, TInitial>
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Runtime.CompilerServices;
-    using System.Threading;
-    using System.Threading.Channels;
-    using System.Threading.Tasks;
-    using Apache.Ignite.Core.Cache.Event;
-    using Apache.Ignite.Core.Cache.Query.Continuous;
+    private int _eventsRequested;
+    private int _stopped;
 
-    /// <summary>
-    /// Asynchronous continuous query handle that wraps a synchronous
-    /// <see cref="IContinuousQueryHandle"/> executed with an initial query, exposing the initial query
-    /// cursor and the event stream. The query is stopped and server-side resources are released when the
-    /// handle is disposed or when event enumeration ends (via break, cancellation, or completion), whichever
-    /// happens first.
-    /// </summary>
-    /// <typeparam name="TK">Key type.</typeparam>
-    /// <typeparam name="TV">Value type.</typeparam>
-    /// <typeparam name="TInitial">Initial query cursor type.</typeparam>
-    internal sealed class ContinuousQueryAsyncHandle<TK, TV, TInitial>(
-        IDisposable handle,
-        Channel<ICacheEntryEvent<TK, TV>> channel,
-        Func<TInitial> initialCursor)
-        : IContinuousQueryHandleAsync<TK, TV, TInitial>
+    /** <inheritdoc /> */
+    public IAsyncEnumerable<ICacheEntryEvent<TK, TV>> GetEvents()
     {
-        private int _eventsRequested;
-        private int _stopped;
-
-        /** <inheritdoc /> */
-        public IAsyncEnumerable<ICacheEntryEvent<TK, TV>> GetEvents()
+        if (Interlocked.CompareExchange(ref _eventsRequested, 1, 0) != 0)
         {
-            if (Interlocked.CompareExchange(ref _eventsRequested, 1, 0) != 0)
-            {
-                throw new InvalidOperationException("GetEvents can be called only once.");
-            }
-
-            return EnumerateEvents();
+            throw new InvalidOperationException("GetEvents can be called only once.");
         }
 
-        /** <inheritdoc /> */
-        public TInitial GetInitialQueryCursor() => initialCursor();
+        return EnumerateEvents();
+    }
 
-        /** <inheritdoc /> */
-        public ValueTask DisposeAsync()
+    /** <inheritdoc /> */
+    public TInitial GetInitialQueryCursor() => initialCursor();
+
+    /** <inheritdoc /> */
+    public ValueTask DisposeAsync()
+    {
+        StopQuery();
+
+        return default;
+    }
+
+    private async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> EnumerateEvents(
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await foreach (var evt in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+            {
+                yield return evt;
+            }
+        }
+        finally
         {
             StopQuery();
-
-            return default;
         }
+    }
 
-        private async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> EnumerateEvents(
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Stops the underlying continuous query and completes the event channel. Idempotent, so it is safe to
+    /// call from both <see cref="DisposeAsync"/> and the end of event enumeration.
+    /// </summary>
+    private void StopQuery()
+    {
+        if (Interlocked.CompareExchange(ref _stopped, 1, 0) != 0)
         {
-            try
-            {
-                await foreach (var evt in channel.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    yield return evt;
-                }
-            }
-            finally
-            {
-                StopQuery();
-            }
+            return;
         }
 
-        /// <summary>
-        /// Stops the underlying continuous query and completes the event channel. Idempotent, so it is safe to
-        /// call from both <see cref="DisposeAsync"/> and the end of event enumeration.
-        /// </summary>
-        private void StopQuery()
-        {
-            if (Interlocked.CompareExchange(ref _stopped, 1, 0) != 0)
-            {
-                return;
-            }
+        handle.Dispose();
 
-            handle.Dispose();
-
-            // Unblock a pending GetEvents() enumeration: the reader drains buffered events, then stops.
-            channel.Writer.TryComplete();
-        }
+        // Unblock a pending GetEvents() enumeration: the reader drains buffered events, then stops.
+        channel.Writer.TryComplete();
     }
 }
