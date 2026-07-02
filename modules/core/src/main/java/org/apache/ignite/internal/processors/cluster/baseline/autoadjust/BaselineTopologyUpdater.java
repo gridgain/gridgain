@@ -16,9 +16,12 @@
 
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
 
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.GridKernalContext;
 import org.apache.ignite.internal.IgniteFeatures;
+import org.apache.ignite.internal.SupportFeaturesUtils;
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
 import org.apache.ignite.internal.cluster.IgniteClusterImpl;
 import org.apache.ignite.internal.managers.discovery.GridDiscoveryManager;
@@ -27,10 +30,13 @@ import org.apache.ignite.internal.processors.cache.GridCachePartitionExchangeMan
 import org.apache.ignite.internal.processors.cluster.GridClusterStateProcessor;
 import org.apache.ignite.internal.util.typedef.internal.CU;
 
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP_DOWN;
 import static org.apache.ignite.internal.IgniteFeatures.BASELINE_AUTO_ADJUSTMENT;
-import static org.apache.ignite.internal.IgniteFeatures.BASELINE_SEPARATE_AUTO_ADJUSTMENT;
+import static org.apache.ignite.internal.IgniteFeatures.SEPARATE_BASELINE_AUTO_ADJUSTMENT;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.isFeatureEnabled;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.processors.cluster.baseline.autoadjust.BaselineAutoAdjustData.NULL_BASELINE_DATA;
 import static org.apache.ignite.internal.util.IgniteUtils.isLocalNodeCoordinator;
 
@@ -80,24 +86,30 @@ public class BaselineTopologyUpdater {
             cluster,
             ctx.pools().getSystemExecutorService(),
             this::isTopologyWatcherEnabled,
-            () -> isTopologyWatcherEnabled(true),
-            () -> isTopologyWatcherEnabled(false)
+            () -> isTopologyWatcherEnabled(SCALE_UP),
+            () -> isTopologyWatcherEnabled(SCALE_DOWN)
         ), ctx.log(BaselineAutoAdjustScheduler.class));
         this.discoveryMgr = ctx.discovery();
         this.ctx = ctx;
     }
 
     /**
-     * Schedule update of the baseline topology
-     * @param topologyVersion version of topology
+     * Schedule update of the baseline topology.
+     * @param topologyVersion version of topology.
+     * @deprecated Use {@link #triggerBaselineUpdate(long, AutoAdjustMode)} instead.
      */
-    public void triggerBaselineUpdate(long topologyVersion, boolean scaleUp) {
-        // Only reset shared data when NEITHER direction is watching.
-        if (!isTopologyWatcherEnabled(scaleUp)) {
-            if (!isTopologyWatcherEnabled(!scaleUp)) {
-                synchronized (this) {
-                    lastBaselineData = NULL_BASELINE_DATA;
-                }
+    @Deprecated
+    public void triggerBaselineUpdate(long topologyVersion) {
+        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
+            triggerBaselineUpdate(topologyVersion, SCALE_UP);
+            triggerBaselineUpdate(topologyVersion, SCALE_DOWN);
+
+            return;
+        }
+
+        if (!isTopologyWatcherEnabled()) {
+            synchronized (this) {
+                lastBaselineData = NULL_BASELINE_DATA;
             }
 
             return;
@@ -120,21 +132,72 @@ public class BaselineTopologyUpdater {
                             return;
                         }
 
+                        long timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
+
+                        // In case of merging exchanges the baseline data can be already expired
+                        // and so it should be rejected by scheduler.
+                        if (baselineAutoAdjustScheduler.schedule(baselineData, timeout))
+                            log.warning("Baseline auto-adjust will be executed in '" + timeout + "' ms");
+                    });
+            }
+        }
+    }
+
+    /**
+     * Schedule update of the baseline topology in direction corresponding to the provided auto-adjust mode
+     * {@link AutoAdjustMode}.
+     *
+     * @param topologyVersion version of topology.
+     * @param mode The baseline scale direction.
+     */
+    public void triggerBaselineUpdate(long topologyVersion, AutoAdjustMode mode) {
+        // Only reset shared data when NEITHER direction is watching.
+        if (!isTopologyWatcherEnabled(SCALE_UP) && !isTopologyWatcherEnabled(SCALE_DOWN)) {
+            synchronized (this) {
+                lastBaselineData = NULL_BASELINE_DATA;
+            }
+
+            return;
+        }
+
+        if ((!isTopologyWatcherEnabled(SCALE_UP) && mode == SCALE_UP)
+            || (!isTopologyWatcherEnabled(SCALE_DOWN) && mode == SCALE_DOWN))
+            return;
+
+        synchronized (this) {
+            lastBaselineData = lastBaselineData.next(topologyVersion);
+
+            final BaselineAutoAdjustData baselineData = lastBaselineData;
+
+            if (isLocalNodeCoordinator(discoveryMgr)) {
+                exchangeManager.affinityReadyFuture(new AffinityTopologyVersion(topologyVersion))
+                    .listen(future -> {
+                        if (future.error() != null)
+                            return;
+
+                        if (exchangeManager.lastFinishedFuture().hasLostPartitions()) {
+                            log.warning("Baseline won't be changed cause lost partitions were detected");
+
+                            return;
+                        }
+
                         boolean scheduled;
                         long timeout;
-                        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE)) {
-                            if (scaleUp) {
-                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(true);
+
+                        switch (mode) {
+                            case SCALE_UP:
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(mode);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleUp(baselineData, timeout);
-                            }
-                            else {
-                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(false);
+
+                                break;
+                            case SCALE_DOWN:
+                                timeout = baselineConfiguration.getBaselineAutoAdjustTimeout(mode);
                                 scheduled = baselineAutoAdjustScheduler.scheduleScaleDown(baselineData, timeout);
-                            }
-                        }
-                        else {
-                            timeout = baselineConfiguration.getBaselineAutoAdjustTimeout();
-                            scheduled = baselineAutoAdjustScheduler.schedule(baselineData, timeout);
+
+                                break;
+
+                            default:
+                                throw new IgniteException("Unsupported auto-adjustment mode: " + mode);
                         }
 
                         // In case of merging exchanges the baseline data can be already expired
@@ -154,47 +217,43 @@ public class BaselineTopologyUpdater {
             && !ctx.clientNode()
             && stateProcessor.clusterState().active()
             && baselineConfiguration.isBaselineAutoAdjustEnabled()
-            && (CU.isPersistenceEnabled(cluster.ignite().configuration()) || cluster.baselineAutoAdjustTimeout() != 0L);
+            && (CU.isPersistenceEnabled(cluster.ignite().configuration())
+            || cluster.baselineAutoAdjustTimeout() != 0L);
     }
 
     /**
      * @return {@code true} if auto-adjust baseline enabled for the scale up {@code true} or scale down {@code false}.
      */
-    private boolean isTopologyWatcherEnabled(boolean scaleUp) {
+    private boolean isTopologyWatcherEnabled(AutoAdjustMode mode) {
         return isSupported(ctx)
             && !ctx.clientNode()
             && stateProcessor.clusterState().active()
-            && isBaselineAutoAdjustEnabled(scaleUp)
+            && baselineConfiguration.isBaselineAutoAdjustEnabled(mode)
             && (CU.isPersistenceEnabled(cluster.ignite().configuration())
-                || cluster.baselineAutoAdjustTimeout(scaleUp) != 0L);
-    }
-
-    /** Returns the baseline auto-adjust status. */
-    private boolean isBaselineAutoAdjustEnabled(boolean scaleUp) {
-        if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return ((baselineConfiguration.isBaselineAutoAdjustEnabled(true) && scaleUp)
-                || (baselineConfiguration.isBaselineAutoAdjustEnabled(false) && !scaleUp));
-
-        return baselineConfiguration.isBaselineAutoAdjustEnabled();
+            || cluster.baselineAutoAdjustTimeout(mode) != 0L);
     }
 
     /**
-     * @return {@code True} if all nodes in the cluster support auto-adjust baseline.
+     * @return {@code True} if all nodes in the cluster support baseline auto-adjust.
+     *         If {@link SupportFeaturesUtils#IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE} is {@code true}, return
+     *         {@code True} if all nodes in the cluster support separate baseline auto-adjust.
      * @see IgniteFeatures#BASELINE_AUTO_ADJUSTMENT
      */
     public static boolean isSupported(GridKernalContext ctx) {
         if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE))
-            return IgniteFeatures.allNodesSupport(ctx, BASELINE_SEPARATE_AUTO_ADJUSTMENT);
+            return IgniteFeatures.allNodesSupport(ctx, SEPARATE_BASELINE_AUTO_ADJUSTMENT);
 
         return IgniteFeatures.allNodesSupport(ctx, BASELINE_AUTO_ADJUSTMENT);
     }
 
     /**
      * @return Statistic of baseline auto-adjust.
+     * @deprecated Use {@link #getStatus(AutoAdjustMode)} instead.
      */
+    @Deprecated
     public BaselineAutoAdjustStatus getStatus() {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted() || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, false))
+            if (lastBaselineData.isAdjusted(SCALE_UP_DOWN) || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, SCALE_UP_DOWN))
                 return BaselineAutoAdjustStatus.notScheduled();
 
             long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime();
@@ -207,17 +266,17 @@ public class BaselineTopologyUpdater {
     }
 
     /**
-     * @param scaleUp If {@code true}, the statistics of baseline scale up auto-adjust will be return,
-     *                if {@code false} - for scale down.
+     * Returns the statistics of the baseline auto-adjust which correspond to the provided auto-adjust mode {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction {@link AutoAdjustMode}.
      * @return Statistic of baseline auto-adjust.
      */
-    public BaselineAutoAdjustStatus getStatus(boolean scaleUp) {
+    public BaselineAutoAdjustStatus getStatus(AutoAdjustMode mode) {
         synchronized (this) {
-            if (lastBaselineData.isAdjusted(scaleUp) ||
-                baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, scaleUp))
+            if (lastBaselineData.isAdjusted(mode) || baselineAutoAdjustScheduler.isExecutionExpired(lastBaselineData, mode))
                 return BaselineAutoAdjustStatus.notScheduled();
 
-            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(scaleUp);
+            long timeToLastTask = baselineAutoAdjustScheduler.lastScheduledTaskTime(mode);
 
             if (timeToLastTask <= 0)
                 return BaselineAutoAdjustStatus.inProgress();

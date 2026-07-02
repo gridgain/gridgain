@@ -16,7 +16,12 @@
 
 package org.apache.ignite.internal.processors.cluster.baseline.autoadjust;
 
+import org.apache.ignite.AutoAdjustMode;
+import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.util.typedef.internal.S;
+
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 
 /**
  * Container of required data for changing baseline.
@@ -28,16 +33,16 @@ class BaselineAutoAdjustData {
     /** Topology version nodes of which should be set to baseline by this task. */
     private final long targetTopologyVersion;
 
-    /** {@code true} If this data don't actual anymore and it setting should be skipped. */
+    /** {@code true} If this data isn't actual anymore and this setting should be skipped. */
     private volatile boolean invalidated;
 
-    /** {@code true} If this data was adjusted. */
+    /** {@code true} If this data has been adjusted. */
     private volatile boolean adjusted;
 
-    /** {@code true} If this data was adjusted for scale up. */
+    /** {@code true} If this data has been adjusted for scale up. */
     private volatile boolean scaleUpAdjusted;
 
-    /** {@code true} If this data was adjusted for scale down. */
+    /** {@code true} If this data has been adjusted for scale down. */
     private volatile boolean scaleDownAdjusted;
 
     /**
@@ -55,8 +60,8 @@ class BaselineAutoAdjustData {
 
         data.onInvalidate();
         data.onAdjust();
-        data.onAdjust(true);
-        data.onAdjust(false);
+        data.onAdjust(SCALE_UP);
+        data.onAdjust(SCALE_DOWN);
 
         return data;
     }
@@ -69,20 +74,34 @@ class BaselineAutoAdjustData {
     }
 
     /**
-     * Mark that this data was adjusted.
+     * Marks that this data has been adjusted.
+     * @deprecated Use {@link #onAdjust(AutoAdjustMode)} instead.
      */
+    @Deprecated
     public void onAdjust() {
         adjusted = true;
     }
 
     /**
-     * @param scaleUp If {@code true} marks that this data for scale up was adjusted, if {@code false} - for scale down.
+     * Marks that data has been adjusted for the scale direction corresponding to the provided auto-adjust mode
+     * {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
      */
-    public void onAdjust(boolean scaleUp) {
-        if (scaleUp)
-            scaleUpAdjusted = true;
-        else
-            scaleDownAdjusted = true;
+    public void onAdjust(AutoAdjustMode mode) {
+        switch (mode) {
+            case SCALE_UP:
+                scaleUpAdjusted = true;
+                break;
+            case SCALE_DOWN:
+                scaleDownAdjusted = true;
+                break;
+            case SCALE_UP_DOWN:
+                adjusted = true;
+                break;
+            default:
+                throw new IgniteException("Unsupported auto-adjust: " + mode + ". Use SCALE_UP or SCALE_DOWN.");
+        }
     }
 
     /**
@@ -101,20 +120,31 @@ class BaselineAutoAdjustData {
 
     /**
      * @return {@code true} If this data already adjusted.
+     * @deprecated Use {@link #isAdjusted(AutoAdjustMode)} instead.
      */
+    @Deprecated
     public boolean isAdjusted() {
         return adjusted;
     }
 
     /**
-     * @param scaleUp If {@code true}, the status will be return for scale up, if {@code false} - for scale down.
+     * Returns whether the data has been adjusted for the direction corresponding to the provided auto-adjust mode
+     * {@link AutoAdjustMode}.
+     *
+     * @param mode The baseline scale direction.
      * @return {@code true} If this data already adjusted.
      */
-    public boolean isAdjusted(boolean scaleUp) {
-        if (scaleUp)
-            return scaleUpAdjusted;
-        else
-            return scaleDownAdjusted;
+    public boolean isAdjusted(AutoAdjustMode mode) {
+        switch (mode) {
+            case SCALE_UP:
+                return scaleUpAdjusted;
+            case SCALE_DOWN:
+                return scaleDownAdjusted;
+            case SCALE_UP_DOWN:
+                return adjusted;
+            default:
+                throw new IgniteException("Unsupported auto-adjust: " + mode + ". Use SCALE_UP or SCALE_DOWN.");
+        }
     }
 
     /**

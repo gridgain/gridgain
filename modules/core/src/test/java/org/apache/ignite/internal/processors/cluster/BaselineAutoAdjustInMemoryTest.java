@@ -18,9 +18,11 @@ package org.apache.ignite.internal.processors.cluster;
 
 import java.util.UUID;
 import org.apache.ignite.internal.IgniteEx;
+import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.junit.Test;
 
 /** */
+@WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "false")
 public class BaselineAutoAdjustInMemoryTest extends BaselineAutoAdjustTest {
     /** {@inheritDoc} */
     @Override protected boolean isPersistent() {

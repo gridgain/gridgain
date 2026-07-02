@@ -24,6 +24,8 @@ import org.junit.Test;
 
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
 
 /**
@@ -31,8 +33,10 @@ import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
  */
 @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
 public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
+    /** */
     private int scaleUpAutoAdjustTimeout;
 
+    /** */
     private int scaleDownAutoAdjustTimeout;
 
     /** {@inheritDoc} */
@@ -45,22 +49,6 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         scaleDownAutoAdjustTimeout = autoAdjustTimeout;
     }
 
-    /** {@inheritDoc} */
-    @Override public void setBaselineAutoAdjustEnabled(IgniteEx ignite, boolean enabled) {
-        super.setBaselineAutoAdjustEnabled(ignite, enabled);
-
-        ignite.cluster().baselineAutoAdjustEnabled(true, enabled);
-        ignite.cluster().baselineAutoAdjustEnabled(false, enabled);
-    }
-
-    /** {@inheritDoc} */
-    @Override public void setBaselineAutoAdjustTimeout(IgniteEx ignite, int timeout) {
-        super.setBaselineAutoAdjustTimeout(ignite, timeout);
-
-        ignite.cluster().baselineAutoAdjustTimeout(true, timeout);
-        ignite.cluster().baselineAutoAdjustTimeout(false, timeout);
-    }
-
     /**
      * @throws Exception if failed.
      */
@@ -70,13 +58,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
 
         IgniteEx ignite0 = startGrids(3);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
+        ignite0.cluster().baselineAutoAdjustEnabled(SCALE_UP, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_UP, scaleUpAutoAdjustTimeout);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true, true);
-        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
-
-        ignite0.cluster().baselineAutoAdjustEnabled(false, true);
-        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(SCALE_DOWN, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_DOWN, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -104,13 +90,11 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
 
         IgniteEx ignite0 = startGrids(3);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
+        ignite0.cluster().baselineAutoAdjustEnabled(SCALE_UP, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_UP, scaleUpAutoAdjustTimeout);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true, true);
-        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
-
-        ignite0.cluster().baselineAutoAdjustEnabled(false, true);
-        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustEnabled(SCALE_DOWN, true);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_DOWN, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -136,14 +120,12 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     public void testAutoAdjustWithOnlyScaleUpEnabled() throws Exception {
         IgniteEx ignite0 = startGrids(3);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
-
         if (isPersistent())
-            ignite0.cluster().baselineAutoAdjustEnabled(true, true);
+            ignite0.cluster().baselineAutoAdjustEnabled(SCALE_UP, true);
         else
-            ignite0.cluster().baselineAutoAdjustEnabled(false, false);
+            ignite0.cluster().baselineAutoAdjustEnabled(SCALE_DOWN, false);
 
-        ignite0.cluster().baselineAutoAdjustTimeout(true, scaleUpAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_UP, scaleUpAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -164,14 +146,12 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
     public void testAutoAdjustWithOnlyScaleDownEnabled() throws Exception {
         IgniteEx ignite0 = startGrids(3);
 
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
-
         if (isPersistent())
-            ignite0.cluster().baselineAutoAdjustEnabled(false, true);
+            ignite0.cluster().baselineAutoAdjustEnabled(SCALE_DOWN, true);
         else
-            ignite0.cluster().baselineAutoAdjustEnabled(true, false);
+            ignite0.cluster().baselineAutoAdjustEnabled(SCALE_UP, false);
 
-        ignite0.cluster().baselineAutoAdjustTimeout(false, scaleDownAutoAdjustTimeout);
+        ignite0.cluster().baselineAutoAdjustTimeout(SCALE_DOWN, scaleDownAutoAdjustTimeout);
 
         ignite0.cluster().state(ClusterState.ACTIVE);
 
@@ -182,27 +162,6 @@ public class SeparateBaselineAutoAdjustTest extends BaselineAutoAdjustTest {
         assertTrue(waitForCondition(
             () -> ignite0.cluster().currentBaselineTopology().size() == 2,
             scaleDownAutoAdjustTimeout * 2
-        ));
-    }
-
-    /**
-     * @throws Exception if failed.
-     */
-    @Test
-    public void testSeparateAutoAdjustShouldBeEnabledExplicitly() throws Exception {
-        IgniteEx ignite0 = startGrids(3);
-
-        ignite0.cluster().baselineAutoAdjustEnabled(true);
-
-        ignite0.cluster().state(ClusterState.ACTIVE);
-
-        startGrid(3);
-
-        stopGrid(1);
-
-        assertTrue(waitForCondition(
-            () -> ignite0.cluster().currentBaselineTopology().size() == 3,
-            autoAdjustTimeout * 2
         ));
     }
 

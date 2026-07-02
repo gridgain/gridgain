@@ -143,6 +143,7 @@ import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AU
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_CLUSTER_ID_AND_TAG_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.commandline.CommandHandler.CONFIRM_MSG;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_CONNECTION_FAILED;
 import static org.apache.ignite.internal.commandline.CommandHandler.EXIT_CODE_ILLEGAL_STATE_ERROR;
@@ -1570,6 +1571,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
      * @throws Exception If failed.
      */
     @Test
+    @WithSystemProperty(key = IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     public void testBaselineAutoAdjustmentAutoRemoveNode() throws Exception {
         Ignite ignite = startGrids(3);
 
@@ -1775,6 +1777,7 @@ public class GridCommandHandlerTest extends GridCommandHandlerClusterPerMethodAb
     @Test
     @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
+    @WithSystemProperty(key = IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE, value = "false")
     @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
     public void testBaselineAutoAdjustmentAutoFeatureDisabled() throws Exception {
         Ignite ignite = startGrids(1);
