@@ -299,6 +299,9 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     /** Number of keys processed during index rebuilding. */
     private long idxRebuildKeyProcessed;
 
+    /** The number of local node partitions that remain to be processed to complete indexing. */
+    private int idxBuildPartitionsLeftCount;
+
     /**
      * Default constructor.
      */
@@ -416,6 +419,8 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
 
         idxRebuildInProgress = m.isIndexRebuildInProgress();
         idxRebuildKeyProcessed = m.getIndexRebuildKeysProcessed();
+
+        idxBuildPartitionsLeftCount = m.getIndexBuildPartitionsLeftCount();
     }
 
     /**
@@ -565,6 +570,8 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
             cacheTouches += e.getCacheTouches();
             cacheTouchHits += e.getCacheTouchHits();
             cacheTouchMisses += e.getCacheTouchMisses();
+
+            idxBuildPartitionsLeftCount += e.getIndexBuildPartitionsLeftCount();
         }
 
         int size = metrics.size();
@@ -1088,6 +1095,11 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
     }
 
     /** {@inheritDoc} */
+    @Override public int getIndexBuildPartitionsLeftCount() {
+        return idxBuildPartitionsLeftCount;
+    }
+
+    /** {@inheritDoc} */
     @Override public String toString() {
         return S.toString(CacheMetricsSnapshotV2.class, this);
     }
@@ -1173,11 +1185,13 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
         out.writeLong(cacheTouches);
         out.writeLong(cacheTouchHits);
         out.writeLong(cacheTouchMisses);
+
+        out.writeInt(idxBuildPartitionsLeftCount);
     }
 
     /** {@inheritDoc} */
     @Override public byte getProtocolVersion() {
-        return V3;
+        return V4;
     }
 
     /** {@inheritDoc} */
@@ -1265,5 +1279,8 @@ public class CacheMetricsSnapshotV2 extends IgniteDataTransferObject implements 
             cacheTouchHits = in.readLong();
             cacheTouchMisses = in.readLong();
         }
+
+        if (protoVer >= V4)
+            idxBuildPartitionsLeftCount = in.readInt();
     }
 }

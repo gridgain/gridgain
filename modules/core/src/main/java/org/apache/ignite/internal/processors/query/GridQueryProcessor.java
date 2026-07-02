@@ -1960,7 +1960,7 @@ public class GridQueryProcessor extends GridProcessorAdapter {
 
                     GridCacheContext cctx = cacheInfo.cacheContext();
 
-                    cctx.group().metrics().addIndexBuildCountPartitionsLeft(cctx.topology().localPartitions().size());
+                    cctx.cache().metrics0().addIndexBuildPartitionsLeftCount(cctx.topology().localPartitions().size());
 
                     GridCacheContext<?, ?> cacheCtx = cacheInfo.cacheContext();
 

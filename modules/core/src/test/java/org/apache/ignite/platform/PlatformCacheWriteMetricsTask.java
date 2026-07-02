@@ -552,6 +552,11 @@ public class PlatformCacheWriteMetricsTask extends ComputeTaskAdapter<Long, Obje
             return 0;
         }
 
+        /** {@inheritDoc} */
+        @Override public int getIndexBuildPartitionsLeftCount() {
+            return 0;
+        }
+
         @Override public long getCacheTouches() {
             return 79;
         }
