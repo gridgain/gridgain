@@ -275,7 +275,13 @@ public enum IgniteFeatures {
     TCP_DISCOVERY_COMPACTED_TOPOLOGY_HISTORY(73),
 
     /** New partition reconciliation algorithms. */
-    PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74);
+    PARTITION_RECONCILIATION_LATEST_ALG_UPDATE(74),
+
+    /**
+     * Support of service call interceptors
+     * ({@link org.apache.ignite.internal.processors.service.LazyServiceConfigurationV2}).
+     */
+    SERVICE_CALL_INTERCEPTORS(75);
 
     /**
      * Unique feature identifier.
