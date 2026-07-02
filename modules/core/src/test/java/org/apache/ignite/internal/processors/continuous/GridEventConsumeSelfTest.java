@@ -40,6 +40,7 @@ import org.apache.ignite.events.JobEvent;
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.IgniteInternalFuture;
 import org.apache.ignite.internal.util.GridConcurrentHashSet;
+import org.apache.ignite.internal.util.lang.GridAbsPredicate;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.internal.util.typedef.G;
 import org.apache.ignite.internal.util.typedef.P1;
@@ -722,6 +723,16 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
     }
 
     /**
+     * Verifies that returning {@code false} from a remote listener callback unsubscribes the
+     * listener so it stops receiving events.
+     * <p>
+     * A broadcast fires {@code EVT_JOB_STARTED} on every node concurrently, and events already in
+     * flight when the routine starts stopping cannot be retracted. The callback may therefore
+     * legitimately observe between {@code 1} and {@code GRID_CNT} events before the unsubscribe
+     * propagates - the contract only guarantees the listener eventually stops. The test asserts
+     * that guarantee (routine unsubscribed everywhere, no further events delivered) rather than an
+     * exact event count, which used to make it flaky.
+     *
      * @throws Exception If failed.
      */
     @Test
@@ -755,8 +766,34 @@ public class GridEventConsumeSelfTest extends GridCommonAbstractTest {
 
             assert latch.await(10, SECONDS) : latch;
 
-            assertEquals(1, nodeIds.size());
-            assertEquals(1, cnt.get());
+            // The callback returned 'false' for the first event, so the routine must be
+            // auto-unsubscribed on all nodes (in-flight events may still arrive in the meantime).
+            assertTrue("Listener was not unsubscribed after the callback returned 'false'",
+                GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                    @Override public boolean apply() {
+                        for (Ignite ignite : G.allGrids()) {
+                            GridContinuousProcessor proc = ((IgniteEx)ignite).context().continuous();
+
+                            if (!localRoutines(proc).isEmpty() || !U.<Map>field(proc, "rmtInfos").isEmpty())
+                                return false;
+                        }
+
+                        return true;
+                    }
+                }, 5000));
+
+            assertTrue("Listener received no events", cnt.get() >= 1);
+            assertTrue("Listener received more events than there are nodes: " + cnt.get(), cnt.get() <= GRID_CNT);
+
+            int cntAfterStop = cnt.get();
+
+            // No further events must be delivered once the listener has been stopped by the callback.
+            grid(0).compute().broadcast(F.noop());
+
+            U.sleep(1000);
+
+            assertEquals("Listener received events after it was stopped by the callback",
+                cntAfterStop, cnt.get());
         }
         finally {
             grid(0).events().stopRemoteListen(consumeId);
