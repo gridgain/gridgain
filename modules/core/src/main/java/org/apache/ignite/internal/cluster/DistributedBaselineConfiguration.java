@@ -201,6 +201,11 @@ public class DistributedBaselineConfiguration {
 
                         setDefaultValue(baselineAutoAdjustEnabled, dfltEnabled, log);
                         setDefaultValue(baselineAutoAdjustTimeout, dfltTimeout, log);
+                    }
+
+                    if (isFeatureEnabled(IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE) &&
+                        allNodesSupport(ctx, SEPARATE_BASELINE_AUTO_ADJUSTMENT) && serverMode) {
+                        initDfltAutoAdjustVars(ctx);
 
                         setDefaultValue(baselineScaleUpAutoAdjustEnabled, dfltScaleUpEnabled, log);
                         setDefaultValue(baselineScaleUpAutoAdjustTimeout, dfltScaleUpTimeout, log);
