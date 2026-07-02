@@ -341,16 +341,15 @@ public class CacheGroupMetricsTest extends GridCommonAbstractTest implements Ser
 
         stopGrid(2);
 
-        // Wait until renting moved to evicting.
-        GridTestUtils.waitForCondition(new GridAbsPredicate() {
-            @Override public boolean apply() {
-                return grid(0).context().cache().cacheGroup(CU.cacheId("group1")).
-                    topology().localPartitions().stream().noneMatch(p -> p.state() == RENTING);
-            }
-        }, 5_000);
-
-        // Check moving partitions while rebalancing.
-        assertFalse(arrayToAllocationMap(new int[10][]).equals(movingPartitionsAllocationMap.value()));
+        // Wait for the moving partition assignment to be reflected in the metric. The previous
+        // "noneMatch RENTING" wait is a proxy that can be trivially satisfied before PME has
+        // assigned any partition state, so it doesn't gate the assertion below.
+        assertTrue("Moving partitions did not appear within 10s",
+            GridTestUtils.waitForCondition(new GridAbsPredicate() {
+                @Override public boolean apply() {
+                    return !arrayToAllocationMap(new int[10][]).equals(movingPartitionsAllocationMap.value());
+                }
+            }, 10_000));
 
         assertTrue(mxBean0Grp1.get2().<IntMetric>findMetric("LocalNodeMovingPartitionsCount").value() > 0);
         assertTrue(mxBean0Grp1.get1().getClusterMovingPartitionsCount() > 0);
