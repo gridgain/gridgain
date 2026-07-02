@@ -402,10 +402,8 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
      */
     private String personName(int id) {
         try {
-            return executeQuery(container, "SELECT name FROM Person WHERE id = " + id, rs -> {
-                rs.next();
-                return rs.getString(1);
-            });
+            return executeQuery(container, "SELECT name FROM Person WHERE id = " + id,
+                    rs -> rs.next() ? rs.getString(1) : null);
         }
         catch (Exception e) {
             throw new IgniteException("Failed to read Person name", e);
