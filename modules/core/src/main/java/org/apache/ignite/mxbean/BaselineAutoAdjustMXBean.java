@@ -16,6 +16,7 @@
 
 package org.apache.ignite.mxbean;
 
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.internal.cluster.DistributedBaselineConfiguration;
 
 /**
@@ -27,8 +28,9 @@ public interface BaselineAutoAdjustMXBean {
     boolean isAutoAdjustmentEnabled();
 
     /** */
-    @MXBeanDescription("Whether baseline scale up (scaleUp==true) or scale down (scaleUp==false) autoadjustment is enabled or not.")
-    boolean isAutoAdjustmentEnabled(boolean scaleUp);
+    @MXBeanDescription("Whether baseline scale up (mode is SCALE_UP) or scale down (mode is SCALE_DOWN) autoadjustment " +
+        "is enabled or not.")
+    boolean isAutoAdjustmentEnabled(AutoAdjustMode mode);
 
     /** */
     @MXBeanDescription("Baseline autoadjustment timeout value.")
@@ -36,7 +38,7 @@ public interface BaselineAutoAdjustMXBean {
 
     /** */
     @MXBeanDescription("Baseline autoadjustment timeout value.")
-    long getAutoAdjustmentTimeout(boolean scaleUp);
+    long getAutoAdjustmentTimeout(AutoAdjustMode mode);
 
     /** */
     @MXBeanDescription("Time until baseline will be adjusted automatically.")
@@ -44,7 +46,7 @@ public interface BaselineAutoAdjustMXBean {
 
     /** */
     @MXBeanDescription("Time until baseline will be adjusted automatically.")
-    long getTimeUntilAutoAdjust(boolean scaleUp);
+    long getTimeUntilAutoAdjust(AutoAdjustMode mode);
 
     /** */
     @MXBeanDescription("State of task of auto-adjust(IN_PROGRESS, SCHEDULED, NOT_SCHEDULED).")
@@ -52,7 +54,7 @@ public interface BaselineAutoAdjustMXBean {
 
     /** */
     @MXBeanDescription("State of task of auto-adjust(IN_PROGRESS, SCHEDULED, NOT_SCHEDULED).")
-    String getTaskState(boolean scaleUp);
+    String getTaskState(AutoAdjustMode mode);
 
     /** */
     @MXBeanDescription("Enable/disable baseline autoadjustment feature.")
@@ -63,7 +65,7 @@ public interface BaselineAutoAdjustMXBean {
     /** */
     @MXBeanDescription("Enable/disable baseline autoadjustment feature for scaleUp/scaleDown separately.")
     public void setAutoAdjustmentEnabled(
-        @MXBeanParameter(name = "scaleUp", description = "ScaleUp/scaleDown flag.") boolean scaleUp,
+        @MXBeanParameter(name = "mode", description = "Auto-adjust mode (SCALE_UP/SCALE_DOWN).") AutoAdjustMode mode,
         @MXBeanParameter(name = "enabled", description = "Enable/disable flag.") boolean enabled
     );
 
@@ -76,7 +78,7 @@ public interface BaselineAutoAdjustMXBean {
     /** */
     @MXBeanDescription("Set baseline autoadjustment timeout value for scaleUp/scaleDown separately.")
     public void setAutoAdjustmentTimeout(
-        @MXBeanParameter(name = "scaleUp", description = "ScaleUp/scaleDown flag.") boolean scaleUp,
+        @MXBeanParameter(name = "mode", description = "Auto-adjust mode (SCALE_UP/SCALE_DOWN).") AutoAdjustMode mode,
         @MXBeanParameter(name = "timeout", description = "Timeout value.") long timeout
     );
 }

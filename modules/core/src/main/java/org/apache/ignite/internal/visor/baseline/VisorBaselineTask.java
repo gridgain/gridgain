@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.cluster.BaselineNode;
 import org.apache.ignite.cluster.ClusterNode;
@@ -34,6 +35,9 @@ import org.apache.ignite.internal.visor.VisorJob;
 import org.apache.ignite.internal.visor.VisorOneNodeTask;
 import org.apache.ignite.internal.visor.util.VisorIllegalStateException;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 
 /**
  * Task that will collect information about baseline topology and can change its state.
@@ -83,13 +87,13 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 srvrs,
                 cluster.isBaselineAutoAdjustEnabled(),
                 cluster.baselineAutoAdjustTimeout(),
-                cluster.isBaselineAutoAdjustEnabled(true),
-                cluster.baselineAutoAdjustTimeout(true),
-                cluster.isBaselineAutoAdjustEnabled(false),
-                cluster.baselineAutoAdjustTimeout(false),
+                cluster.isBaselineAutoAdjustEnabled(SCALE_UP),
+                cluster.baselineAutoAdjustTimeout(SCALE_UP),
+                cluster.isBaselineAutoAdjustEnabled(SCALE_DOWN),
+                cluster.baselineAutoAdjustTimeout(SCALE_DOWN),
                 cluster.baselineAutoAdjustStatus(),
-                cluster.baselineAutoAdjustStatus(true),
-                cluster.baselineAutoAdjustStatus(false)
+                cluster.baselineAutoAdjustStatus(SCALE_UP),
+                cluster.baselineAutoAdjustStatus(SCALE_DOWN)
             );
         }
 
@@ -239,16 +243,16 @@ public class VisorBaselineTask extends VisorOneNodeTask<VisorBaselineTaskArg, Vi
                 ignite.cluster().baselineAutoAdjustTimeout(settings.getAutoAdjustAwaitingTime());
 
             if (settings.isScaleUpAutoAdjustEnabled() != null)
-                ignite.cluster().baselineAutoAdjustEnabled(true, settings.isScaleUpAutoAdjustEnabled());
+                ignite.cluster().baselineAutoAdjustEnabled(SCALE_UP, settings.isScaleUpAutoAdjustEnabled());
 
             if (settings.getScaleUpAutoAdjustAwaitingTime() != null)
-                ignite.cluster().baselineAutoAdjustTimeout(true, settings.getScaleUpAutoAdjustAwaitingTime());
+                ignite.cluster().baselineAutoAdjustTimeout(SCALE_UP, settings.getScaleUpAutoAdjustAwaitingTime());
 
             if (settings.isScaleDownAutoAdjustEnabled() != null)
-                ignite.cluster().baselineAutoAdjustEnabled(false, settings.isScaleDownAutoAdjustEnabled());
+                ignite.cluster().baselineAutoAdjustEnabled(SCALE_DOWN, settings.isScaleDownAutoAdjustEnabled());
 
             if (settings.getScaleDownAutoAdjustAwaitingTime() != null)
-                ignite.cluster().baselineAutoAdjustTimeout(false, settings.getScaleDownAutoAdjustAwaitingTime());
+                ignite.cluster().baselineAutoAdjustTimeout(SCALE_DOWN, settings.getScaleDownAutoAdjustAwaitingTime());
 
             return collect();
         }

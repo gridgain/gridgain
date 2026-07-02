@@ -16,6 +16,7 @@
 
 package org.apache.ignite.internal.processors.cluster;
 
+import org.apache.ignite.AutoAdjustMode;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.internal.GridKernalContext;
@@ -49,8 +50,8 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public boolean isAutoAdjustmentEnabled(boolean scaleUp) {
-        return baselineConfiguration.isBaselineAutoAdjustEnabled(scaleUp);
+    @Override public boolean isAutoAdjustmentEnabled(AutoAdjustMode mode) {
+        return baselineConfiguration.isBaselineAutoAdjustEnabled(mode);
     }
 
     /** {@inheritDoc} */
@@ -59,8 +60,8 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public long getAutoAdjustmentTimeout(boolean scaleUp) {
-        return baselineConfiguration.getBaselineAutoAdjustTimeout(scaleUp);
+    @Override public long getAutoAdjustmentTimeout(AutoAdjustMode mode) {
+        return baselineConfiguration.getBaselineAutoAdjustTimeout(mode);
     }
 
     /** {@inheritDoc} */
@@ -69,8 +70,8 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public long getTimeUntilAutoAdjust(boolean scaleUp) {
-        return state.baselineAutoAdjustStatus(scaleUp).getTimeUntilAutoAdjust();
+    @Override public long getTimeUntilAutoAdjust(AutoAdjustMode mode) {
+        return state.baselineAutoAdjustStatus(mode).getTimeUntilAutoAdjust();
     }
 
     /** {@inheritDoc} */
@@ -79,8 +80,8 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public String getTaskState(boolean scaleUp) {
-        return state.baselineAutoAdjustStatus(scaleUp).getTaskState().toString();
+    @Override public String getTaskState(AutoAdjustMode mode) {
+        return state.baselineAutoAdjustStatus(mode).getTaskState().toString();
     }
 
     /** {@inheritDoc} */
@@ -94,9 +95,9 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public void setAutoAdjustmentEnabled(boolean scaleUp, boolean enabled) {
+    @Override public void setAutoAdjustmentEnabled(AutoAdjustMode mode, boolean enabled) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(scaleUp, ctx, enabled).get();
+            baselineConfiguration.updateBaselineAutoAdjustEnabledAsync(mode, ctx, enabled).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);
@@ -114,9 +115,9 @@ public class BaselineAutoAdjustMXBeanImpl implements BaselineAutoAdjustMXBean {
     }
 
     /** {@inheritDoc} */
-    @Override public void setAutoAdjustmentTimeout(boolean scaleUp, long timeout) {
+    @Override public void setAutoAdjustmentTimeout(AutoAdjustMode mode, long timeout) {
         try {
-            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(scaleUp, ctx, timeout).get();
+            baselineConfiguration.updateBaselineAutoAdjustTimeoutAsync(mode, ctx, timeout).get();
         }
         catch (IgniteCheckedException e) {
             throw new IgniteException(e);

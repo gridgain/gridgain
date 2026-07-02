@@ -20,6 +20,7 @@ import javax.management.MBeanServer;
 import javax.management.MBeanServerInvocationHandler;
 import javax.management.ObjectName;
 import java.lang.management.ManagementFactory;
+
 import org.apache.ignite.internal.IgniteEx;
 import org.apache.ignite.internal.cluster.IgniteClusterEx;
 import org.apache.ignite.internal.util.typedef.internal.U;
@@ -29,6 +30,8 @@ import org.apache.ignite.testframework.junits.WithSystemProperty;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
 
+import static org.apache.ignite.AutoAdjustMode.SCALE_DOWN;
+import static org.apache.ignite.AutoAdjustMode.SCALE_UP;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
 import static org.apache.ignite.testframework.GridTestUtils.waitForCondition;
@@ -86,7 +89,6 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
 
     /** */
     @Test
-    @WithSystemProperty(key = "IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE", value = "true")
     public void testTimeoutAndEnabledFlagForScaleUpAndScaleDownSeparately() throws Exception {
         IgniteEx ignite = (IgniteEx)startGrid();
 
@@ -94,74 +96,71 @@ public class BaselineAutoAdjustMXBeanTest extends GridCommonAbstractTest {
 
         BaselineAutoAdjustMXBean bltMxBean = bltMxBean();
 
-        assertTrue(cluster.isBaselineAutoAdjustEnabled());
-        assertTrue(bltMxBean.isAutoAdjustmentEnabled());
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(SCALE_UP));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(SCALE_UP));
 
-        assertTrue(cluster.isBaselineAutoAdjustEnabled(true));
-        assertTrue(bltMxBean.isAutoAdjustmentEnabled(true));
+        assertEquals(0L, cluster.baselineAutoAdjustTimeout(SCALE_UP));
+        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(SCALE_UP));
 
-        assertEquals(0L, cluster.baselineAutoAdjustTimeout(true));
-        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(true));
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(SCALE_DOWN));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(SCALE_DOWN));
 
-        assertTrue(cluster.isBaselineAutoAdjustEnabled(false));
-        assertTrue(bltMxBean.isAutoAdjustmentEnabled(false));
+        assertEquals(0L, cluster.baselineAutoAdjustTimeout(SCALE_DOWN));
+        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(SCALE_DOWN));
 
-        assertEquals(0L, cluster.baselineAutoAdjustTimeout(false));
-        assertEquals(0L, bltMxBean.getAutoAdjustmentTimeout(false));
+        cluster.baselineAutoAdjustEnabled(SCALE_UP, false);
+        assertFalse(bltMxBean.isAutoAdjustmentEnabled(SCALE_UP));
+        assertTrue(bltMxBean.isAutoAdjustmentEnabled(SCALE_DOWN));
 
-        cluster.baselineAutoAdjustEnabled(true, false);
-        assertFalse(bltMxBean.isAutoAdjustmentEnabled(true));
-        assertTrue(bltMxBean.isAutoAdjustmentEnabled(false));
+        cluster.baselineAutoAdjustTimeout(SCALE_UP, 31_000L);
+        cluster.baselineAutoAdjustTimeout(SCALE_DOWN, 32_000L);
+        assertEquals(31_000L, bltMxBean.getAutoAdjustmentTimeout(SCALE_UP));
+        assertEquals(32_000L, bltMxBean.getAutoAdjustmentTimeout(SCALE_DOWN));
 
-        cluster.baselineAutoAdjustTimeout(true, 31_000L);
-        cluster.baselineAutoAdjustTimeout(false, 32_000L);
-        assertEquals(31_000L, bltMxBean.getAutoAdjustmentTimeout(true));
-        assertEquals(32_000L, bltMxBean.getAutoAdjustmentTimeout(false));
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_UP, true);
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_DOWN, false);
+        assertTrue(cluster.isBaselineAutoAdjustEnabled(SCALE_UP));
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(SCALE_DOWN));
 
-        bltMxBean.setAutoAdjustmentEnabled(true, true);
-        bltMxBean.setAutoAdjustmentEnabled(false, false);
-        assertTrue(cluster.isBaselineAutoAdjustEnabled(true));
-        assertFalse(cluster.isBaselineAutoAdjustEnabled(false));
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_UP, false);
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_DOWN, false);
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(SCALE_UP));
+        assertFalse(cluster.isBaselineAutoAdjustEnabled(SCALE_DOWN));
 
-        bltMxBean.setAutoAdjustmentEnabled(true, false);
-        bltMxBean.setAutoAdjustmentEnabled(false, false);
-        assertFalse(cluster.isBaselineAutoAdjustEnabled(true));
-        assertFalse(cluster.isBaselineAutoAdjustEnabled(false));
+        bltMxBean.setAutoAdjustmentTimeout(SCALE_UP, 20_000L);
+        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(SCALE_UP));
 
-        bltMxBean.setAutoAdjustmentTimeout(true, 20_000L);
-        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(true));
+        bltMxBean.setAutoAdjustmentTimeout(SCALE_DOWN, 20_000L);
+        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(SCALE_DOWN));
 
-        bltMxBean.setAutoAdjustmentTimeout(false, 20_000L);
-        assertEquals(20_000L, cluster.baselineAutoAdjustTimeout(false));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(SCALE_UP));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(SCALE_DOWN));
 
-        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(true));
-        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(false));
-
-        bltMxBean.setAutoAdjustmentEnabled(true, true);
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_UP, true);
 
         startGrid(1);
 
-        long timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(true);
+        long timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(SCALE_UP);
         assertTrue(Long.toString(timeUntilAutoAdjust), timeUntilAutoAdjust > 0 && timeUntilAutoAdjust < 20_000L);
 
-        assertEquals("SCHEDULED", bltMxBean.getTaskState(true));
-        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(false));
+        assertEquals("SCHEDULED", bltMxBean.getTaskState(SCALE_UP));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(SCALE_DOWN));
 
         assertTrue(
             "Failed to wait for changing baseline in " + 20_000 * 2 + " ms.",
             waitForCondition(() -> ignite.cluster().currentBaselineTopology().size() == 2, 20_000 * 2)
         );
 
-        bltMxBean.setAutoAdjustmentEnabled(true, false);
-        bltMxBean.setAutoAdjustmentEnabled(false, true);
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_UP, false);
+        bltMxBean.setAutoAdjustmentEnabled(SCALE_DOWN, true);
 
         stopGrid(1);
 
-        timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(false);
+        timeUntilAutoAdjust = bltMxBean.getTimeUntilAutoAdjust(SCALE_DOWN);
         assertTrue(Long.toString(timeUntilAutoAdjust), timeUntilAutoAdjust > 0 && timeUntilAutoAdjust < 20_000L);
 
-        assertEquals("SCHEDULED", bltMxBean.getTaskState(false));
-        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(true));
+        assertEquals("SCHEDULED", bltMxBean.getTaskState(SCALE_DOWN));
+        assertEquals("NOT_SCHEDULED", bltMxBean.getTaskState(SCALE_UP));
     }
 
     /** */
