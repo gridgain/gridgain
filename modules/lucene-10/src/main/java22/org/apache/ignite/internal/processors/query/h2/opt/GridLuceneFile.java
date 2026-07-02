@@ -23,6 +23,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
 
@@ -58,6 +60,21 @@ public class GridLuceneFile implements Accountable {
      */
     private static final boolean NOCOPY_MIRROR =
         Boolean.parseBoolean(System.getProperty("GRIDGAIN_VECTOR_NOCOPY_SCORER", "true"));
+
+    /** JUL, matching Lucene's own vectorization-status logging — this module has no Ignite logger wiring. */
+    private static final Logger log = Logger.getLogger(GridLuceneFile.class.getName());
+
+    /** First mirror build is logged at INFO (the operator-visible "no-copy is active" signal). */
+    private static final AtomicBoolean engagedLogged = new AtomicBoolean();
+
+    static {
+        // Whether the no-copy scorer can engage is otherwise invisible in logs (an MR-jar-vs-exploded
+        // classpath mix-up or this switch silently fall back to the copy scorer), so announce the off state.
+        if (!NOCOPY_MIRROR) {
+            log.info("GridGain no-copy vector scorer disabled via -DGRIDGAIN_VECTOR_NOCOPY_SCORER=false; " +
+                "Lucene will use its copy-based vector scorer.");
+        }
+    }
 
     /** Lazily-built contiguous off-heap mirror of the whole file (0 = not built). See {@link #contiguousAddr()}. */
     private volatile long contiguousPtr;
@@ -208,6 +225,13 @@ public class GridLuceneFile implements Accountable {
 
         contiguousLen = length;
         contiguousPtr = dst;
+
+        if (engagedLogged.compareAndSet(false, true)) {
+            log.info("GridGain no-copy vector scorer engaged: contiguous off-heap mirror built for '" + name +
+                "' (" + length + " bytes); further mirror builds are logged at FINE.");
+        }
+        else if (log.isLoggable(Level.FINE))
+            log.fine("No-copy mirror built for '" + name + "' (" + length + " bytes).");
 
         return dst;
     }

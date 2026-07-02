@@ -285,6 +285,16 @@ public class GridLuceneInputStream extends IndexInput implements MemorySegmentAc
      * succeeds against a single contiguous region, which {@link GridLuceneFile#contiguousAddr()} provides
      * (the file is otherwise stored as discontiguous 32 KB pages). Returns {@code null} if the mirror is
      * unavailable or the range is out of bounds, in which case Lucene falls back to its copy path.
+     *
+     * <p><b>Lifetime.</b> The returned segment is a raw view ({@code MemorySegment.ofAddress(..).reinterpret})
+     * with no reachability tie to this input, so its validity rests on the file's ref-count: the directory's
+     * {@code openInput} takes a ref, {@link #close()} releases it, and {@code GridLuceneFile.deferredDelete()}
+     * frees the mirror (and the page buffers) only once the file is deleted AND no refs remain. Lucene's
+     * {@code IndexInput} contract forbids using an input, its clones or slices — and therefore anything
+     * obtained from them, including these segments — after the input is closed, so a segment held by a
+     * vector scorer is valid exactly as long as the reader that created it. Reading through a segment after
+     * close would be use-after-free, but that is the same (pre-existing) failure mode as {@code readByte} on
+     * a closed input reading a freed page buffer — the no-copy path adds no new lifetime class.
      */
     @Override public MemorySegment segmentSliceOrNull(long pos, long len) throws IOException {
         long base = file.contiguousAddr();

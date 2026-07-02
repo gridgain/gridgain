@@ -263,8 +263,12 @@
                             <classesDirectory>${project.build.directory}/${project.build.finalName}.jar</classesDirectory>
                             <!-- GridUnsafe needs Ignite's module-access flags (the parent applies these to
                                  surefire, not failsafe); enable-native-access silences the MemorySegment
-                                 restricted-method warning. -->
+                                 restricted-method warning; jdk.incubator.vector activates Lucene's Panama
+                                 vectorization provider, whose scorer is the only caller of
+                                 MemorySegmentAccessInput (the default scorer never requests segments, so
+                                 without it the E2E test cannot engage the no-copy path). -->
                             <argLine>
+                                --add-modules=jdk.incubator.vector
                                 --add-opens=java.base/jdk.internal.access=ALL-UNNAMED
                                 --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
                                 --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
@@ -276,9 +280,37 @@
                             </argLine>
                         </configuration>
                         <executions>
+                            <!-- Default lane: plumbing IT + E2E engagement IT, no-copy ON (default). -->
                             <execution>
+                                <id>nocopy-its</id>
                                 <goals>
                                     <goal>integration-test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>**/GridLuceneNoCopyKillSwitchIT.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                            <!-- Kill-switch lane: separate fork, since the switch is read once at
+                                 GridLuceneFile class init. -->
+                            <execution>
+                                <id>nocopy-killswitch-off</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/GridLuceneNoCopyKillSwitchIT.java</include>
+                                    </includes>
+                                    <systemPropertyVariables>
+                                        <GRIDGAIN_VECTOR_NOCOPY_SCORER>false</GRIDGAIN_VECTOR_NOCOPY_SCORER>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>nocopy-verify</id>
+                                <goals>
                                     <goal>verify</goal>
                                 </goals>
                             </execution>
