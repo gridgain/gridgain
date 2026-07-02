@@ -27,7 +27,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -116,6 +118,8 @@ final class ReliableChannel implements AutoCloseable {
     /** Open channels counter. */
     private final AtomicInteger channelsCnt = new AtomicInteger();
 
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
     /**
      * Constructor.
      */
@@ -137,7 +141,7 @@ final class ReliableChannel implements AutoCloseable {
         partitionAwarenessEnabled = clientCfg.isAffinityAwarenessEnabled();
 
         affinityCtx = new ClientCacheAffinityContext(binary);
-        discoveryCtx = new ClientDiscoveryContext(clientCfg);
+        discoveryCtx = new ClientDiscoveryContext(clientCfg, scheduler, this::channelsInit);
 
         connMgr = new GridNioClientConnectionMultiplexer(clientCfg);
         connMgr.start();
@@ -152,6 +156,8 @@ final class ReliableChannel implements AutoCloseable {
             log.debug("ReliableChannel stopping");
 
         closed = true;
+
+        scheduler.shutdown();
 
         connMgr.stop();
 
@@ -580,7 +586,7 @@ final class ReliableChannel implements AutoCloseable {
         }
 
         // Add connected channels to the list to avoid unnecessary reconnects, unless address finder is used.
-        if (holders != null && clientCfg.getAddressesFinder() == null) {
+        if (holders != null && discoveryCtx.usesDefaultAddressFinder()) {
             // Do not modify the original list.
             newAddrs = new ArrayList<>(newAddrs);
 

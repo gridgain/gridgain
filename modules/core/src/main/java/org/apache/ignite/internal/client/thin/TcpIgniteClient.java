@@ -144,6 +144,7 @@ public class TcpIgniteClient implements IgniteClient {
             BiFunction<ClientChannelConfiguration, ClientConnectionMultiplexer, ClientChannel> chFactory,
             ClientConfiguration cfg
     ) throws ClientException {
+        log = NullLogger.whenNull(cfg.getLogger());
         final ClientBinaryMetadataHandler metadataHnd = new ClientBinaryMetadataHandler();
 
         ClientMarshallerContextImpl marshCtx = new ClientMarshallerContextImpl();
@@ -158,8 +159,6 @@ public class TcpIgniteClient implements IgniteClient {
         ch = new ReliableChannel(chFactory, cfg, binary);
 
         evtLsnrs = cfg.getEventListeners() == null ? null : cfg.getEventListeners().clone();
-
-        log = NullLogger.whenNull(cfg.getLogger());
 
         try {
             ch.channelsInit();

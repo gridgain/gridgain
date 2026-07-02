@@ -49,6 +49,8 @@ public final class ClientConfiguration implements Serializable {
     /** Server addresses finder. */
     private transient ClientAddressFinder addrFinder;
 
+    private long backgroundReResolveAddressesInterval = 30_000;
+
     /** @serial Tcp no delay. */
     private boolean tcpNoDelay = true;
 
@@ -195,6 +197,31 @@ public final class ClientConfiguration implements Serializable {
     public ClientConfiguration setAddressesFinder(ClientAddressFinder finder) {
         addrFinder = finder;
 
+        return this;
+    }
+
+    /**
+     * Gets how long the resolved addresses will be considered valid, in milliseconds.
+     * Set to {@code 0} for infinite validity. Default is 30s.
+     *
+     * <p>Ignored when custom address finder is set.
+     * This finder resolves the provided hostnames into multiple IP addresses, each corresponds to an active cluster
+     * node. However, additional IP addresses can be collected after updating the DNS records.
+     * This property controls how often the client will try to re-resolve provided hostnames and connect to newly
+     * discovered addresses.
+     *
+     * @return Background re-resolve interval, in milliseconds.
+     */
+    public long getBackgroundReResolveAddressesInterval() {
+        return backgroundReResolveAddressesInterval;
+    }
+
+    /**
+     * @param backgroundReResolveAddressesInterval Background re-resolve interval, in milliseconds.
+     * @return {@code this} for chaining.
+     */
+    public ClientConfiguration setBackgroundReResolveAddressesInterval(long backgroundReResolveAddressesInterval) {
+        this.backgroundReResolveAddressesInterval = backgroundReResolveAddressesInterval;
         return this;
     }
 
