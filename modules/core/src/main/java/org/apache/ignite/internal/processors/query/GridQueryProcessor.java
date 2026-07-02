@@ -336,6 +336,19 @@ public class GridQueryProcessor extends GridProcessorAdapter {
     @Override public void onKernalStop(boolean cancel) {
         super.onKernalStop(cancel);
 
+        // On graceful stop, let indexes flush persistent state while the checkpoint
+        // lock is still grantable — the guaranteed final checkpoint will carry it to
+        // disk. On forced stop the final checkpoint is skipped anyway, and any torn
+        // index state self-invalidates on restart.
+        if (!cancel && idx != null) {
+            try {
+                idx.beforeNodeStop();
+            }
+            catch (Throwable t) {
+                U.warn(log, "Failed to flush index state on node stop.", t);
+            }
+        }
+
         if (cancel && idx != null) {
             try {
                 while (!busyLock.tryBlock(500))
@@ -3475,7 +3488,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryVector(String cacheName, String field,
-        float[] qryVector, int k, float threshold, String resType, IndexingQueryFilter filters) throws IgniteCheckedException {
+        float[] qryVector, int k, float threshold, int efSearch, String resType, IndexingQueryFilter filters)
+        throws IgniteCheckedException {
         checkEnabled();
 
         if (!busyLock.enterBusy())
@@ -3490,7 +3504,8 @@ public class GridQueryProcessor extends GridProcessorAdapter {
                         String typeName = typeName(cacheName, resType);
                         String schemaName = idx.schema(cacheName);
 
-                        return idx.queryLocalVector(schemaName, cacheName, field, qryVector, k, threshold, typeName, filters);
+                        return idx.queryLocalVector(schemaName, cacheName, field, qryVector, k, threshold, efSearch,
+                            typeName, filters);
                     }
                 }, true);
         }

@@ -178,7 +178,8 @@ public interface GridQueryIndexing {
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> queryLocalVector(String schemaName, String cacheName,
-        String field, float[] qryVector, int k, float threshold, String typeName, IndexingQueryFilter filter) throws IgniteCheckedException;
+        String field, float[] qryVector, int k, float threshold, int efSearch, String typeName,
+        IndexingQueryFilter filter) throws IgniteCheckedException;
 
     /**
      * Create new index locally.
@@ -430,6 +431,16 @@ public interface GridQueryIndexing {
      * Cancels all executing queries.
      */
     public void onKernalStop();
+
+    /**
+     * Invoked early in the graceful node-stop sequence, before cache stop and before
+     * the database manager blocks checkpoint-lock acquisition — the last point where
+     * indexes can write persistent state (e.g. a parting vector-graph snapshot) that
+     * the final checkpoint will flush.
+     */
+    public default void beforeNodeStop() {
+        // No-op.
+    }
 
     /**
      * Gets database schema from cache name.

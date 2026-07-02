@@ -41,4 +41,19 @@ public @interface QueryVectorField {
      */
     SimilarityFunction similarityFunction() default SimilarityFunction.COSINE;
 
+    /**
+     * HNSW max connections per node (M) for the vector index built over this field.
+     * Higher values improve recall at the cost of memory and build time.
+     *
+     * @return M, or {@code 0} (default) to use the engine default.
+     */
+    int m() default 0;
+
+    /**
+     * HNSW beam width used while building the vector index (efConstruction).
+     * Higher values improve graph quality at the cost of build time.
+     *
+     * @return efConstruction, or {@code 0} (default) to use the engine default.
+     */
+    int efConstruction() default 0;
 }

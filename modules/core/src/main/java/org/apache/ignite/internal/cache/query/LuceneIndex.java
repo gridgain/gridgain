@@ -50,10 +50,13 @@ public interface LuceneIndex extends AutoCloseable {
      * @param v Value.
      * @param ver Version.
      * @param expires Expiration time.
+     * @param link Data-row link of the entry ({@code 0} if not available) — lets the index
+     *     materialize results by a direct row read instead of duplicating key/value bytes.
      * @throws IgniteCheckedException If failed.
      */
     @SuppressWarnings("ConstantConditions")
-    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires) throws IgniteCheckedException;
+    public void store(CacheObject k, CacheObject v, GridCacheVersion ver, long expires, long link)
+        throws IgniteCheckedException;
 
     /**
      * Removes entry for given key from this index.
@@ -78,10 +81,43 @@ public interface LuceneIndex extends AutoCloseable {
      * Runs lucene vector query over this index.
      *
      * @param qryVector Query as vector.
+     * @param k Number of nearest neighbours to return.
+     * @param threshold Minimum similarity score, or a negative value for no threshold.
+     * @param efSearch Search-time beam width, or {@code 0} for the engine default.
      * @param filters Filters over result.
      * @return Query result.
      * @throws IgniteCheckedException If failed.
      */
     public <K, V> GridCloseableIterator<IgniteBiTuple<K, V>> vectorQuery(String field, float[] qryVector,
-        int k, float threshold, IndexingQueryFilter filters) throws IgniteCheckedException;
+        int k, float threshold, int efSearch, IndexingQueryFilter filters) throws IgniteCheckedException;
+
+    /**
+     * Destroys the index: like {@link #close()}, but additionally drops any persistent
+     * state the index keeps. Called when the cache is destroyed (as opposed to a node
+     * stop / cache close, where persistent index state must survive).
+     */
+    public default void destroy() throws Exception {
+        close();
+    }
+
+    /**
+     * Asks the index whether it needs the row-scan rebuild after a restart. An index
+     * that restored itself from its own persistent state (e.g. a vector graph
+     * snapshot) returns {@code false} and the scan is skipped.
+     *
+     * @return {@code True} if the index must be rebuilt from cache rows.
+     */
+    public default boolean needsRebuild() {
+        return true;
+    }
+
+    /**
+     * Invoked early in the node-stop sequence, before cache stop and before the
+     * database manager blocks checkpoint-lock acquisition — the last point where an
+     * index can still write persistent state (e.g. its parting graph snapshot) that
+     * the final checkpoint of a graceful stop will flush.
+     */
+    public default void beforeNodeStop() {
+        // No-op.
+    }
 }
