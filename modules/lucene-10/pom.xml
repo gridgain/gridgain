@@ -29,12 +29,13 @@
         <relativePath>../../parent-internal/pom.xml</relativePath>
     </parent>
 
-    <artifactId>ignite-lucene-9</artifactId>
+    <artifactId>ignite-lucene-10</artifactId>
     <version>8.10.127-SNAPSHOT</version>
 
     <properties>
-        <maven.compiler.target>11</maven.compiler.target>
-        <maven.compiler.release>11</maven.compiler.release>
+        <!-- Lucene 10 runs on Java 21 or greater, so compile at release 21. -->
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
     </properties>
 
     <dependencies>
@@ -53,25 +54,25 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
-            <version>${lucene9.version}</version>
+            <version>${lucene10.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-analysis-common</artifactId>
-            <version>${lucene9.version}</version>
+            <version>${lucene10.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-queries</artifactId>
-            <version>${lucene9.version}</version>
+            <version>${lucene10.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-queryparser</artifactId>
-            <version>${lucene9.version}</version>
+            <version>${lucene10.version}</version>
         </dependency>
 
         <dependency>
@@ -140,8 +141,8 @@
                 </configuration>
             </plugin>
 
-            <!-- The GridLucene* classes are identical across Lucene 9.10 and 10.4; they live once in
-                 ../lucene-9-10-common and are compiled here against Lucene 9.10. -->
+            <!-- The GridLucene* sources are identical across Lucene 9.10 and 10.4; they live once in
+                 ../lucene-9-10-common and are compiled here against Lucene 10.4. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -165,6 +166,15 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Sources compile at release 21 (Lucene 10's floor). Pin a modern compiler; the
+                 parent's 3.1 predates the release option. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+            </plugin>
         </plugins>
     </build>
+
 </project>
