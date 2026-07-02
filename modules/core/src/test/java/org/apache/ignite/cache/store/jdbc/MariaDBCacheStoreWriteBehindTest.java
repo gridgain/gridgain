@@ -95,14 +95,14 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        containerStart();
+        containerBeforeTest();
     }
 
     /**
      * Starts the MariaDB {@link #container} for the {@link #image} currently under test is
      * running, (re)starting it when the parameter changes, so at most one container is alive at a time.
      */
-    private void containerStart() throws Exception {
+    private void containerBeforeTest() throws Exception {
         if (container != null && image.equals(container.getDockerImageName())) {
             executeUpdate(container,
                     "DELETE FROM Person"
@@ -173,7 +173,7 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         putPersons(cache, n);
 
-        waitForPersonCount(container, n, 15_000);
+        waitForPersonCount(container, n, 10_000);
     }
 
     /**
