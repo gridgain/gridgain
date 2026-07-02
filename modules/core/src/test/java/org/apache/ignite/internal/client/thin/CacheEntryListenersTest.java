@@ -524,7 +524,7 @@ public class CacheEntryListenersTest extends AbstractThinClientTest {
 
             cache3.deregisterCacheEntryListener(lsnrCfg);
 
-            // Can register the listener after deregisteration.
+            // Can register the listener after deregistration.
             cache2.registerCacheEntryListener(lsnrCfg);
         }
     }
