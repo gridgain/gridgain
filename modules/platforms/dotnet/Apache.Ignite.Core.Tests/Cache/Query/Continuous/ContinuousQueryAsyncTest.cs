@@ -41,7 +41,7 @@ public class ContinuousQueryAsyncTest
     /// written to the channel and, when the stream ends, stops the query (mirrors the streaming overload).
     /// </summary>
     [Test]
-    public async Task GetEvents_StreamsEventsThenStopsQueryOnCompletion()
+    public async Task TestGetEventsStreamsEventsThenStopsQueryOnCompletion()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var stopSpy = new DisposeSpy();
@@ -67,7 +67,7 @@ public class ContinuousQueryAsyncTest
     /// streaming overload.
     /// </summary>
     [Test]
-    public async Task GetEvents_BreakStopsQuery()
+    public async Task TestGetEventsBreakStopsQuery()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var stopSpy = new DisposeSpy();
@@ -89,7 +89,7 @@ public class ContinuousQueryAsyncTest
     /// Tests that cancelling the enumeration (via <c>WithCancellation</c>) throws and stops the query.
     /// </summary>
     [Test]
-    public void GetEvents_CancelledToken_StopsQueryAndThrows()
+    public void TestGetEventsCancelledTokenStopsQueryAndThrows()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var stopSpy = new DisposeSpy();
@@ -113,7 +113,7 @@ public class ContinuousQueryAsyncTest
     /// Tests that <see cref="ContinuousQueryAsyncHandle{TK,TV,TInitial}.GetEvents"/> can be called only once.
     /// </summary>
     [Test]
-    public void GetEvents_SecondCall_Throws()
+    public void TestGetEventsSecondCallThrows()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var handle = new ContinuousQueryAsyncHandle<int, int, string>(new DisposeSpy(), channel, () => "cursor");
@@ -128,7 +128,7 @@ public class ContinuousQueryAsyncTest
     /// the provided cursor factory (the "only once" semantics are enforced by the underlying handle).
     /// </summary>
     [Test]
-    public void GetInitialQueryCursor_DelegatesToFactory()
+    public void TestGetInitialQueryCursorDelegatesToFactory()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var calls = 0;
@@ -144,7 +144,7 @@ public class ContinuousQueryAsyncTest
     /// completes the channel.
     /// </summary>
     [Test]
-    public async Task DisposeAsync_StopsQueryAndCompletesChannel()
+    public async Task TestDisposeAsyncStopsQueryAndCompletesChannel()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var stopSpy = new DisposeSpy();
@@ -161,7 +161,7 @@ public class ContinuousQueryAsyncTest
     /// underlying query exactly once.
     /// </summary>
     [Test]
-    public async Task StopQuery_Idempotent_AcrossEnumerationAndDispose()
+    public async Task TestStopQueryIdempotentAcrossEnumerationAndDispose()
     {
         var channel = Channel.CreateUnbounded<ICacheEntryEvent<int, int>>();
         var stopSpy = new DisposeSpy();
@@ -183,7 +183,7 @@ public class ContinuousQueryAsyncTest
     /// Tests that <see cref="ContinuousQueryAsync.CreateQuery{TK,TV}"/> maps all options onto the query.
     /// </summary>
     [Test]
-    public void CreateQuery_AppliesOptions()
+    public void TestCreateQueryAppliesOptions()
     {
         var channel = ContinuousQueryAsync.CreateChannel<int, int>();
 
@@ -212,7 +212,7 @@ public class ContinuousQueryAsyncTest
     /// defaults when no options are provided.
     /// </summary>
     [Test]
-    public void CreateQuery_NullOptions_UsesContinuousQueryDefaults()
+    public void TestCreateQueryNullOptionsUsesContinuousQueryDefaults()
     {
         var channel = ContinuousQueryAsync.CreateChannel<int, int>();
 
@@ -230,7 +230,7 @@ public class ContinuousQueryAsyncTest
     /// events into the channel.
     /// </summary>
     [Test]
-    public void CreateQuery_ListenerForwardsEventsToChannel()
+    public void TestCreateQueryListenerForwardsEventsToChannel()
     {
         var channel = ContinuousQueryAsync.CreateChannel<int, int>();
         var qry = ContinuousQueryAsync.CreateQuery(channel.Writer, null, null);
@@ -249,7 +249,7 @@ public class ContinuousQueryAsyncTest
     /// <see cref="ICacheEntryFilter{TK,TV}"/> into an event filter that delegates to <c>Invoke</c>.
     /// </summary>
     [Test]
-    public void CreateQuery_WrapsEntryFilterAsEventFilter()
+    public void TestCreateQueryWrapsEntryFilterAsEventFilter()
     {
         var channel = ContinuousQueryAsync.CreateChannel<int, int>();
         var filter = new RecordingFilter();
@@ -275,7 +275,7 @@ public class ContinuousQueryAsyncTest
     /// so that a freshly-constructed options object produces a valid query.
     /// </summary>
     [Test]
-    public void ContinuousQueryOptions_Defaults_MatchContinuousQuery()
+    public void TestContinuousQueryOptionsDefaultsMatchContinuousQuery()
     {
         var options = new ContinuousQueryOptions();
 
