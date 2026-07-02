@@ -99,6 +99,11 @@ public class GridLuceneOutputStream extends IndexOutput implements Accountable {
     @Override public void close() throws IOException {
         flush();
 
+        // The file's content is complete and, per the Directory contract, no input may have been opened
+        // on it yet — the storage-layout hook point (no-op for the page chain; the lucene-10 java22
+        // overlay compacts the pages into one contiguous region here for the no-copy vector scorer).
+        file.onOutputClosed();
+
         file.releaseRef();
     }
 

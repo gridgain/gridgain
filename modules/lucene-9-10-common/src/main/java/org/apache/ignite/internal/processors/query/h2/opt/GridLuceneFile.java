@@ -87,6 +87,16 @@ public class GridLuceneFile implements Accountable {
     }
 
     /**
+     * Invoked by {@link GridLuceneOutputStream#close()} once the file's content is complete (and before
+     * any input can legally be opened on it). No-op here: the page-chain storage is final as written.
+     * The lucene-10 java22 overlay overrides this to compact the pages into a single contiguous region,
+     * which the no-copy vector scorer serves {@code MemorySegment} views from.
+     */
+    void onOutputClosed() {
+        // No-op: page-chain storage is final as written.
+    }
+
+    /**
      * @return New buffer address.
      */
     final long addBuffer() {

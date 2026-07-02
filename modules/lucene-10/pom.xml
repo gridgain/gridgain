@@ -33,7 +33,8 @@
     <version>8.10.127-SNAPSHOT</version>
 
     <properties>
-        <!-- Lucene 10 runs on Java 21 or greater, so compile at release 21. -->
+        <!-- Base classes compile at 21 (Lucene 10's floor). The FFM no-copy overlay in
+             src/main/java22 compiles at 22 into META-INF/versions/22 (see build/plugins). -->
         <maven.compiler.target>21</maven.compiler.target>
         <maven.compiler.release>21</maven.compiler.release>
     </properties>
@@ -141,8 +142,9 @@
                 </configuration>
             </plugin>
 
-            <!-- The GridLucene* sources are identical across Lucene 9.10 and 10.4; they live once in
-                 ../lucene-9-10-common and are compiled here against Lucene 10.4. -->
+            <!-- Shared GridLucene* base sources (identical across Lucene 9.10 and 10.4) live once in
+                 ../lucene-9-10-common and are compiled here against Lucene 10.4. The FFM no-copy overlay
+                 in src/main/java22 (below) is the only lucene-10-specific code. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -167,8 +169,8 @@
                 </executions>
             </plugin>
 
-            <!-- Sources compile at release 21 (Lucene 10's floor). Pin a modern compiler; the
-                 parent's 3.1 predates the release option. -->
+            <!-- Base classes compile at release 21 (Lucene 10's floor). Pin a modern compiler; the
+                 parent's 3.1 predates the release/multi-release options. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -177,4 +179,145 @@
         </plugins>
     </build>
 
+    <profiles>
+        <!-- The FFM no-copy scorer uses java.lang.foreign, which is non-preview only on JDK 22+. When
+             built on JDK 22+, compile the src/main/java22 overlay into META-INF/versions/22 and mark the
+             jar multi-release, so a Java 22+ runtime auto-loads the no-copy scorer. On JDK 21 this profile
+             is inactive and the module builds base-only (Lucene 10 + readFloats) — which still runs on 21+.
+             So the module builds on JDK 21+ and only *gains* the no-copy overlay when built on 22+. -->
+        <profile>
+            <id>nocopy-java22-overlay</id>
+            <activation>
+                <jdk>[22,)</jdk>
+            </activation>
+
+            <!-- Compile the tests at release 22 as well, so the no-copy test may reference
+                 java.lang.foreign (final in 22, preview in 21). Base/main sources still compile at
+                 release 21 (see the maven.compiler.release property above). -->
+            <properties>
+                <maven.compiler.testRelease>22</maven.compiler.testRelease>
+            </properties>
+
+            <build>
+                <plugins>
+                    <!-- Add the release-22 no-copy test sources (mirrors src/main/java22). -->
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>3.6.1</version>
+                        <executions>
+                            <execution>
+                                <id>add-nocopy-test-source</id>
+                                <phase>generate-test-sources</phase>
+                                <goals><goal>add-test-source</goal></goals>
+                                <configuration>
+                                    <sources><source>${project.basedir}/src/test/java22</source></sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <version>3.13.0</version>
+                        <executions>
+                            <execution>
+                                <id>compile-java22-nocopy</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>compile</goal>
+                                </goals>
+                                <configuration>
+                                    <release>22</release>
+                                    <multiReleaseOutput>true</multiReleaseOutput>
+                                    <compileSourceRoots>
+                                        <compileSourceRoot>${project.basedir}/src/main/java22</compileSourceRoot>
+                                    </compileSourceRoots>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-jar-plugin</artifactId>
+                        <configuration>
+                            <archive>
+                                <manifestEntries>
+                                    <Multi-Release>true</Multi-Release>
+                                </manifestEntries>
+                            </archive>
+                        </configuration>
+                    </plugin>
+
+                    <!-- The overlay only shadows the base when classes load from the multi-release JAR
+                         (exploded target/classes never applies META-INF/versions/ versioning). So the
+                         no-copy *IT runs under failsafe against the packaged jar, after 'package' builds it,
+                         rather than under surefire against target/classes. The enable-native-access argLine
+                         silences the restricted-method (MemorySegment.reinterpret) warning. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.5.4</version>
+                        <configuration>
+                            <classesDirectory>${project.build.directory}/${project.build.finalName}.jar</classesDirectory>
+                            <!-- GridUnsafe needs Ignite's module-access flags (the parent applies these to
+                                 surefire, not failsafe); enable-native-access silences the MemorySegment
+                                 restricted-method warning; jdk.incubator.vector activates Lucene's Panama
+                                 vectorization provider, whose scorer is the only caller of
+                                 MemorySegmentAccessInput (the default scorer never requests segments, so
+                                 without it the E2E test cannot engage the no-copy path). -->
+                            <argLine>
+                                --add-modules=jdk.incubator.vector
+                                --add-opens=java.base/jdk.internal.access=ALL-UNNAMED
+                                --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED
+                                --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+                                --add-opens=java.base/java.io=ALL-UNNAMED
+                                --add-opens=java.base/java.nio=ALL-UNNAMED
+                                --add-opens=java.base/java.util=ALL-UNNAMED
+                                --add-opens=java.base/java.lang=ALL-UNNAMED
+                                --enable-native-access=ALL-UNNAMED
+                            </argLine>
+                        </configuration>
+                        <executions>
+                            <!-- Default lane: plumbing IT + E2E engagement IT, no-copy ON (default). -->
+                            <execution>
+                                <id>nocopy-its</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                                <configuration>
+                                    <excludes>
+                                        <exclude>**/GridLuceneNoCopyKillSwitchIT.java</exclude>
+                                    </excludes>
+                                </configuration>
+                            </execution>
+                            <!-- Kill-switch lane: separate fork, since the switch is read once at
+                                 GridLuceneFile class init. -->
+                            <execution>
+                                <id>nocopy-killswitch-off</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                                <configuration>
+                                    <includes>
+                                        <include>**/GridLuceneNoCopyKillSwitchIT.java</include>
+                                    </includes>
+                                    <systemPropertyVariables>
+                                        <GRIDGAIN_VECTOR_NOCOPY_SCORER>false</GRIDGAIN_VECTOR_NOCOPY_SCORER>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>nocopy-verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

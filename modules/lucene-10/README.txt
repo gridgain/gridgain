@@ -2,7 +2,8 @@ GridGain Lucene Index Module
 -----------------------------
 
 GridGain Lucene module provides capabilities to index cache context and run SQL, full text queries against
-these indexes. Requires JDK 21+ (Lucene 10 runs on Java 21 or greater).
+these indexes. Requires JDK 21+ (Lucene 10 runs on Java 21 or greater); the no-copy vector scorer
+activates automatically on JDK 22+.
 
 To enable Lucene module when starting a standalone node, move 'optional/ignite-lucene-10' folder to
 'libs' folder before running 'ignite.{sh|bat}' script. The content of the module folder will
