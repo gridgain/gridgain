@@ -27,6 +27,8 @@ import java.util.function.Function;
 import org.apache.ignite.client.ClientAutoCloseableIterator;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientIgniteSet;
+
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.platform.client.ClientStatus;
@@ -92,6 +94,13 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> addAsync(T o) {
+        A.notNull(o, "o");
+
+        return singleKeyOpAsync(ClientOperation.OP_SET_VALUE_ADD, o);
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean addAll(Collection<? extends T> c) {
         A.notNull(c, "c");
 
@@ -99,8 +108,20 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> addAllAsync(Collection<? extends T> c) {
+        A.notNull(c, "c");
+
+        return multiKeyOpAsync(ClientOperation.OP_SET_VALUE_ADD_ALL, c);
+    }
+
+    /** {@inheritDoc} */
     @Override public void clear() {
         op(ClientOperation.OP_SET_CLEAR, null, null);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> clearAsync() {
+        return opAsync(ClientOperation.OP_SET_CLEAR, null, null);
     }
 
     /** {@inheritDoc} */
@@ -111,6 +132,13 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> containsAsync(Object o) {
+        A.notNull(o, "o");
+
+        return singleKeyOpAsync(ClientOperation.OP_SET_VALUE_CONTAINS, o);
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean containsAll(Collection<?> c) {
         A.notNull(c, "c");
 
@@ -118,8 +146,20 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> containsAllAsync(Collection<?> c) {
+        A.notNull(c, "c");
+
+        return multiKeyOpAsync(ClientOperation.OP_SET_VALUE_CONTAINS_ALL, c);
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean isEmpty() {
         return size() == 0;
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> isEmptyAsync() {
+        return new IgniteClientFutureImpl<>(sizeAsync().thenApply(sz -> sz == 0));
     }
 
     /** {@inheritDoc} */
@@ -155,10 +195,24 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> removeAsync(Object o) {
+        A.notNull(o, "o");
+
+        return singleKeyOpAsync(ClientOperation.OP_SET_VALUE_REMOVE, o);
+    }
+
+    /** {@inheritDoc} */
     @Override public boolean removeAll(Collection<?> c) {
         A.notNull(c, "c");
 
         return multiKeyOp(ClientOperation.OP_SET_VALUE_REMOVE_ALL, c);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> removeAllAsync(Collection<?> c) {
+        A.notNull(c, "c");
+
+        return multiKeyOpAsync(ClientOperation.OP_SET_VALUE_REMOVE_ALL, c);
     }
 
     /** {@inheritDoc} */
@@ -181,8 +235,32 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> retainAllAsync(Collection<?> c) {
+        A.notNull(c, "c");
+
+        if (c.isEmpty()) {
+            // Special case: remove all.
+            // Not the same as clear, because we need the boolean result.
+            return ch.serviceAsync(ClientOperation.OP_SET_VALUE_RETAIN_ALL, out -> {
+                try (BinaryRawWriterEx w = serDes.createBinaryWriter(out.out())) {
+                    writeIdentity(w);
+                    w.writeBoolean(serverKeepBinary);
+                    w.writeInt(0); // Size.
+                }
+            }, r -> r.in().readBoolean());
+        }
+
+        return multiKeyOpAsync(ClientOperation.OP_SET_VALUE_RETAIN_ALL, c);
+    }
+
+    /** {@inheritDoc} */
     @Override public int size() {
         return op(ClientOperation.OP_SET_SIZE, null, r -> r.in().readInt());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Integer> sizeAsync() {
+        return opAsync(ClientOperation.OP_SET_SIZE, null, r -> r.in().readInt());
     }
 
     /** {@inheritDoc} */
@@ -273,6 +351,26 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /**
+     * Performs a single key operation asynchronously.
+     *
+     * @param op Op code.
+     * @param key Key.
+     * @return Result.
+     */
+    private IgniteClientFuture<Boolean> singleKeyOpAsync(ClientOperation op, Object key) {
+        Object affKey = affinityKey(key);
+
+        return ch.affinityServiceAsync(cacheId, affKey, op, out -> {
+            try (BinaryRawWriterEx w = serDes.createBinaryWriter(out.out())) {
+                writeIdentity(w);
+
+                w.writeBoolean(serverKeepBinary);
+                w.writeObject(key);
+            }
+        }, r -> r.in().readBoolean());
+    }
+
+    /**
      * Performs a multi key operation.
      *
      * @param op Op code.
@@ -308,6 +406,41 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
     }
 
     /**
+     * Performs a multi key operation asynchronously.
+     *
+     * @param op Op code.
+     * @param keys Keys.
+     * @return Result.
+     */
+    @SuppressWarnings("rawtypes")
+    private IgniteClientFuture<Boolean> multiKeyOpAsync(ClientOperation op, Collection keys) {
+        if (keys.isEmpty())
+            return IgniteClientFutureImpl.completedFuture(false);
+
+        Iterator iter = keys.iterator();
+        Object firstKey = iter.next();
+
+        // Use the first key as affinity key as a simple optimization.
+        // Let the server map other keys to nodes, while still using no more than N network requests.
+        Object affKey = affinityKey(firstKey);
+
+        return ch.affinityServiceAsync(cacheId, affKey, op, out -> {
+            try (BinaryRawWriterEx w = serDes.createBinaryWriter(out.out())) {
+                writeIdentity(w);
+
+                w.writeBoolean(serverKeepBinary);
+                w.writeInt(keys.size());
+
+                w.writeObject(firstKey);
+
+                while (iter.hasNext()) {
+                    w.writeObject(iter.next());
+                }
+            }
+        }, r -> r.in().readBoolean());
+    }
+
+    /**
      * Performs an operation.
      *
      * @param op Op code.
@@ -318,6 +451,26 @@ class ClientIgniteSetImpl<T> implements ClientIgniteSet<T> {
      */
     private <TR> TR op(ClientOperation op, Consumer<BinaryRawWriterEx> writer, Function<PayloadInputChannel, TR> reader) {
         return ch.service(op, out -> {
+            try (BinaryRawWriterEx w = serDes.createBinaryWriter(out.out())) {
+                writeIdentity(w);
+
+                if (writer != null)
+                    writer.accept(w);
+            }
+        }, reader);
+    }
+
+    /**
+     * Performs an operation asynchronously.
+     *
+     * @param op Op code.
+     * @param writer Writer.
+     * @param reader Reader.
+     * @param <TR> Result type.
+     * @return Result.
+     */
+    private <TR> IgniteClientFuture<TR> opAsync(ClientOperation op, Consumer<BinaryRawWriterEx> writer, Function<PayloadInputChannel, TR> reader) {
+        return ch.serviceAsync(op, out -> {
             try (BinaryRawWriterEx w = serDes.createBinaryWriter(out.out())) {
                 writeIdentity(w);
 

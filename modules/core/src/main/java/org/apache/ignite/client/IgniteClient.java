@@ -283,6 +283,19 @@ public interface IgniteClient extends AutoCloseable {
     public <T> ClientIgniteSet<T> set(String name, @Nullable ClientCollectionConfiguration cfg);
 
     /**
+     * Gets a distributed set from cache asynchronously. Creates one if it has not been created yet and {@code cfg} is
+     * not {@code null}.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if set could not be fetched or created.
+     *
+     * @param name Set name.
+     * @param cfg Set configuration if new set should be created.
+     * @param <T> Type of the elements in set.
+     * @return a Future representing pending completion of the operation, which wraps the set with given properties.
+     */
+    public <T> IgniteClientFuture<ClientIgniteSet<T>> setAsync(String name, @Nullable ClientCollectionConfiguration cfg);
+
+    /**
      * Gets an atomic sequence from cache. Creates one if it has not been created yet and {@code create} flag
      * is {@code true}. Uses configuration from {@link IgniteConfiguration#getAtomicConfiguration()}.
      *
