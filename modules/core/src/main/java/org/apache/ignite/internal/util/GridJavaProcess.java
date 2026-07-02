@@ -182,6 +182,35 @@ public final class GridJavaProcess {
     }
 
     /**
+     * Extracts this (driver) JVM's JDK module-access arguments (--add-opens / --add-exports /
+     * --add-modules / --add-reads / --patch-module) from {@link U#jvmArgs()}, so a forked JDK 9+ node
+     * can inherit them and reach JDK internals (e.g. java.nio for off-heap) at startup. Handles both
+     * the "--flag=value" and two-token "--flag value" forms.
+     *
+     * @return Module-access JVM arguments in order; empty if none.
+     */
+    public static List<String> moduleAccessArgs() {
+        List<String> driverArgs = new ArrayList<>(U.jvmArgs());
+        List<String> res = new ArrayList<>();
+
+        for (int i = 0; i < driverArgs.size(); i++) {
+            String a = driverArgs.get(i);
+
+            if (a.startsWith("--add-opens") || a.startsWith("--add-exports")
+                || a.startsWith("--add-modules") || a.startsWith("--add-reads")
+                || a.startsWith("--patch-module")) {
+                res.add(a);
+
+                // Two-token form: the value (e.g. "java.base/java.nio=ALL-UNNAMED") is the next arg.
+                if (!a.contains("=") && i + 1 < driverArgs.size())
+                    res.add(driverArgs.get(++i));
+            }
+        }
+
+        return res;
+    }
+
+    /**
      * Resolves path to java binary (that can be executed using exec). Either the provided java home directory
      * is used, or, if it's {@code null}, the java.home system property is consulted with.
      *

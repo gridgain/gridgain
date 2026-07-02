@@ -16,7 +16,6 @@
 
 package org.apache.ignite.testframework.junits.multijvm;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -100,7 +99,6 @@ import org.apache.ignite.testframework.junits.IgniteTestResources;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static org.junit.Assert.fail;
 
 /**
  * Ignite proxy for ignite instance at another JVM.
@@ -109,9 +107,6 @@ import static org.junit.Assert.fail;
 public class IgniteProcessProxy implements IgniteEx {
     /** Grid proxies. */
     private static final transient ConcurrentMap<String, IgniteProcessProxy> gridProxies = new ConcurrentHashMap<>();
-
-    /** Property that specify alternative {@code JAVA_HOME}. */
-    private static final String TEST_MULTIJVM_JAVA_HOME = "test.multijvm.java.home";
 
     /** Waiting milliseconds of the left of a node to topology. */
     private static final long NODE_LEFT_TIMEOUT = 30_000L;
@@ -130,6 +125,9 @@ public class IgniteProcessProxy implements IgniteEx {
 
     /** Grid id. */
     private final UUID id;
+
+    /** Remote JVM major version, cached from JdkForkResolver.validateRemoteJre so filteredJvmArgs can consult it. */
+    private final int remoteMajor;
 
     /**
      * @param cfg Configuration.
@@ -173,8 +171,8 @@ public class IgniteProcessProxy implements IgniteEx {
         this.locJvmGrid = locJvmGrid;
         this.log = logger(log, "jvm-" + id.toString().substring(0, id.toString().indexOf('-')));
 
-        final String javaHome = System.getProperty(TEST_MULTIJVM_JAVA_HOME);
-        validateRemoteJre(javaHome);
+        final String javaHome = resolveRemoteJavaHome();
+        this.remoteMajor = JdkForkResolver.validateRemoteJre(javaHome, acceptLegacyJdk8Remote());
 
         String params = params(cfg, resetDiscovery);
 
@@ -213,22 +211,36 @@ public class IgniteProcessProxy implements IgniteEx {
     }
 
     /**
-     * Validates that the JRE corresponding to the given Java home is valid for use as a remote JVM.
-     * This currently means only checking that its major version matches the major version of the JRE we run on.
+     * Resolves the path to the JDK installation root that should run the forked
+     * remote node, or {@code null} to inherit the local JDK.
      *
-     * @param javaHome Java home.
-     * @throws IOException          If I/O fails when interacting with 'java' process.
-     * @throws InterruptedException If we get interrupted.
+     * <p>Default implementation reads {@code -Dtest.multijvm.java.home}. Subclasses
+     * may override to pick a JDK based on the version being tested (see
+     * {@code IgniteCompatibilityAbstractTest}'s per-version override).
+     *
+     * @return Path to a JDK installation root, or {@code null}.
      */
-    private static void validateRemoteJre(@Nullable String javaHome) throws IOException, InterruptedException {
-        int remoteMajorVersion = new JavaVersionCommand().majorVersion(javaHome);
-        int localMajorVersion = U.majorJavaVersion(System.getProperty("java.version"));
+    protected String resolveRemoteJavaHome() {
+        return System.getProperty(JdkForkResolver.TEST_MULTIJVM_JAVA_HOME);
+    }
 
-        if (localMajorVersion != remoteMajorVersion) {
-            fail("Version of remote java with home at '" + javaHome + "' (" + remoteMajorVersion +
-                ") is different from local java version (" + localMajorVersion + "). " +
-                "Make sure test.multijvm.java.home property specifies a path to a correct Java installation");
-        }
+    /**
+     * Whether this proxy accepts a legacy JDK 8 remote fork. {@code false} for plain
+     * multi-JVM tests: their fork loads the current build's class files, which an older
+     * JVM can't, so the fork must run the driver's JDK. Compatibility tests override to
+     * {@code true} - their forks load a previous release's JDK 8 class files.
+     *
+     * @return {@code true} if a JDK 8 remote is acceptable.
+     */
+    protected boolean acceptLegacyJdk8Remote() {
+        return false;
+    }
+
+    /**
+     * @return The remote fork's JDK major version (validated in the constructor).
+     */
+    protected final int remoteJdkMajor() {
+        return remoteMajor;
     }
 
     /**
@@ -285,12 +297,14 @@ public class IgniteProcessProxy implements IgniteEx {
             if (arg.startsWith("-Xmx") || arg.startsWith("-Xms") ||
                 arg.startsWith("-cp") || arg.startsWith("-classpath") ||
                 (marsh != null && arg.startsWith("-D" + IgniteTestResources.MARSH_CLASS_NAME)) ||
-                arg.startsWith("--add-opens") || arg.startsWith("--add-exports") || arg.startsWith("--add-modules") ||
-                arg.startsWith("--patch-module") || arg.startsWith("--add-reads") ||
                 arg.startsWith("-XX:+IgnoreUnrecognizedVMOptions") ||
                 arg.startsWith(IgniteSystemProperties.IGNITE_FORCE_MVCC_MODE_IN_TESTS))
                 filteredJvmArgs.add(arg);
         }
+
+        // JDK 9+ forks need the driver's module-access flags; a JDK 8 launcher rejects them.
+        if (remoteMajor >= 9)
+            filteredJvmArgs.addAll(GridJavaProcess.moduleAccessArgs());
 
         return filteredJvmArgs;
     }
