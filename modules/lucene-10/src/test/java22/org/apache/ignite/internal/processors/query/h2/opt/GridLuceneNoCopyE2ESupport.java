@@ -48,12 +48,13 @@ import static org.junit.Assume.assumeTrue;
  * Shared fixture for the end-to-end no-copy scorer tests: builds a real Lucene HNSW index over
  * {@link GridLuceneDirectory}, computes exact ground truth by brute force, and provides two probes:
  * <ul>
- * <li>{@link #mirrorExcessBytes()} — off-heap bytes allocated beyond the directory's page buffers. The
- * only non-page allocation in this module is {@link GridLuceneFile}'s contiguous mirror, so a value of
- * about the {@code .vec} file length means Lucene's memory-segment scorer engaged (whether at merge time —
- * graph construction scores through the production input — or at first query), and ~0 means it did not.</li>
- * <li>captured JUL records from the overlay {@code GridLuceneFile} logger (attached before the index is
- * built, so merge-time mirror builds and the kill-switch static-init line are observed too).</li>
+ * <li>off-heap accounting — with contiguous-on-close storage (no-copy on), total allocation equals the
+ * <b>exact</b> sum of live file lengths ({@link #exactFileBytes()}); with the kill switch off it equals
+ * the <b>page-rounded</b> sum ({@link #pageRoundedFileBytes()}); and in neither case may a query allocate
+ * anything (the no-doubling property this design exists for);</li>
+ * <li>captured JUL records from the overlay {@code GridLuceneFile} and {@code GridLuceneInputStream}
+ * loggers (attached before the index is built, so compaction, the first-engagement INFO and the
+ * kill-switch static-init line are all observed).</li>
  * </ul>
  * Not named {@code *IT}, so failsafe does not run it directly.
  */
@@ -76,9 +77,6 @@ abstract class GridLuceneNoCopyE2ESupport {
     /** */
     static final String FIELD = "v";
 
-    /** Raw vector payload of the {@code .vec} file — the mirror is at least this big. */
-    static final long VEC_BYTES = (long)N * DIM * 4;
-
     /** */
     GridUnsafeMemory mem;
 
@@ -94,11 +92,14 @@ abstract class GridLuceneNoCopyE2ESupport {
     /** Exact top-{@link #K} doc ids per query (docId == insertion order: single forceMerged segment). */
     int[][] exactTop;
 
-    /** Captured records from the overlay GridLuceneFile logger (mirror builds, kill-switch notice). */
+    /** Captured records from the overlay loggers (compaction, engagement, kill-switch notice). */
     final List<LogRecord> fileLogRecords = Collections.synchronizedList(new ArrayList<>());
 
     /** */
     private Logger fileLog;
+
+    /** */
+    private Logger inputLog;
 
     /** */
     private Handler capture;
@@ -108,17 +109,22 @@ abstract class GridLuceneNoCopyE2ESupport {
     public void setUpE2E() throws Exception {
         assumeTrue("no-copy overlay needs a Java 22+ runtime", Runtime.version().feature() >= 22);
 
-        // Attach the capturing handler BEFORE anything touches GridLuceneFile, so its static-init line
-        // (kill switch) and merge-time mirror builds are observed as well.
-        fileLog = Logger.getLogger(GridLuceneFile.class.getName());
-        fileLog.setLevel(Level.FINE);
+        // Attach the capturing handler BEFORE anything touches the overlay classes, so the kill-switch
+        // static-init line, per-file compaction (FINE) and the first-engagement INFO are all observed.
         capture = new Handler() {
             @Override public void publish(LogRecord r) { fileLogRecords.add(r); }
             @Override public void flush() { /* No-op. */ }
             @Override public void close() { /* No-op. */ }
         };
         capture.setLevel(Level.ALL);
+
+        fileLog = Logger.getLogger(GridLuceneFile.class.getName());
+        fileLog.setLevel(Level.FINE);
         fileLog.addHandler(capture);
+
+        inputLog = Logger.getLogger(GridLuceneInputStream.class.getName());
+        inputLog.setLevel(Level.FINE);
+        inputLog.addHandler(capture);
 
         mem = new GridUnsafeMemory(0);
         dir = new GridLuceneDirectory(mem);
@@ -128,7 +134,7 @@ abstract class GridLuceneNoCopyE2ESupport {
         exactTop = bruteForceTopK();
 
         // Keep the merged segment non-compound so the .vec flat-vectors file is a standalone
-        // GridLuceneFile — the unit the mirror is built for.
+        // GridLuceneFile with a well-known name for the overlay-loaded probe.
         IndexWriterConfig iwc = new IndexWriterConfig().setUseCompoundFile(false);
         iwc.getMergePolicy().setNoCFSRatio(0.0);
 
@@ -148,29 +154,42 @@ abstract class GridLuceneNoCopyE2ESupport {
     /** */
     @After
     public void tearDownE2E() throws Exception {
-        if (fileLog != null && capture != null)
-            fileLog.removeHandler(capture);
+        if (capture != null) {
+            if (fileLog != null)
+                fileLog.removeHandler(capture);
+
+            if (inputLog != null)
+                inputLog.removeHandler(capture);
+        }
 
         if (dir != null)
             dir.close();
     }
 
+    /** Exact sum of live file lengths — total off-heap when every closed file is compacted (no-copy on). */
+    long exactFileBytes() throws IOException {
+        long sum = 0;
+
+        for (String f : dir.listAll())
+            sum += dir.fileLength(f);
+
+        return sum;
+    }
+
     /**
-     * Off-heap bytes allocated beyond the page buffers of all live files. Files are stored as whole
-     * {@link GridLuceneOutputStream#BUFFER_SIZE} pages, so page bytes = Σ ceil(len / BUFFER_SIZE) pages;
-     * anything above that is the contiguous no-copy mirror (transient merge-time mirrors of deleted
-     * files are freed with their files and do not linger).
+     * Page-rounded sum of live file lengths, Σ ceil(len / {@link GridLuceneOutputStream#BUFFER_SIZE})
+     * pages — total off-heap for the base page-chain layout (kill switch off).
      */
-    long mirrorExcessBytes() throws IOException {
-        long pages = 0;
+    long pageRoundedFileBytes() throws IOException {
+        long sum = 0;
 
         for (String f : dir.listAll()) {
             long len = dir.fileLength(f);
 
-            pages += ((len + BUFFER_SIZE - 1) / BUFFER_SIZE) * BUFFER_SIZE;
+            sum += ((len + BUFFER_SIZE - 1) / BUFFER_SIZE) * BUFFER_SIZE;
         }
 
-        return mem.allocatedSize() - pages;
+        return sum;
     }
 
     /** The {@code .vec} flat-vectors file of the single forceMerged segment. */
@@ -184,11 +203,21 @@ abstract class GridLuceneNoCopyE2ESupport {
             + " — compound files unexpectedly enabled");
     }
 
-    /** @return {@code true} if the overlay logged a contiguous-mirror build (INFO first, FINE after). */
-    boolean mirrorBuildLogged() {
+    /** @return {@code true} if the overlay logged the first-engagement INFO (segment served to the scorer). */
+    boolean engagementLogged() {
+        return logged("no-copy vector scorer engaged");
+    }
+
+    /** @return {@code true} if the overlay logged at least one FINE page-to-contiguous compaction. */
+    boolean compactionLogged() {
+        return logged("Compacted");
+    }
+
+    /** */
+    private boolean logged(String needle) {
         synchronized (fileLogRecords) {
             for (LogRecord r : fileLogRecords) {
-                if (r.getMessage() != null && r.getMessage().contains("mirror built"))
+                if (r.getMessage() != null && r.getMessage().contains(needle))
                     return true;
             }
         }
@@ -198,14 +227,7 @@ abstract class GridLuceneNoCopyE2ESupport {
 
     /** @return {@code true} if the overlay logged the kill-switch "disabled" notice at class init. */
     boolean disabledNoticeLogged() {
-        synchronized (fileLogRecords) {
-            for (LogRecord r : fileLogRecords) {
-                if (r.getMessage() != null && r.getMessage().contains("disabled"))
-                    return true;
-            }
-        }
-
-        return false;
+        return logged("disabled");
     }
 
     /** Average recall@{@link #K} over all queries against the brute-force ground truth. */

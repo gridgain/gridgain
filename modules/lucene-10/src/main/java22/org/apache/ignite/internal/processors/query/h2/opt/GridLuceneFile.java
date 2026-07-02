@@ -29,7 +29,14 @@ import java.util.logging.Logger;
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
 
 /**
- * Lucene file.
+ * Lucene file. This java22 overlay stores a closed file's content <b>contiguously</b>: the file is written
+ * into the usual append-friendly {@link GridLuceneOutputStream#BUFFER_SIZE} page chain (page addresses must
+ * not move under the writer), and {@link #onOutputClosed()} then compacts the pages into one exact-size
+ * off-heap block and frees them. {@link #contiguousAddr()} exposes that block, letting the no-copy
+ * MemorySegment vector scorer read vectors in place — with <b>no mirror copy and no memory doubling</b>
+ * (storage even shrinks from page-rounded to exact size). Compacting at output close is safe because the
+ * Lucene {@code Directory} contract forbids opening an input before the output is closed, and the file is
+ * immutable afterwards.
  */
 public class GridLuceneFile implements Accountable {
     /** */
@@ -54,32 +61,30 @@ public class GridLuceneFile implements Accountable {
     private final AtomicBoolean deleted = new AtomicBoolean();
 
     /**
-     * Kill switch for the no-copy contiguous mirror (default on). When off, {@link #contiguousAddr()}
-     * returns 0 and Lucene falls back to its copy-based vector scorer — useful to trade the mirror's extra
-     * memory back for RAM, or to isolate regressions.
+     * Kill switch for the no-copy vector scorer (default on). When off, files keep the base page-chain
+     * layout ({@link #onOutputClosed()} does not compact), {@link #contiguousAddr()} returns 0 and Lucene
+     * falls back to its copy-based vector scorer — restoring the exact pre-overlay behavior to isolate
+     * regressions.
      */
-    private static final boolean NOCOPY_MIRROR =
+    private static final boolean NOCOPY_SCORER =
         Boolean.parseBoolean(System.getProperty("GRIDGAIN_VECTOR_NOCOPY_SCORER", "true"));
 
     /** JUL, matching Lucene's own vectorization-status logging — this module has no Ignite logger wiring. */
     private static final Logger log = Logger.getLogger(GridLuceneFile.class.getName());
 
-    /** First mirror build is logged at INFO (the operator-visible "no-copy is active" signal). */
-    private static final AtomicBoolean engagedLogged = new AtomicBoolean();
-
     static {
         // Whether the no-copy scorer can engage is otherwise invisible in logs (an MR-jar-vs-exploded
         // classpath mix-up or this switch silently fall back to the copy scorer), so announce the off state.
-        if (!NOCOPY_MIRROR) {
+        if (!NOCOPY_SCORER) {
             log.info("GridGain no-copy vector scorer disabled via -DGRIDGAIN_VECTOR_NOCOPY_SCORER=false; " +
-                "Lucene will use its copy-based vector scorer.");
+                "file storage stays paged and Lucene will use its copy-based vector scorer.");
         }
     }
 
-    /** Lazily-built contiguous off-heap mirror of the whole file (0 = not built). See {@link #contiguousAddr()}. */
+    /** Base address of the file's contiguous storage (0 = still paged: open for write, empty, or switch off). */
     private volatile long contiguousPtr;
 
-    /** Allocation size of the contiguous mirror, for release on delete. */
+    /** Exact size of the contiguous allocation (== file length at compaction time), for release on delete. */
     private long contiguousLen;
 
     /**
@@ -118,12 +123,72 @@ public class GridLuceneFile implements Accountable {
     }
 
     /**
+     * Invoked by {@link GridLuceneOutputStream#close()} once the file's content is complete (and before
+     * any input can legally be opened on it): compacts the file into contiguous storage, unless the
+     * kill switch is off. Replaces the base copy's no-op (this overlay shadows the base class in the
+     * multi-release jar; it does not subclass it).
+     */
+    void onOutputClosed() {
+        if (NOCOPY_SCORER)
+            compact();
+    }
+
+    /**
+     * Re-lays the closed file's pages into one exact-size contiguous off-heap block, repoints the page
+     * table into it ({@code getBuffer(i) == base + i * BUFFER_SIZE}, so the sequential read path is
+     * untouched) and frees the pages. No reader can hold a stale page address: the Directory contract
+     * forbids opening an input before the output is closed, and the writer's cached page address is dead
+     * after {@code close()}. Total off-heap for the file goes page-rounded → exact, and the no-copy scorer
+     * needs no mirror copy at query time.
+     */
+    private synchronized void compact() {
+        if (contiguousPtr != 0 || deleted.get() || length <= 0)
+            return;
+
+        int nb = buffers.size();
+        long dst = dir.memory().allocate(length);
+        long copied = 0;
+
+        for (int i = 0; i < nb && copied < length; i++) {
+            long chunk = Math.min(BUFFER_SIZE, length - copied);
+
+            dir.memory().copyMemory(buffers.get(i), dst + copied, chunk);
+
+            copied += chunk;
+        }
+
+        for (int i = 0; i < nb; i++) {
+            long page = buffers.get(i);
+
+            buffers.set(i, dst + (long)i * BUFFER_SIZE);
+
+            dir.memory().release(page, BUFFER_SIZE);
+        }
+
+        contiguousLen = length;
+        contiguousPtr = dst;
+
+        // Storage shrank from page-rounded to exact size.
+        long delta = length - (long)nb * BUFFER_SIZE;
+
+        sizeInBytes += delta;
+
+        if (dir != null)
+            dir.sizeInBytes.getAndAdd(delta);
+
+        if (log.isLoggable(Level.FINE))
+            log.fine("Compacted '" + name + "' to contiguous off-heap storage (" + length + " bytes, " + nb + " pages freed).");
+    }
+
+    /**
      * @return New buffer address.
      */
     final long addBuffer() {
         long buf = newBuffer();
 
         synchronized (this) {
+            assert contiguousPtr == 0 : "append after compaction: " + name;
+
             buffers.add(buf);
 
             sizeInBytes += BUFFER_SIZE;
@@ -182,58 +247,17 @@ public class GridLuceneFile implements Accountable {
     }
 
     /**
-     * Address of a contiguous off-heap copy of the entire file, built lazily on first call. The file is
-     * normally stored as discontiguous {@link GridLuceneOutputStream#BUFFER_SIZE} pages; this single
-     * contiguous mirror lets Lucene's memory-segment vector scorer read each candidate vector in place
-     * (no per-candidate copy into a scratch {@code float[]}). Returns {@code 0} when unavailable
-     * (empty/deleted file). Freed in {@link #deferredDelete()}. The sequential read path is unaffected.
+     * Address of the file's contiguous off-heap storage, laid down by {@link #onOutputClosed()} when the
+     * output was closed. Lucene's memory-segment vector scorer requests the whole input as one segment,
+     * which only a single contiguous region can satisfy; since the storage itself is contiguous, no mirror
+     * copy is ever made. Returns {@code 0} when unavailable (file still open for write, empty, or the
+     * {@code GRIDGAIN_VECTOR_NOCOPY_SCORER} switch is off) — Lucene then falls back to its copy path.
+     * Freed in {@link #deferredDelete()}. The sequential read path is unaffected either way.
      *
-     * @return Contiguous mirror address, or {@code 0}.
+     * @return Contiguous storage address, or {@code 0}.
      */
     final long contiguousAddr() {
-        long p = contiguousPtr;
-
-        if (p != 0)
-            return p;
-
-        return NOCOPY_MIRROR ? buildContiguous() : 0;
-    }
-
-    /**
-     * Builds the contiguous mirror once (synchronized so concurrent query threads build at most one).
-     *
-     * @return Mirror address, or {@code 0}.
-     */
-    private synchronized long buildContiguous() {
-        if (contiguousPtr != 0)
-            return contiguousPtr;
-
-        if (deleted.get() || length <= 0)
-            return 0;
-
-        long dst = dir.memory().allocate(length);
-
-        long copied = 0;
-
-        for (int i = 0, nb = buffers.size(); i < nb && copied < length; i++) {
-            long chunk = Math.min(BUFFER_SIZE, length - copied);
-
-            dir.memory().copyMemory(buffers.get(i), dst + copied, chunk);
-
-            copied += chunk;
-        }
-
-        contiguousLen = length;
-        contiguousPtr = dst;
-
-        if (engagedLogged.compareAndSet(false, true)) {
-            log.info("GridGain no-copy vector scorer engaged: contiguous off-heap mirror built for '" + name +
-                "' (" + length + " bytes); further mirror builds are logged at FINE.");
-        }
-        else if (log.isLoggable(Level.FINE))
-            log.fine("No-copy mirror built for '" + name + "' (" + length + " bytes).");
-
-        return dst;
+        return contiguousPtr;
     }
 
     /**
@@ -264,13 +288,16 @@ public class GridLuceneFile implements Accountable {
 
         assert refCnt.get() == 0;
 
-        for (int i = 0; i < buffers.idx; i++)
-            dir.memory().release(buffers.arr[i], BUFFER_SIZE);
-
         if (contiguousPtr != 0) {
+            // The pages were re-laid into (and freed in favor of) the contiguous block: the page table
+            // holds derived addresses inside it, so free only the block itself.
             dir.memory().release(contiguousPtr, contiguousLen);
 
             contiguousPtr = 0;
+        }
+        else {
+            for (int i = 0; i < buffers.idx; i++)
+                dir.memory().release(buffers.arr[i], BUFFER_SIZE);
         }
 
         buffers = null;
@@ -328,6 +355,18 @@ public class GridLuceneFile implements Accountable {
             assert idx < this.idx;
 
             return arr[idx];
+        }
+
+        /**
+         * Replaces value by index.
+         *
+         * @param idx Index.
+         * @param val Value.
+         */
+        void set(int idx, long val) {
+            assert idx < this.idx;
+
+            arr[idx] = val;
         }
 
         /**

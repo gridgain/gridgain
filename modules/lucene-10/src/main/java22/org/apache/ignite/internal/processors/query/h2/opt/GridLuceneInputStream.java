@@ -28,6 +28,8 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 
 import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutputStream.BUFFER_SIZE;
 
@@ -35,6 +37,12 @@ import static org.apache.ignite.internal.processors.query.h2.opt.GridLuceneOutpu
  * A memory-resident {@link IndexInput} implementation.
  */
 public class GridLuceneInputStream extends IndexInput implements MemorySegmentAccessInput {
+    /** JUL, matching Lucene's own vectorization-status logging — this module has no Ignite logger wiring. */
+    private static final Logger log = Logger.getLogger(GridLuceneInputStream.class.getName());
+
+    /** First successful segment hand-off is logged once at INFO — the operator-visible "no-copy is active". */
+    private static final AtomicBoolean engagedLogged = new AtomicBoolean();
+
     /** */
     private GridLuceneFile file;
 
@@ -279,22 +287,24 @@ public class GridLuceneInputStream extends IndexInput implements MemorySegmentAc
     }
 
     /**
-     * Returns a {@link MemorySegment} view over the off-heap bytes {@code [pos, pos+len)} using the file's
-     * contiguous mirror, so Lucene's memory-segment vector scorer can read vectors in place with no copy.
+     * Returns a {@link MemorySegment} view over the off-heap bytes {@code [pos, pos+len)} of the file's
+     * contiguous storage, so Lucene's memory-segment vector scorer can read vectors in place with no copy.
      * Lucene requests the whole input ({@code segmentSliceOrNull(0, length())}) up front; that only
-     * succeeds against a single contiguous region, which {@link GridLuceneFile#contiguousAddr()} provides
-     * (the file is otherwise stored as discontiguous 32 KB pages). Returns {@code null} if the mirror is
-     * unavailable or the range is out of bounds, in which case Lucene falls back to its copy path.
+     * succeeds against a single contiguous region, which the file's storage itself provides — it is
+     * compacted from the write-time page chain when the output closes (see
+     * {@link GridLuceneFile#contiguousAddr()}), so no mirror copy and no extra memory are involved.
+     * Returns {@code null} if contiguous storage is unavailable (kill switch off, file still open for
+     * write) or the range is out of bounds, in which case Lucene falls back to its copy path.
      *
      * <p><b>Lifetime.</b> The returned segment is a raw view ({@code MemorySegment.ofAddress(..).reinterpret})
      * with no reachability tie to this input, so its validity rests on the file's ref-count: the directory's
      * {@code openInput} takes a ref, {@link #close()} releases it, and {@code GridLuceneFile.deferredDelete()}
-     * frees the mirror (and the page buffers) only once the file is deleted AND no refs remain. Lucene's
-     * {@code IndexInput} contract forbids using an input, its clones or slices — and therefore anything
-     * obtained from them, including these segments — after the input is closed, so a segment held by a
-     * vector scorer is valid exactly as long as the reader that created it. Reading through a segment after
-     * close would be use-after-free, but that is the same (pre-existing) failure mode as {@code readByte} on
-     * a closed input reading a freed page buffer — the no-copy path adds no new lifetime class.
+     * frees the storage only once the file is deleted AND no refs remain. Lucene's {@code IndexInput}
+     * contract forbids using an input, its clones or slices — and therefore anything obtained from them,
+     * including these segments — after the input is closed, so a segment held by a vector scorer is valid
+     * exactly as long as the reader that created it. Reading through a segment after close would be
+     * use-after-free, but that is the same (pre-existing) failure mode as {@code readByte} on a closed
+     * input reading a freed page — the no-copy path adds no new lifetime class.
      */
     @Override public MemorySegment segmentSliceOrNull(long pos, long len) throws IOException {
         long base = file.contiguousAddr();
@@ -306,6 +316,11 @@ public class GridLuceneInputStream extends IndexInput implements MemorySegmentAc
 
         if (a < 0 || a + len > length)
             return null;
+
+        if (engagedLogged.compareAndSet(false, true)) {
+            log.info("GridGain no-copy vector scorer engaged: serving MemorySegment views over contiguous " +
+                "off-heap file storage (first request: '" + file.getName() + "', " + len + " bytes).");
+        }
 
         return MemorySegment.ofAddress(base + a).reinterpret(len);
     }

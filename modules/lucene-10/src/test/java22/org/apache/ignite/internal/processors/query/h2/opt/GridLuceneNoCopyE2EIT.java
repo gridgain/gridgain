@@ -33,13 +33,14 @@ import static org.junit.Assume.assumeTrue;
 /**
  * End-to-end proof that Lucene's memory-segment vector scorer actually engages on a real HNSW search
  * through {@link GridLuceneDirectory} — the plumbing tests ({@link GridLuceneNoCopyInputIT}) exercise
- * {@link MemorySegmentAccessInput} directly but cannot show that Lucene takes the no-copy path.
+ * {@link MemorySegmentAccessInput} directly but cannot show that Lucene takes the no-copy path — and that
+ * the contiguous-on-close storage delivers the design's memory promise: <b>total off-heap == the exact sum
+ * of file lengths, and a vector query allocates nothing</b> (no mirror, no doubling).
  * <p>
- * Engagement is asserted behaviourally: the contiguous mirror is only ever built when Lucene calls
- * {@code segmentSliceOrNull} (i.e., the memory-segment scorer path), so off-heap allocation beyond the
- * page buffers ≈ the {@code .vec} file length proves it, and ~0 refutes it. Requires the Panama
- * vectorization provider ({@code --add-modules jdk.incubator.vector} in the failsafe argLine) — Lucene's
- * default scorer never asks for memory segments.
+ * Engagement is asserted via the overlay's first-engagement INFO, which is emitted only when a segment is
+ * actually handed to a caller of {@code segmentSliceOrNull} (i.e., the memory-segment scorer). Requires
+ * the Panama vectorization provider ({@code --add-modules jdk.incubator.vector} in the failsafe argLine) —
+ * Lucene's default scorer never asks for memory segments.
  */
 public class GridLuceneNoCopyE2EIT extends GridLuceneNoCopyE2ESupport {
     /** */
@@ -52,28 +53,31 @@ public class GridLuceneNoCopyE2EIT extends GridLuceneNoCopyE2ESupport {
         try (DirectoryReader r = DirectoryReader.open(dir)) {
             IndexSearcher s = new IndexSearcher(r);
 
+            // Contiguous-on-close storage: every closed file was compacted to its exact length, so total
+            // off-heap equals the exact byte sum of the live files (the page layout would be bigger).
+            long baseline = mem.allocatedSize();
+            long exact = exactFileBytes();
+
+            assertTrue("compacted storage must equal the exact file bytes: allocated=" + baseline
+                + ", exact=" + exact, baseline >= exact && baseline <= exact + 64 * 1024);
+
+            assertTrue("per-file compaction must be logged at FINE", compactionLogged());
+
             TopDocs first = s.search(new KnnFloatVectorQuery(FIELD, queryV[0], FANOUT), K);
 
-            long excess = mirrorExcessBytes();
+            // THE no-doubling property this design exists for: serving the scorer allocates nothing —
+            // the segment views the file's own storage.
+            assertEquals("a vector query must not allocate off-heap memory (storage is already contiguous)",
+                baseline, mem.allocatedSize());
 
-            // The mirror may have been built at merge time (graph construction scores the just-written
-            // .vec through the production input) or by the query above — either way it must exist now.
-            assertTrue("memory-segment scorer did not engage: no contiguous mirror after a vector query "
-                    + "(excess=" + excess + ", expected >= " + VEC_BYTES + "). If 0, check that the failsafe "
-                    + "argLine passes --add-modules jdk.incubator.vector (Lucene's default scorer never "
-                    + "requests memory segments).",
-                excess >= VEC_BYTES);
+            assertTrue("memory-segment scorer did not engage (no first-engagement INFO). Check that the "
+                    + "failsafe argLine passes --add-modules jdk.incubator.vector (Lucene's default scorer "
+                    + "never requests memory segments).",
+                engagementLogged());
 
-            assertTrue("only the .vec mirror should exceed the page buffers (excess=" + excess + ")",
-                excess <= dir.fileLength(vecFileName()) + 256 * 1024);
-
-            assertTrue("the overlay must log the mirror build", mirrorBuildLogged());
-
-            // The mirror is built once and cached: a repeat query must not allocate again.
             TopDocs again = s.search(new KnnFloatVectorQuery(FIELD, queryV[0], FANOUT), K);
 
-            assertEquals("repeat query re-allocated off-heap memory (mirror not cached?)",
-                excess, mirrorExcessBytes());
+            assertEquals("repeat query allocated off-heap memory", baseline, mem.allocatedSize());
 
             assertArrayEquals("same query, same index — results must be deterministic",
                 docIds(first), docIds(again));
