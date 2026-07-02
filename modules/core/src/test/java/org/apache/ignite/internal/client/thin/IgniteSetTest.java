@@ -208,7 +208,7 @@ public class IgniteSetTest extends AbstractThinClientTest {
     @Test
     @SuppressWarnings("SuspiciousMethodCalls")
     public void testRetainAll() {
-        ClientIgniteSet<Integer> set = client.set("testRemoveAll", new ClientCollectionConfiguration());
+        ClientIgniteSet<Integer> set = client.set("testRetainAll", new ClientCollectionConfiguration());
 
         assertFalse(set.retainAll(ImmutableList.of()));
 
