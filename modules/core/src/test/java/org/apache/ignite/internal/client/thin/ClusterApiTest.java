@@ -73,6 +73,22 @@ public class ClusterApiTest extends AbstractThinClientTest {
     }
 
     /**
+     * Test change cluster state operation by thin client (async).
+     */
+    @Test
+    public void testClusterStateAsync() throws Exception {
+        try (IgniteClient client = startClient(0)) {
+            ClientCluster clientCluster = client.cluster();
+            IgniteCluster igniteCluster = grid(0).cluster();
+
+            changeAndCheckStateAsync(clientCluster, igniteCluster, ClusterState.INACTIVE);
+            changeAndCheckStateAsync(clientCluster, igniteCluster, ClusterState.ACTIVE_READ_ONLY);
+            changeAndCheckStateAsync(clientCluster, igniteCluster, ClusterState.ACTIVE);
+            changeAndCheckStateAsync(clientCluster, igniteCluster, ClusterState.INACTIVE);
+        }
+    }
+
+    /**
      * Test change WAL state for cache operation by thin client.
      */
     @Test
@@ -110,12 +126,60 @@ public class ClusterApiTest extends AbstractThinClientTest {
     }
 
     /**
+     * Test change WAL state for cache operation by thin client (async).
+     */
+    @Test
+    public void testWalStateAsync() throws Exception {
+        try (IgniteClient client = startClient(0)) {
+            ClientCluster clientCluster = client.cluster();
+            IgniteCluster igniteCluster = grid(0).cluster();
+
+            igniteCluster.state(ClusterState.ACTIVE);
+
+            grid(0).getOrCreateCache(DEFAULT_CACHE_NAME);
+
+            igniteCluster.disableWal(DEFAULT_CACHE_NAME);
+
+            // Check enable WAL operation.
+            assertTrue(clientCluster.enableWalAsync(DEFAULT_CACHE_NAME).get());
+            assertTrue(clientCluster.isWalEnabledAsync(DEFAULT_CACHE_NAME).get());
+            assertTrue(igniteCluster.isWalEnabled(DEFAULT_CACHE_NAME));
+
+            // Check enable WAL operation on already enabled WAL.
+            assertFalse(clientCluster.enableWalAsync(DEFAULT_CACHE_NAME).get());
+            assertTrue(clientCluster.isWalEnabledAsync(DEFAULT_CACHE_NAME).get());
+            assertTrue(igniteCluster.isWalEnabled(DEFAULT_CACHE_NAME));
+
+            // Check disable WAL operation.
+            assertTrue(clientCluster.disableWalAsync(DEFAULT_CACHE_NAME).get());
+            assertFalse(clientCluster.isWalEnabledAsync(DEFAULT_CACHE_NAME).get());
+            assertFalse(igniteCluster.isWalEnabled(DEFAULT_CACHE_NAME));
+
+            // Check disable WAL operation on already disabled WAL.
+            assertFalse(clientCluster.disableWalAsync(DEFAULT_CACHE_NAME).get());
+            assertFalse(clientCluster.isWalEnabledAsync(DEFAULT_CACHE_NAME).get());
+            assertFalse(igniteCluster.isWalEnabled(DEFAULT_CACHE_NAME));
+        }
+    }
+
+    /**
      * Changes state by thin client and check by thin and thick clients that state is changed.
      */
     private void changeAndCheckState(ClientCluster clientCluster, IgniteCluster igniteCluster, ClusterState state) {
         clientCluster.state(state);
 
         assertEquals(state, clientCluster.state());
+        assertEquals(state, igniteCluster.state());
+    }
+
+    /**
+     * Changes state by thin client (async) and check by thin and thick clients that state is changed.
+     */
+    private void changeAndCheckStateAsync(ClientCluster clientCluster, IgniteCluster igniteCluster, ClusterState state)
+        throws Exception {
+        clientCluster.stateAsync(state).get();
+
+        assertEquals(state, clientCluster.stateAsync().get());
         assertEquals(state, igniteCluster.state());
     }
 }

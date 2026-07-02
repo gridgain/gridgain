@@ -30,6 +30,13 @@ public interface ClientCluster extends ClientClusterGroup {
     public ClusterState state();
 
     /**
+     * Gets current cluster state.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the current cluster state.
+     */
+    public IgniteClientFuture<ClusterState> stateAsync();
+
+    /**
      * Changes current cluster state to given {@code newState} cluster state.
      * <p>
      * <b>NOTE:</b>
@@ -39,6 +46,19 @@ public interface ClientCluster extends ClientClusterGroup {
      * @throws ClientException If change state operation failed.
      */
     public void state(ClusterState newState) throws ClientException;
+
+    /**
+     * Changes current cluster state to given {@code newState} cluster state.
+     * <p>
+     * <b>NOTE:</b>
+     * Deactivation clears in-memory caches (without persistence) including the system caches.
+     * <p>
+     * May be completed exceptionally with {@link ClientException} if change state operation failed.
+     *
+     * @param newState New cluster state.
+     * @return a Future representing pending completion of the operation.
+     */
+    public IgniteClientFuture<Void> stateAsync(ClusterState newState);
 
     /**
      * Disables write-ahead logging for specified cache. When WAL is disabled, changes are not logged to disk.
@@ -60,6 +80,27 @@ public interface ClientCluster extends ClientClusterGroup {
     public boolean disableWal(String cacheName) throws ClientException;
 
     /**
+     * Disables write-ahead logging for specified cache. When WAL is disabled, changes are not logged to disk.
+     * This significantly improves cache update speed. The drawback is absence of local crash-recovery guarantees.
+     * If node is crashed, local content of WAL-disabled cache will be cleared on restart to avoid data corruption.
+     * <p>
+     * Internally this method will wait for all current cache operations to finish and prevent new cache operations
+     * from being executed. Then checkpoint is initiated to flush all data to disk. Control is returned to the callee
+     * when all dirty pages are prepared for checkpoint, but not necessarily flushed to disk.
+     * <p>
+     * WAL state can be changed only for persistent caches.
+     * <p>
+     * May be completed exceptionally with {@link ClientException} if error occurs.
+     *
+     * @param cacheName Cache name.
+     * @return a Future representing pending completion of the operation, which wraps whether WAL disabled by this
+     * call.
+     * @see #enableWalAsync(String)
+     * @see #isWalEnabledAsync(String)
+     */
+    public IgniteClientFuture<Boolean> disableWalAsync(String cacheName);
+
+    /**
      * Enables write-ahead logging for specified cache. Restoring crash-recovery guarantees of a previous call to
      * {@link #disableWal(String)}.
      * <p>
@@ -78,6 +119,26 @@ public interface ClientCluster extends ClientClusterGroup {
     public boolean enableWal(String cacheName) throws ClientException;
 
     /**
+     * Enables write-ahead logging for specified cache. Restoring crash-recovery guarantees of a previous call to
+     * {@link #disableWalAsync(String)}.
+     * <p>
+     * Internally this method will wait for all current cache operations to finish and prevent new cache operations
+     * from being executed. Then checkpoint is initiated to flush all data to disk. Control is returned to the callee
+     * when all data is persisted to disk.
+     * <p>
+     * WAL state can be changed only for persistent caches.
+     * <p>
+     * May be completed exceptionally with {@link ClientException} if error occurs.
+     *
+     * @param cacheName Cache name.
+     * @return a Future representing pending completion of the operation, which wraps whether WAL enabled by this
+     * call.
+     * @see #disableWalAsync(String)
+     * @see #isWalEnabledAsync(String)
+     */
+    public IgniteClientFuture<Boolean> enableWalAsync(String cacheName);
+
+    /**
      * Checks if write-ahead logging is enabled for specified cache.
      *
      * @param cacheName Cache name.
@@ -86,4 +147,15 @@ public interface ClientCluster extends ClientClusterGroup {
      * @see #enableWal(String)
      */
     public boolean isWalEnabled(String cacheName);
+
+    /**
+     * Checks if write-ahead logging is enabled for specified cache.
+     *
+     * @param cacheName Cache name.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if WAL is enabled
+     * for cache.
+     * @see #disableWalAsync(String)
+     * @see #enableWalAsync(String)
+     */
+    public IgniteClientFuture<Boolean> isWalEnabledAsync(String cacheName);
 }
