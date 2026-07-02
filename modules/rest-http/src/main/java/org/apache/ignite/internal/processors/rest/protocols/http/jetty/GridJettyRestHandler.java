@@ -57,6 +57,7 @@ import org.apache.ignite.internal.processors.rest.request.GridRestCacheRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestChangeStateRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterNameRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestClusterStateRequest;
+import org.apache.ignite.internal.processors.rest.request.GridRestDrainRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestLogRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestNodeStateBeforeStartRequest;
 import org.apache.ignite.internal.processors.rest.request.GridRestProbeRequest;
@@ -800,6 +801,17 @@ public class GridJettyRestHandler extends AbstractHandler {
                 GridRestProbeRequest restReq0 = new GridRestProbeRequest();
 
                 restReq0.kind(params.get("kind"));
+
+                restReq = restReq0;
+
+                break;
+            }
+
+            case DRAIN: {
+                GridRestDrainRequest restReq0 = new GridRestDrainRequest();
+
+                restReq0.action(GridRestDrainRequest.Action.of(params.get("action")));
+                restReq0.force(Boolean.parseBoolean(params.get("force")));
 
                 restReq = restReq0;
 
