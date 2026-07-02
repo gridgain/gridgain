@@ -29,6 +29,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -53,6 +55,7 @@ import org.apache.ignite.cache.SimilarityFunction;
 import org.apache.ignite.client.ClientCacheConfiguration;
 import org.apache.ignite.client.ClientCachePluginConfiguration;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.binary.BinaryContext;
 import org.apache.ignite.internal.binary.BinaryFieldMetadata;
 import org.apache.ignite.internal.binary.BinaryMetadata;
@@ -733,6 +736,36 @@ public final class ClientUtils {
             res[i] = unwrapBinary(arr[i], hnds, null);
 
         return res;
+    }
+
+    /**
+     * Waits for the future to complete and returns its result, unwrapping {@link CompletionException}.
+     *
+     * @param fut Future.
+     * @return Result.
+     */
+    public static <T> T syncResult(IgniteClientFuture<T> fut) {
+        return syncResult(fut.toCompletableFuture());
+    }
+
+    /**
+     * Waits for the future to complete and returns its result, unwrapping {@link CompletionException}.
+     *
+     * @param fut Future.
+     * @return Result.
+     */
+    public static <T> T syncResult(CompletableFuture<T> fut) {
+        try {
+            return fut.join();
+        }
+        catch (CompletionException e) {
+            Throwable cause = e.getCause();
+
+            if (cause instanceof RuntimeException)
+                throw (RuntimeException) cause;
+
+            throw e;
+        }
     }
 
     /** A helper class to translate query fields. */
