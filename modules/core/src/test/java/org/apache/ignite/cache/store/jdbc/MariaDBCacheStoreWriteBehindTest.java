@@ -149,10 +149,10 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         putPersons(cache, n);
 
-        waitForRowCount(n, 10_000);
+        waitForPersonCount(container, n, 10_000);
 
         for (int i = 0; i < n; i++)
-            assertEquals("name" + i, personName(i));
+            assertEquals("name" + i, personName(container, i));
     }
 
     /**
@@ -173,7 +173,7 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         putPersons(cache, n);
 
-        waitForRowCount(n, 15_000);
+        waitForPersonCount(container, n, 15_000);
     }
 
     /**
@@ -199,9 +199,9 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
         String expName = "v" + (updates - 1);
 
         assertTrue("Final coalesced value did not reach MariaDB",
-                GridTestUtils.waitForCondition(() -> expName.equals(personName(1)), 10_000));
+                GridTestUtils.waitForCondition(() -> expName.equals(personName(container, 1)), 10_000));
 
-        assertEquals("Coalescing must leave exactly one row for the key", 1, personRowCount());
+        assertEquals("Coalescing must leave exactly one row for the key", 1, personCount(container));
     }
 
     /**
@@ -221,10 +221,10 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         putPersons(cache, n);
 
-        waitForRowCount(n, 10_000);
+        waitForPersonCount(container, n, 10_000);
 
-        assertEquals("name0", personName(0));
-        assertEquals("name29", personName(29));
+        assertEquals("name0", personName(container, 0));
+        assertEquals("name29", personName(container, 29));
     }
 
     /**
@@ -244,7 +244,7 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         putPersons(cache, n);
 
-        waitForRowCount(n, 10_000);
+        waitForPersonCount(container, n, 10_000);
 
         Set<PersonKey> keys = new HashSet<>();
 
@@ -253,7 +253,7 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
 
         cache.removeAll(keys);
 
-        waitForRowCount(0, 10_000);
+        waitForPersonCount(container, 0, 10_000);
     }
 
     /**
@@ -278,10 +278,10 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
             tx.commit();
         }
 
-        waitForRowCount(n, 10_000);
+        waitForPersonCount(container, n, 10_000);
 
         for (int i = 0; i < n; i++)
-            assertEquals("tx" + i, personName(i));
+            assertEquals("tx" + i, personName(container, i));
     }
 
     /**
@@ -376,15 +376,15 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
      * Waits until the {@code Person} table holds exactly {@code expected} rows, or fails after
      * {@code timeoutMs}. Used to assert on the asynchronous write-behind flush.
      */
-    private void waitForRowCount(int expected, long timeoutMs) throws Exception {
-        assertTrue("Timed out waiting for " + expected + " rows in MariaDB (write-behind flush); actual=" + personRowCount(),
-                GridTestUtils.waitForCondition(() -> personRowCount() == expected, timeoutMs));
+    private static void waitForPersonCount(MariaDBContainer container, int expected, long timeoutMs) throws Exception {
+        assertTrue("Timed out waiting for " + expected + " rows in MariaDB (write-behind flush); actual=" + personCount(container),
+                GridTestUtils.waitForCondition(() -> personCount(container) == expected, timeoutMs));
     }
 
     /**
      * @return Current number of rows in the {@code Person} table.
      */
-    private int personRowCount() {
+    private static int personCount(MariaDBContainer container) {
         try {
             return executeQuery(container, "SELECT COUNT(*) FROM Person", rs -> {
                 rs.next();
@@ -400,7 +400,7 @@ public class MariaDBCacheStoreWriteBehindTest extends GridCommonAbstractTest {
      * @param id Person id.
      * @return {@code name} column for the given id in MariaDB, or {@code null} if absent.
      */
-    private String personName(int id) {
+    private static String personName(MariaDBContainer container, int id) {
         try {
             return executeQuery(container, "SELECT name FROM Person WHERE id = " + id,
                     rs -> rs.next() ? rs.getString(1) : null);
