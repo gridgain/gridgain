@@ -112,9 +112,10 @@ public class H2Schema {
      * Drop table.
      *
      * @param tbl Table to be removed.
+     * @param destroy {@code True} when the cache is destroyed (drop persistent index state).
      */
-    public void drop(H2TableDescriptor tbl) {
-        tbl.onDrop();
+    public void drop(H2TableDescriptor tbl, boolean destroy) {
+        tbl.onDrop(destroy);
 
         tbls.remove(tbl.tableName());
 

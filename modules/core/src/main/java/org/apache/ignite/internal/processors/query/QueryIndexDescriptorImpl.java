@@ -65,6 +65,12 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
      */
     private SimilarityFunction similarityFunction;
 
+    /** HNSW max connections per node for VECTOR index ({@code 0} — engine default). */
+    private int m;
+
+    /** HNSW build-time beam width for VECTOR index ({@code 0} — engine default). */
+    private int efConstruction;
+
     /**
      * Constructor.
      *
@@ -94,6 +100,25 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
     public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize, SimilarityFunction similarityFunction) {
         this(typDesc, name, type, inlineSize);
         this.similarityFunction = similarityFunction;
+    }
+
+    /**
+     * Constructor for VECTOR index.
+     *
+     * @param typDesc            Type descriptor.
+     * @param name               Index name.
+     * @param type               Type.
+     * @param inlineSize         Inline size.
+     * @param similarityFunction Vector Similarity Function for VECTOR index.
+     * @param m                  HNSW max connections per node ({@code 0} — engine default).
+     * @param efConstruction     HNSW build-time beam width ({@code 0} — engine default).
+     */
+    public QueryIndexDescriptorImpl(QueryTypeDescriptorImpl typDesc, String name, QueryIndexType type, int inlineSize,
+        SimilarityFunction similarityFunction, int m, int efConstruction) {
+        this(typDesc, name, type, inlineSize, similarityFunction);
+
+        this.m = m;
+        this.efConstruction = efConstruction;
     }
 
     /**
@@ -127,6 +152,16 @@ public class QueryIndexDescriptorImpl implements GridQueryIndexDescriptor {
     /** {@inheritDoc} */
     @Override public SimilarityFunction similarityFunction() {
         return similarityFunction;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int m() {
+        return m;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int efConstruction() {
+        return efConstruction;
     }
 
     /** {@inheritDoc} */

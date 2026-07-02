@@ -60,6 +60,12 @@ public class QueryIndex implements Serializable {
      */
     private SimilarityFunction similarityFunction;
 
+    /** HNSW max connections per node for VECTOR index ({@code 0} — engine default). */
+    private int m;
+
+    /** HNSW build-time beam width for VECTOR index ({@code 0} — engine default). */
+    private int efConstruction;
+
     /**
      * Creates an empty index. Should be populated via setters.
      */
@@ -284,6 +290,48 @@ public class QueryIndex implements Serializable {
      */
     public SimilarityFunction getSimilarityFunction() {
         return similarityFunction;
+    }
+
+    /**
+     * Gets HNSW max connections per node for VECTOR index.
+     *
+     * @return M, or {@code 0} for the engine default.
+     */
+    public int getM() {
+        return m;
+    }
+
+    /**
+     * Sets HNSW max connections per node for VECTOR index.
+     *
+     * @param m M, or {@code 0} for the engine default.
+     * @return {@code this} for chaining.
+     */
+    public QueryIndex setM(int m) {
+        this.m = m;
+
+        return this;
+    }
+
+    /**
+     * Gets HNSW build-time beam width for VECTOR index.
+     *
+     * @return efConstruction, or {@code 0} for the engine default.
+     */
+    public int getEfConstruction() {
+        return efConstruction;
+    }
+
+    /**
+     * Sets HNSW build-time beam width for VECTOR index.
+     *
+     * @param efConstruction efConstruction, or {@code 0} for the engine default.
+     * @return {@code this} for chaining.
+     */
+    public QueryIndex setEfConstruction(int efConstruction) {
+        this.efConstruction = efConstruction;
+
+        return this;
     }
 
     /**

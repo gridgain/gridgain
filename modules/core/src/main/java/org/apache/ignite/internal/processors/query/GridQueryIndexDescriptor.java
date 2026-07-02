@@ -68,4 +68,22 @@ public interface GridQueryIndexDescriptor {
      * @return Similarity Function.
      */
     public SimilarityFunction similarityFunction();
+
+    /**
+     * Returns HNSW max connections per node for VECTOR index.
+     *
+     * @return M, or {@code 0} for the engine default.
+     */
+    public default int m() {
+        return 0;
+    }
+
+    /**
+     * Returns HNSW build-time beam width for VECTOR index.
+     *
+     * @return efConstruction, or {@code 0} for the engine default.
+     */
+    public default int efConstruction() {
+        return 0;
+    }
 }

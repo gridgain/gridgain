@@ -19,6 +19,8 @@ package org.apache.ignite.internal.processors.cache.persistence.tree.io;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.internal.metric.IndexPageType;
 import org.apache.ignite.internal.metric.IoStatisticsHolder;
@@ -609,6 +611,23 @@ public abstract class PageIO {
         testIO = io;
     }
 
+    /** Externally registered page IOs (e.g. plugin-provided page types) by type. */
+    private static final Map<Integer, IOVersions<? extends PageIO>> EXT_IOS = new ConcurrentHashMap<>();
+
+    /**
+     * Registers externally provided page IO versions (e.g. plugin page types), so that
+     * generic code (diagnostics, page dumps, recovery) can resolve them through
+     * {@link #getPageIO(int, int)}. Registration is idempotent for the same instance;
+     * conflicting registrations for one type are a programming error.
+     *
+     * @param ios IO versions to register.
+     */
+    public static void registerExtension(IOVersions<? extends PageIO> ios) {
+        IOVersions<? extends PageIO> old = EXT_IOS.putIfAbsent(ios.getType(), ios);
+
+        assert old == null || old == ios : "Conflicting page IO registration for type: " + ios.getType();
+    }
+
     /**
      * @return Type.
      */
@@ -737,6 +756,11 @@ public abstract class PageIO {
                     if (testIO.type == type && testIO.ver == ver)
                         return (Q)testIO;
                 }
+
+                IOVersions<? extends PageIO> extIos = EXT_IOS.get(type);
+
+                if (extIos != null)
+                    return (Q)extIos.forVersion(ver);
 
                 return (Q)getBPlusIO(type, ver);
         }
