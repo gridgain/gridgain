@@ -80,14 +80,14 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
-            <version>${jackson.version}</version>
+            <version>${jackson-core.version}</version>
         </dependency>
 
         <!-- Do not remove com.fasterxml.jackson.core:jackson-annotations it is required at runtime -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
-            <version>${jackson.version}</version>
+            <version>${jackson-annotations.version}</version>
         </dependency>
 
         <!-- Do not remove com.fasterxml.jackson.core:jackson-databind it is required at runtime -->
