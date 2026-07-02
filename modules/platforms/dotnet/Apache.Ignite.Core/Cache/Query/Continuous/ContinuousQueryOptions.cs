@@ -31,7 +31,7 @@ public sealed record ContinuousQueryOptions
     /// <para />
     /// Defaults to <see cref="ContinuousQuery.DefaultBufferSize"/>
     /// </summary>
-    public int BufferSize { get; set; }
+    public int BufferSize { get; set; } = ContinuousQuery.DefaultBufferSize;
 
     /// <summary>
     /// Time interval. When a cache update happens, entry is first put into a buffer.
@@ -53,7 +53,7 @@ public sealed record ContinuousQueryOptions
     /// <para />
     /// Defaults to <c>true</c>.
     /// </summary>
-    public bool AutoUnsubscribe { get; set; }
+    public bool AutoUnsubscribe { get; set; } = ContinuousQuery.DefaultAutoUnsubscribe;
 
     /// <summary>
     /// Local flag. When set query will be executed only on local node, so only local
