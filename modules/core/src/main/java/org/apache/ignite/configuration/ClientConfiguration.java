@@ -204,7 +204,7 @@ public final class ClientConfiguration implements Serializable {
      * Gets how long the resolved addresses will be considered valid, in milliseconds.
      * Set to {@code 0} for infinite validity. Default is 30s.
      *
-     * <p>Currently only takes effect for the {@link org.apache.ignite.client.DnsClientAddressFinder} address finder.
+     * <p>Ignored when custom address finder is set.
      * This finder resolves the provided hostnames into multiple IP addresses, each corresponds to an active cluster
      * node. However, additional IP addresses can be collected after updating the DNS records.
      * This property controls how often the client will try to re-resolve provided hostnames and connect to newly

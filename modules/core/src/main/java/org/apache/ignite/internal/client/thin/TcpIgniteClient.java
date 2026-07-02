@@ -50,7 +50,6 @@ import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientIgniteSet;
 import org.apache.ignite.client.ClientServices;
 import org.apache.ignite.client.ClientTransactions;
-import org.apache.ignite.client.DnsClientAddressFinder;
 import org.apache.ignite.client.IgniteClient;
 import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.client.events.ClientFailEvent;
@@ -146,12 +145,6 @@ public class TcpIgniteClient implements IgniteClient {
             ClientConfiguration cfg
     ) throws ClientException {
         log = NullLogger.whenNull(cfg.getLogger());
-
-        // Add default addressFinder
-        if (cfg.getAddressesFinder() == null) {
-            cfg.setAddressesFinder(new DnsClientAddressFinder(cfg.getAddresses()));
-        }
-
         final ClientBinaryMetadataHandler metadataHnd = new ClientBinaryMetadataHandler();
 
         ClientMarshallerContextImpl marshCtx = new ClientMarshallerContextImpl();

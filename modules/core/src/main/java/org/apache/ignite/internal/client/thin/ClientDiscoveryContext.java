@@ -68,6 +68,8 @@ public class ClientDiscoveryContext {
     /** */
     private final boolean enabled;
 
+    private final boolean usesDefaultAddressFinder;
+
     /** */
     private volatile TopologyInfo topInfo;
 
@@ -83,8 +85,12 @@ public class ClientDiscoveryContext {
         addresses = clientCfg.getAddresses();
         enabled = clientCfg.isClusterDiscoveryEnabled();
 
-        @Nullable ClientAddressFinder addrFinder = clientCfg.getAddressesFinder();
         long addrRenewalInterval = clientCfg.getBackgroundReResolveAddressesInterval();
+        @Nullable ClientAddressFinder addrFinder = clientCfg.getAddressesFinder();
+        if (addrFinder == null) {
+            addrFinder = new DnsClientAddressFinder(addresses);
+        }
+
         if (clientCfg.getBackgroundReResolveAddressesInterval() > 0 && addrFinder instanceof DnsClientAddressFinder) {
             this.addrFinder = new ClientAddressReloader(
                     log,
@@ -96,6 +102,9 @@ public class ClientDiscoveryContext {
         } else {
             this.addrFinder = clientCfg.getAddressesFinder();
         }
+
+        usesDefaultAddressFinder = addrFinder instanceof DnsClientAddressFinder
+                || addrFinder instanceof ClientAddressReloader;
 
         reset();
     }
@@ -239,7 +248,7 @@ public class ClientDiscoveryContext {
      * @return Whether the default address finder is used (i.e. no custom address finder is configured).
      */
     boolean usesDefaultAddressFinder() {
-        return addrFinder == null || addrFinder instanceof DnsClientAddressFinder;
+        return usesDefaultAddressFinder;
     }
 
     /**
@@ -362,7 +371,7 @@ public class ClientDiscoveryContext {
             String[] ret = finder.getAddresses();
 
             if (scheduledAddressReload.compareAndSet(false, true)) {
-                currAddrs = new HashSet<>(Arrays.asList(ret));
+                currAddrs = Set.of(ret);
                 scheduler.scheduleAtFixedRate(
                         this,
                         addrRenewalInterval,
@@ -375,15 +384,15 @@ public class ClientDiscoveryContext {
         }
 
         @Override public void run() {
-            Set<String> newAddrs = new HashSet<>(Arrays.asList(finder.getAddresses()));
+            try {
+                Set<String> newAddrs = Set.of(finder.getAddresses());
 
-            if (!newAddrs.equals(currAddrs)) {
-                currAddrs = newAddrs;
-                try {
+                if (!newAddrs.equals(currAddrs)) {
+                    currAddrs = newAddrs;
                     onReloadCallback.run();
-                } catch (RuntimeException e) {
-                    log.warning("Error calling onReloadCallback", e);
                 }
+            } catch (RuntimeException e) {
+                log.warning("Error calling onReloadCallback", e);
             }
         }
     }
