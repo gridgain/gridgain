@@ -65,12 +65,29 @@ public interface ClientServices {
     public Collection<ClientServiceDescriptor> serviceDescriptors();
 
     /**
+     * Gets metadata about all deployed services in the grid.
+     *
+     * @return a Future representing pending completion of the operation, which wraps metadata about all deployed
+     * services in the grid.
+     */
+    public IgniteClientFuture<Collection<ClientServiceDescriptor>> serviceDescriptorsAsync();
+
+    /**
      * Gets metadata about deployed services in the grid.
      *
      * @param name Service name.
      * @return Metadata about all deployed services in the grid.
      */
     public ClientServiceDescriptor serviceDescriptor(String name);
+
+    /**
+     * Gets metadata about deployed services in the grid.
+     *
+     * @param name Service name.
+     * @return a Future representing pending completion of the operation, which wraps metadata about all deployed
+     * services in the grid.
+     */
+    public IgniteClientFuture<ClientServiceDescriptor> serviceDescriptorAsync(String name);
 
     /**
      * Gets a remote handle on the service with the specified caller context.

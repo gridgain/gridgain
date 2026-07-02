@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import org.apache.ignite.Ignite;
 import org.apache.ignite.client.ClientClusterGroup;
 import org.apache.ignite.client.ClientException;
@@ -364,6 +365,72 @@ public class ServicesTest extends AbstractThinClientTest {
             assertThrowsWithCause(() -> {
                 client.services().serviceDescriptor("unknown");
             }, ClientException.class);
+        }
+    }
+
+    /** Test service descriptors returned correctly (async). */
+    @Test
+    public void testServiceDescriptorsAsync() throws Exception {
+        try (IgniteClient client = startClient(0)) {
+            Collection<ClientServiceDescriptor> svcs = client.services().serviceDescriptorsAsync().get();
+
+            assertNotNull(svcs);
+
+            assertEquals(3, svcs.size());
+
+            assertTrue(svcs.stream().filter(svc -> svc.name().equals(NODE_ID_SERVICE_NAME)).peek(svc -> {
+                assertEquals(NODE_ID_SERVICE_NAME, svc.name());
+                assertEquals(TestNodeIdService.class.getName(), svc.serviceClass());
+                assertEquals(0, svc.totalCount());
+                assertEquals(1, svc.maxPerNodeCount());
+                assertNull(svc.cacheName());
+                assertEquals(grid(0).localNode().id(), svc.originNodeId());
+                assertEquals(PlatformType.JAVA, svc.platformType());
+
+                try {
+                    assertDescriptorsEquals(svc, client.services().serviceDescriptorAsync(NODE_ID_SERVICE_NAME).get());
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).findFirst().isPresent());
+
+            assertTrue(svcs.stream().filter(svc -> svc.name().equals(NODE_SINGLTON_SERVICE_NAME)).peek(svc -> {
+                assertEquals(NODE_SINGLTON_SERVICE_NAME, svc.name());
+                assertEquals(TestService.class.getName(), svc.serviceClass());
+                assertEquals(0, svc.totalCount());
+                assertEquals(1, svc.maxPerNodeCount());
+                assertNull(svc.cacheName());
+                assertEquals(grid(0).localNode().id(), svc.originNodeId());
+                assertEquals(PlatformType.JAVA, svc.platformType());
+
+                try {
+                    assertDescriptorsEquals(svc, client.services().serviceDescriptorAsync(NODE_SINGLTON_SERVICE_NAME).get());
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).findFirst().isPresent());
+
+            assertTrue(svcs.stream().filter(svc -> svc.name().equals(CLUSTER_SINGLTON_SERVICE_NAME)).peek(svc -> {
+                assertEquals(CLUSTER_SINGLTON_SERVICE_NAME, svc.name());
+                assertEquals(TestService.class.getName(), svc.serviceClass());
+                assertEquals(1, svc.totalCount());
+                assertEquals(1, svc.maxPerNodeCount());
+                assertEquals(DEFAULT_CACHE_NAME, svc.cacheName());
+                assertEquals(grid(0).localNode().id(), svc.originNodeId());
+                assertEquals(PlatformType.JAVA, svc.platformType());
+
+                try {
+                    assertDescriptorsEquals(svc, client.services().serviceDescriptorAsync(CLUSTER_SINGLTON_SERVICE_NAME).get());
+                }
+                catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }).findFirst().isPresent());
+
+            assertThrowsWithCause((Callable<?>)() -> client.services().serviceDescriptorAsync("unknown").get(),
+                ClientException.class);
         }
     }
 
