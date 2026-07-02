@@ -201,7 +201,7 @@
                                 </goals>
                                 <phase>validate</phase>
                                 <configuration>
-                                    <outputDirectory>${basedir}/target/javadoc</outputDirectory>
+                                    <outputDirectory>${basedir}/target/javadoc/core</outputDirectory>
                                     <stylesheetfile>${basedir}/assembly/docfiles/css/stylesheet.css</stylesheetfile>
                                     <!-- ignite-tools is a reactor project here, so the inherited tagletArtifact resolves
                                          to a not-yet-packaged artifact at the validate phase; point the taglet path at
@@ -321,7 +321,7 @@
                                 <phase>initialize</phase>
                                 <configuration>
                                     <target>
-                                        <copy todir="${basedir}/target/javadoc/apidocs">
+                                        <copy todir="${basedir}/target/javadoc/core">
                                             <fileset dir="assembly/docfiles">
                                                 <include name="img/**" />
                                                 <include name="*.js" />
@@ -330,7 +330,7 @@
 
                                             <taskdef name="doctask" classname="org.apache.ignite.tools.ant.beautifier.GridJavadocAntTask" />
 
-                                            <doctask css="dotted" dir="target/javadoc/apidocs">
+                                            <doctask css="dotted" dir="target/javadoc/core">
                                                 <include name="**/*.html" />
                                                 <exclude name="overview-frame.html" />
                                                 <exclude name="allclasses-frame.html" />

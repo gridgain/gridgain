@@ -174,7 +174,7 @@
         </fileSet>
 
         <fileSet>
-            <directory>target/javadoc/apidocs</directory>
+            <directory>target/javadoc/core</directory>
             <outputDirectory>/docs/javadoc</outputDirectory>
         </fileSet>
 
