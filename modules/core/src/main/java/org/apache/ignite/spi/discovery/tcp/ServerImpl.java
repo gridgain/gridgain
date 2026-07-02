@@ -86,6 +86,8 @@ import org.apache.ignite.internal.processors.cache.GridCacheSharedContext;
 import org.apache.ignite.internal.processors.cache.persistence.file.FilePageStoreManager;
 import org.apache.ignite.internal.processors.cache.persistence.maintenance.ClearFolderWorkflow;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.metric.MetricRegistry;
+import org.apache.ignite.internal.processors.metric.impl.MaxValueMetric;
 import org.apache.ignite.internal.processors.security.SecurityContext;
 import org.apache.ignite.internal.processors.security.SecurityUtils;
 import org.apache.ignite.internal.processors.tracing.Span;
@@ -198,6 +200,7 @@ import static org.apache.ignite.internal.managers.discovery.IgniteDiscoverySpi.A
 import static org.apache.ignite.internal.processors.security.SecurityUtils.nodeSecurityContext;
 import static org.apache.ignite.spi.IgnitePortProtocol.TCP;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_DISCOVERY_CLIENT_RECONNECT_HISTORY_SIZE;
+import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DISCO_METRICS;
 import static org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi.DFLT_NODE_IDS_HISTORY_SIZE;
 import static org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoverySpiState.AUTH_FAILED;
 import static org.apache.ignite.spi.discovery.tcp.internal.TcpDiscoverySpiState.CHECK_FAILED;
@@ -261,6 +264,9 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** Statistics printer thread. */
     @SuppressWarnings("FieldAccessedSynchronizedAndUnsynchronized")
     private StatisticsPrinter statsPrinter;
+
+    /** Metric for max message queue size. */
+    private MaxValueMetric maxMsgQueueSizeMetric;
 
     /** Failed nodes (but still in topology). */
     private final Map<TcpDiscoveryNode, UUID> failedNodes = new HashMap<>();
@@ -470,6 +476,16 @@ class ServerImpl extends TcpDiscoveryImpl {
     /** {@inheritDoc} */
     @Override public void onContextInitialized0(IgniteSpiContext spiCtx) throws IgniteSpiException {
         spiCtx.registerPort(tcpSrvr.port, TCP);
+
+        MetricRegistry discoReg = (MetricRegistry)spiCtx.getOrCreateMetricRegistry(DISCO_METRICS);
+
+        maxMsgQueueSizeMetric = discoReg.maxValueMetric("MaxMsgQueueSize",
+            "Max message queue size", 60_000L, 5);
+
+        discoReg.register("Next", () -> {
+            TcpDiscoveryNode next = msgWorker != null ? msgWorker.next : null;
+            return next != null ? next.id() : null;
+        }, UUID.class, "Next in the ring node ID");
     }
 
     /** {@inheritDoc} */
@@ -3221,6 +3237,9 @@ class ServerImpl extends TcpDiscoveryImpl {
                 if (log.isDebugEnabled())
                     log.debug("Message has been added to a worker's queue: " + msg);
             }
+
+            if (maxMsgQueueSizeMetric != null)
+                maxMsgQueueSizeMetric.update(queue.size());
         }
 
         /** */

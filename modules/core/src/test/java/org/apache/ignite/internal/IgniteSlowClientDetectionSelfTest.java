@@ -29,13 +29,9 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 import org.apache.ignite.events.DiscoveryEvent;
 import org.apache.ignite.events.Event;
 import org.apache.ignite.events.EventType;
-import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.util.lang.GridAbsPredicate;
-import org.apache.ignite.internal.util.nio.GridNioServer;
-import org.apache.ignite.internal.util.typedef.internal.U;
 import org.apache.ignite.lang.IgnitePredicate;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
-import org.apache.ignite.spi.communication.tcp.internal.GridNioServerWrapper;
 import org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
@@ -152,13 +148,7 @@ public class IgniteSlowClientDetectionSelfTest extends GridCommonAbstractTest {
         for (int i = 0; i < 100; i++)
             cache0.put(0, i);
 
-        GridIoManager ioMgr = slowClient.context().io();
-
-        TcpCommunicationSpi commSpi = (TcpCommunicationSpi)((Object[])U.field(ioMgr, "spis"))[0];
-
-        GridNioServer nioSrvr = ((GridNioServerWrapper)GridTestUtils.getFieldValue(commSpi, "nioSrvWrapper")).nio();
-
-        GridTestUtils.setFieldValue(nioSrvr, "skipRead", true);
+        GridTestUtils.skipCommNioServerRead(slowClient, true);
 
         // Initiate messages for client.
         for (int i = 0; i < 100; i++)

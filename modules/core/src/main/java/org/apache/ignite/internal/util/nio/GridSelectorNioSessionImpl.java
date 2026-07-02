@@ -29,6 +29,7 @@ import org.apache.ignite.IgniteCheckedException;
 import org.apache.ignite.IgniteLogger;
 import org.apache.ignite.internal.processors.metric.MetricRegistry;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
+import org.apache.ignite.internal.processors.metric.impl.MaxValueMetric;
 import org.apache.ignite.internal.processors.tracing.MTC;
 import org.apache.ignite.internal.util.tostring.GridToStringExclude;
 import org.apache.ignite.internal.util.typedef.internal.LT;
@@ -37,6 +38,8 @@ import org.apache.ignite.util.deque.FastSizeDeque;
 import org.jetbrains.annotations.Nullable;
 
 import static org.apache.ignite.internal.processors.tracing.messages.TraceableMessagesTable.traceName;
+import static org.apache.ignite.internal.util.nio.GridNioServer.MAX_MESSAGES_QUEUE_SIZE_METRIC_DESC;
+import static org.apache.ignite.internal.util.nio.GridNioServer.MAX_MESSAGES_QUEUE_SIZE_METRIC_NAME;
 import static org.apache.ignite.internal.util.nio.GridNioServer.OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC;
 import static org.apache.ignite.internal.util.nio.GridNioServer.OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME;
 
@@ -86,6 +89,9 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
     /** Outbound messages queue size metric. */
     @Nullable private final LongAdderMetric outboundMessagesQueueSizeMetric;
+
+    /** Maximum outbound messages queue size metric. */
+    @Nullable private final MaxValueMetric maxMessagesQueueSizeMetric;
 
     /**
      * Creates session instance.
@@ -143,6 +149,13 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
         outboundMessagesQueueSizeMetric = mreg == null ? null : mreg.longAdderMetric(
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_NAME,
             OUTBOUND_MESSAGES_QUEUE_SIZE_METRIC_DESC
+        );
+
+        maxMessagesQueueSizeMetric = mreg == null ? null : mreg.maxValueMetric(
+            MAX_MESSAGES_QUEUE_SIZE_METRIC_NAME,
+            MAX_MESSAGES_QUEUE_SIZE_METRIC_DESC,
+            60_000,
+            5
         );
     }
 
@@ -298,6 +311,14 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
         if (outboundMessagesQueueSizeMetric != null)
             outboundMessagesQueueSizeMetric.increment();
 
+        if (maxMessagesQueueSizeMetric != null) {
+            int queueSize = queue.sizex();
+
+            maxMessagesQueueSizeMetric.update(queueSize);
+
+            return queueSize;
+        }
+
         return queue.sizex();
     }
 
@@ -347,6 +368,14 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
         if (outboundMessagesQueueSizeMetric != null)
             outboundMessagesQueueSizeMetric.increment();
 
+        if (maxMessagesQueueSizeMetric != null) {
+            int queueSize = queue.sizex();
+
+            maxMessagesQueueSizeMetric.update(queueSize);
+
+            return queueSize;
+        }
+
         return queue.sizex();
     }
 
@@ -362,6 +391,9 @@ class GridSelectorNioSessionImpl extends GridNioSessionImpl implements GridNioKe
 
         if (outboundMessagesQueueSizeMetric != null)
             outboundMessagesQueueSizeMetric.add(futs.size());
+
+        if (maxMessagesQueueSizeMetric != null)
+            maxMessagesQueueSizeMetric.update(futs.size());
     }
 
     /**

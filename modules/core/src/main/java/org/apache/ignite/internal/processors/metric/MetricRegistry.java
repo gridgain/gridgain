@@ -35,6 +35,7 @@ import org.apache.ignite.internal.processors.metric.impl.DoubleMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HistogramMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.HitRateMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntGauge;
+import org.apache.ignite.internal.processors.metric.impl.MaxValueMetric;
 import org.apache.ignite.internal.processors.metric.impl.IntMetricImpl;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderMetric;
 import org.apache.ignite.internal.processors.metric.impl.LongAdderWithDelegateMetric;
@@ -446,7 +447,7 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * Calculates number of hits in last rateTimeInterval milliseconds.
      *
      * This method does nothing in case a metric with the given name already exists.
-
+     *
      * @param rateTimeInterval Rate time interval.
      * @param size Array size for underlying calculations.
      * @return {@link HitRateMetric}
@@ -463,6 +464,24 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
             metric.reset(cfgRateTimeInterval, DFLT_SIZE);
 
         return metric;
+    }
+
+    /**
+     * Creates and registers a max value metric.
+     * <p>
+     * It accumulates approximate maximum value statistics.
+     * Calculates maximum value in last {@code timeInterval} milliseconds.
+     * <p>
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * @param name Name.
+     * @param desc Description.
+     * @param timeInterval Time interval in milliseconds.
+     * @param size Array size for underlying calculations.
+     * @return {@link MaxValueMetric}
+     */
+    public MaxValueMetric maxValueMetric(String name, @Nullable String desc, long timeInterval, int size) {
+        return addMetric(name, new MaxValueMetric(metricName(regName, name), desc, timeInterval, size));
     }
 
     /**
