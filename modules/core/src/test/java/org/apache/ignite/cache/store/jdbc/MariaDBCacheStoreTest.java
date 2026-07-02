@@ -36,6 +36,8 @@ import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.apache.ignite.transactions.Transaction;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.testcontainers.mariadb.MariaDBContainer;
 
 import java.io.Serializable;
@@ -44,7 +46,6 @@ import java.sql.Connection;
 import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Arrays;
@@ -57,6 +58,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import static org.apache.ignite.cache.store.jdbc.MariaDBImages.executeQuery;
+import static org.apache.ignite.cache.store.jdbc.MariaDBImages.executeUpdate;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
@@ -68,35 +71,32 @@ import static org.hamcrest.Matchers.hasSize;
  * batched bulk operations, identifier escaping, transactional semantics, and parallel
  * {@code loadCache} behaviour against the live database.
  */
+@RunWith(Parameterized.class)
 public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     /**
-     * MariaDB container — started once for the whole test class.
-     * MariaDB image pinned to current LTS — supports {@code INSERT ... ON DUPLICATE KEY UPDATE}.
+     * MariaDB image under test, injected by {@link Parameterized}. One value per
+     * {@link MariaDBImages#lts()} row, so every test runs once per MariaDB version.
      */
-    private static MariaDBContainer container = new MariaDBContainer("mariadb:11.8");
+    @Parameterized.Parameter
+    public String image;
+
+    /**
+     * MariaDB container for the {@link #image} currently under test. Started lazily and swapped in
+     * {@link #beforeTest()} when {@link #image} changes;
+     */
+    private static MariaDBContainer container;
 
     /**
      * Cache name used by all tests that rely on the default {@code Person} mapping.
      */
     private static final String CACHE_NAME = "test-cache";
 
-    /** {@inheritDoc} */
-    @Override protected void beforeTestsStarted() throws Exception {
-        super.beforeTestsStarted();
-
-        container.start();
-
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement()
-        ) {
-            stmt.executeUpdate("CREATE TABLE Person (id INT PRIMARY KEY, org_id INT, birthday DATE, name VARCHAR(50), gender VARCHAR(50))");
-
-            // Reserved-word table + column name; exercises backtick escaping when sqlEscapeAll=true.
-            stmt.executeUpdate("CREATE TABLE `Person ORDER BY` (id INT PRIMARY KEY, org_id INT, birthday DATE, `name GROUP BY` VARCHAR(50), gender VARCHAR(50))");
-
-            // MariaDB-specific data-type fixtures (Tier 3): microsecond TIMESTAMP and high-precision DECIMAL.
-            stmt.executeUpdate("CREATE TABLE TypeSample (id INT PRIMARY KEY, ts TIMESTAMP(6), amount DECIMAL(38,10))");
-        }
+    /**
+     * @return MariaDB image tags to run every test against (the LTS matrix).
+     */
+    @Parameterized.Parameters(name = "{0}")
+    public static Collection<Object[]> images() {
+        return MariaDBImages.lts();
     }
 
     /** {@inheritDoc} */
@@ -115,13 +115,40 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     @Override protected void beforeTest() throws Exception {
         super.beforeTest();
 
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement()
-        ) {
-            stmt.executeUpdate("DELETE FROM Person");
-            stmt.executeUpdate("DELETE FROM `Person ORDER BY`");
-            stmt.executeUpdate("DELETE FROM TypeSample");
+        containerStart();
+    }
+
+    /**
+     * Starts the MariaDB {@link #container} for the {@link #image} currently under test is
+     * running, (re)starting it when the parameter changes, so at most one container is alive at a time.
+     */
+    private void containerStart() throws Exception {
+        if (container != null && image.equals(container.getDockerImageName())) {
+            executeUpdate(container,
+                    "DELETE FROM Person",
+                    "DELETE FROM `Person ORDER BY`",
+                    "DELETE FROM TypeSample"
+            );
+
+            return;
         }
+
+        if (container != null) {
+            container.stop();
+        }
+
+        container = new MariaDBContainer(image);
+        container.start();
+
+        executeUpdate(container,
+                "CREATE TABLE Person (id INT PRIMARY KEY, org_id INT, birthday DATE, name VARCHAR(50), gender VARCHAR(50))",
+
+                // Reserved-word table + column name; exercises backtick escaping when sqlEscapeAll=true.
+                "CREATE TABLE `Person ORDER BY` (id INT PRIMARY KEY, org_id INT, birthday DATE, `name GROUP BY` VARCHAR(50), gender VARCHAR(50))",
+
+                // MariaDB-specific data-type fixtures (Tier 3): microsecond TIMESTAMP and high-precision DECIMAL.
+                "CREATE TABLE TypeSample (id INT PRIMARY KEY, ts TIMESTAMP(6), amount DECIMAL(38,10))"
+        );
     }
 
     /** {@inheritDoc} */
@@ -197,7 +224,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.put(key, val);
 
-        executeQueryInContainer("SELECT name, gender FROM Person WHERE id = 1", rs -> {
+        executeQuery(container, "SELECT name, gender FROM Person WHERE id = 1", rs -> {
             assertTrue("Expected row in MariaDB after cache.put", rs.next());
             assertEquals(val.getName(), rs.getString(1));
             assertEquals(val.getGender().ordinal(), rs.getInt(2));
@@ -211,7 +238,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.remove(key);
 
-        executeQueryInContainer("SELECT COUNT(*) FROM Person WHERE id = 1", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM Person WHERE id = 1", rs -> {
             assertTrue(rs.next());
             assertEquals("Row should be deleted from MariaDB", 0, rs.getInt(1));
         });
@@ -241,7 +268,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         cache.putAll(first);
         cache.putAll(second);
 
-        executeQueryInContainer("SELECT id, name FROM Person ORDER BY id", rs -> {
+        executeQuery(container, "SELECT id, name FROM Person ORDER BY id", rs -> {
             int cnt = 0;
 
             while (rs.next()) {
@@ -335,14 +362,14 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         assertNotNull("cache.get returned null after put on escape-cache", fromCache);
         assertEquals("Alice", fromCache.getName());
 
-        executeQueryInContainer("SELECT `name GROUP BY` FROM `Person ORDER BY` WHERE id = 1", rs -> {
+        executeQuery(container, "SELECT `name GROUP BY` FROM `Person ORDER BY` WHERE id = 1", rs -> {
             assertTrue("Expected row in `Person ORDER BY` after cache.put", rs.next());
             assertEquals("Alice", rs.getString(1));
         });
 
         cache.remove(key);
 
-        executeQueryInContainer("SELECT COUNT(*) FROM `Person ORDER BY`", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM `Person ORDER BY`", rs -> {
             assertTrue(rs.next());
             assertEquals("Row should be deleted from `Person ORDER BY`", 0, rs.getInt(1));
         });
@@ -408,7 +435,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.removeAll(keys);
 
-        executeQueryInContainer("SELECT COUNT(*) FROM Person", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM Person", rs -> {
             assertTrue(rs.next());
             assertEquals("All rows should be deleted from MariaDB", 0, rs.getInt(1));
         });
@@ -431,7 +458,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.put(key, val);
 
-        executeQueryInContainer("SELECT birthday, name FROM Person WHERE id = 42", rs -> {
+        executeQuery(container, "SELECT birthday, name FROM Person WHERE id = 42", rs -> {
             assertTrue("Expected row in MariaDB after cache.put", rs.next());
 
             rs.getDate(1);
@@ -481,14 +508,14 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.putAll(first);
 
-        executeQueryInContainer("SELECT COUNT(*) FROM Person", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM Person", rs -> {
             assertTrue(rs.next());
             assertEquals("All " + n + " rows should be inserted across batches", n, rs.getInt(1));
         });
 
         cache.putAll(second);
 
-        executeQueryInContainer("SELECT id, name FROM Person ORDER BY id", rs -> {
+        executeQuery(container, "SELECT id, name FROM Person ORDER BY id", rs -> {
             int cnt = 0;
 
             while (rs.next()) {
@@ -525,7 +552,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
             tx.commit();
         }
 
-        executeQueryInContainer("SELECT name FROM Person WHERE id = 1", rs -> {
+        executeQuery(container, "SELECT name FROM Person WHERE id = 1", rs -> {
             assertTrue("Row should be visible in MariaDB after commit", rs.next());
             assertEquals("Tx-Alice", rs.getString(1));
         });
@@ -552,7 +579,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
             tx.rollback();
         }
 
-        executeQueryInContainer("SELECT COUNT(*) FROM Person WHERE id = 2", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM Person WHERE id = 2", rs -> {
             assertTrue(rs.next());
             assertEquals("Row must not be present in MariaDB after rollback", 0, rs.getInt(1));
         });
@@ -601,7 +628,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
         assertEquals("DECIMAL(38,10) must preserve precision", bigAmount, fromCache.getAmount());
 
         // Cross-check the raw row in MariaDB to confirm storage, not just cache round-trip.
-        executeQueryInContainer("SELECT ts, amount FROM TypeSample WHERE id = 1", rs -> {
+        executeQuery(container, "SELECT ts, amount FROM TypeSample WHERE id = 1", rs -> {
             assertTrue(rs.next());
             assertEquals(microTs, rs.getTimestamp(1));
             assertEquals(bigAmount, rs.getBigDecimal(2));
@@ -631,7 +658,7 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
         cache.putAll(entries);
 
-        executeQueryInContainer("SELECT COUNT(*) FROM Person", rs -> {
+        executeQuery(container, "SELECT COUNT(*) FROM Person", rs -> {
             assertTrue(rs.next());
             assertEquals("All entries should land in MariaDB before restart", n, rs.getInt(1));
         });
@@ -722,19 +749,6 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
 
             ps.executeBatch();
         }
-    }
-
-    private static void executeQueryInContainer(String query, ThrowingConsumer<ResultSet> consumer) throws Exception {
-        try (Connection conn = container.createConnection("");
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(query)
-        ) {
-            consumer.accept(rs);
-        }
-    }
-
-    interface ThrowingConsumer<T> {
-        void accept(T t) throws Exception;
     }
 
     /**
