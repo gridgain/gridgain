@@ -602,10 +602,11 @@ public class AlterTableAlterColumn extends CommandWithColumns {
         oldColumn.getSQL(builder, true).append(" IS NULL");
         String sql = builder.toString();
         Prepared command = session.prepare(sql);
-        ResultInterface result = command.query(0);
-        result.next();
-        if (result.currentRow()[0].getInt() > 0) {
-            throw DbException.get(ErrorCode.COLUMN_CONTAINS_NULL_VALUES_1, oldColumn.getSQL(false));
+        try (ResultInterface result = command.query(0)) {
+            result.next();
+            if (result.currentRow()[0].getInt() > 0) {
+                throw DbException.get(ErrorCode.COLUMN_CONTAINS_NULL_VALUES_1, oldColumn.getSQL(false));
+            }
         }
     }
 
