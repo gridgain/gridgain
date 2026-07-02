@@ -1258,6 +1258,9 @@ public class DataStreamerImpl<K, V> implements IgniteDataStreamer<K, V>, Delayed
 
         try {
             doFlush();
+
+            if (cancelled)
+                closedException();
         }
         catch (IgniteCheckedException e) {
             throw CU.convertToCacheException(e);
