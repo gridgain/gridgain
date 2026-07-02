@@ -45,6 +45,7 @@ import org.apache.ignite.internal.managers.communication.GridIoManager;
 import org.apache.ignite.internal.managers.communication.GridIoMessage;
 import org.apache.ignite.internal.managers.eventstorage.GridLocalEventListener;
 import org.apache.ignite.internal.processors.failure.FailureProcessor;
+import org.apache.ignite.internal.processors.metric.GridMetricManager;
 import org.apache.ignite.internal.processors.metric.impl.MetricUtils;
 import org.apache.ignite.internal.processors.resource.GridResourceProcessor;
 import org.apache.ignite.internal.processors.tracing.MTC;
@@ -103,6 +104,7 @@ import org.jetbrains.annotations.TestOnly;
 
 import static org.apache.ignite.events.EventType.EVT_NODE_FAILED;
 import static org.apache.ignite.events.EventType.EVT_NODE_LEFT;
+import static org.apache.ignite.internal.processors.metric.impl.MetricUtils.SEPARATOR;
 import static org.apache.ignite.spi.communication.tcp.internal.CommunicationTcpUtils.NOOP;
 import static org.apache.ignite.spi.communication.tcp.internal.TcpConnectionIndexAwareMessage.UNDEFINED_CONNECTION_INDEX;
 
@@ -422,6 +424,16 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
     }
 
     /**
+     * @param registryName Metric registry name.
+     * @return {@code True} if {@code registryName} belongs to TCP communication metrics (excluding connection pool metrics).
+     */
+    public static boolean isCommunicationMetrics(String registryName) {
+        return registryName.startsWith(COMMUNICATION_METRICS_GROUP_NAME + SEPARATOR)
+            && !registryName.startsWith(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME + SEPARATOR)
+            && !registryName.equals(ConnectionClientPool.SHARED_METRICS_REGISTRY_NAME);
+    }
+
+    /**
      * @return Listener.
      */
     public CommunicationListener getListener() {
@@ -727,7 +739,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
         }
 
         if (cfg.connectionsPerNode() > 1)
-            connPlc = new RoundRobinConnectionPolicy(cfg);
+            connPlc = new RoundRobinConnectionPolicy(cfg.connectionsPerNode());
         else
             connPlc = new FirstConnectionPolicy();
 
@@ -765,6 +777,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             cfg.directBuffer()
         ));
 
+        GridMetricManager metricMgr = ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null;
+
         this.nioSrvWrapper = resolve(ignite, new GridNioServerWrapper(
             log,
             cfg,
@@ -780,7 +794,7 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             this.srvLsnr,
             ignite.configuration().getIgniteInstanceName(),
             getWorkersRegistry(ignite),
-            ignite instanceof IgniteEx ? ((IgniteEx)ignite).context().metric() : null,
+            metricMgr,
             this::createTcpClient,
             tcpHandshakeExecutor
         ));
@@ -800,7 +814,8 @@ public class TcpCommunicationSpi extends TcpCommunicationConfigInitializer {
             stateProvider,
             nioSrvWrapper,
             connectionRequestor,
-            getName()
+            getName(),
+            metricMgr
         ));
 
         this.srvLsnr.setClientPool(clientPool);

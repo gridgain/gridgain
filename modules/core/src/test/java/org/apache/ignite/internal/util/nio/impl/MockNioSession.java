@@ -99,6 +99,11 @@ public class MockNioSession extends GridMetadataAwareAdapter implements GridNioS
     }
 
     /** {@inheritDoc} */
+    @Override public int messagesQueueSize() {
+        return 0;
+    }
+
+    /** {@inheritDoc} */
     @Override public long lastSendScheduleTime() {
         return 0;
     }

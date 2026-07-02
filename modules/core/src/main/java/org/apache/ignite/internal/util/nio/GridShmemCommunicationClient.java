@@ -51,6 +51,9 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
     /** */
     private final MessageFormatter formatter;
 
+    /** Creation time of this client. */
+    private final long creationTime = U.currentTimeMillis();
+
     /** Sent bytes count metric. */
     @Nullable protected final AtomicLongMetric sentBytesCntMetric;
 
@@ -159,6 +162,16 @@ public class GridShmemCommunicationClient extends GridAbstractCommunicationClien
     /** {@inheritDoc} */
     @Override public void sendMessage(ByteBuffer data) throws IgniteCheckedException {
         throw new UnsupportedOperationException();
+    }
+
+    /** {@inheritDoc} */
+    @Override public long creationTime() {
+        return creationTime;
+    }
+
+    /** {@inheritDoc} */
+    @Override public int messagesQueueSize() {
+        return 0;
     }
 
     /** {@inheritDoc} */

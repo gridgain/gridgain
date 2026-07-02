@@ -54,11 +54,12 @@ import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiDropNodesTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiFaultyClientSslTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiFaultyClientTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiFreezingClientTest;
-import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiHalfOpenedConnectionTest;
+import org.apache.ignite.spi.communication.tcp.internal.TcpCommunicationSpiHalfOpenedConnectionTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiInverseConnectionLoggingTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiMultiJvmTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiNodeLeftLoggingTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpiSkipMessageSendTest;
+import org.apache.ignite.spi.communication.tcp.CommunicationConnectionPoolMetricsTest;
 import org.apache.ignite.spi.communication.tcp.TcpCommunicationStatisticsTest;
 import org.apache.ignite.spi.communication.tcp.TooManyOpenFilesTcpCommunicationSpiTest;
 import org.apache.ignite.spi.communication.tcp.internal.BlacklistNetwokInterfacesTest;
@@ -110,6 +111,7 @@ import org.junit.runners.Suite;
     TcpCommunicationSpiHalfOpenedConnectionTest.class,
 
     TcpCommunicationStatisticsTest.class,
+    CommunicationConnectionPoolMetricsTest.class,
 
     IgniteTcpCommunicationHandshakeWaitTest.class,
     IgniteTcpCommunicationHandshakeWaitSslTest.class,

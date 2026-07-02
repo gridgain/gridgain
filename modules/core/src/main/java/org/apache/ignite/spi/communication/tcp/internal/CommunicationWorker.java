@@ -235,8 +235,10 @@ public class CommunicationWorker extends GridWorker {
      * @param doMaintenance Whether connection/client maintenance should be done.
      */
     private void sendAcksAndMaybeDoMaintenance(boolean doMaintenance) {
-        if (doMaintenance)
+        if (doMaintenance) {
             cleanupRecovery();
+            clientPool.cleanupNodeMetrics();
+        }
 
         for (Map.Entry<UUID, GridCommunicationClient[]> e : clientPool.entrySet()) {
             UUID nodeId = e.getKey();

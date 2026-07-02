@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package org.apache.ignite.spi.communication.tcp;
+package org.apache.ignite.spi.communication.tcp.internal;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -30,6 +30,7 @@ import org.apache.ignite.internal.util.nio.GridTcpNioCommunicationClient;
 import org.apache.ignite.internal.util.typedef.F;
 import org.apache.ignite.plugin.extensions.communication.Message;
 import org.apache.ignite.spi.communication.CommunicationSpi;
+import org.apache.ignite.spi.communication.tcp.TcpCommunicationSpi;
 import org.apache.ignite.testframework.GridTestUtils;
 import org.apache.ignite.testframework.junits.common.GridCommonAbstractTest;
 import org.junit.Test;
@@ -132,7 +133,8 @@ public class TcpCommunicationSpiHalfOpenedConnectionTest extends GridCommonAbstr
     private void reconnect(Ignite srcNode, Ignite targetNode, ClusterGroup targetGrp) {
         CommunicationSpi commSpi = srcNode.configuration().getCommunicationSpi();
 
-        ConcurrentMap<UUID, GridCommunicationClient[]> clients = GridTestUtils.getFieldValue(commSpi, "clientPool", "clients");
+        ConnectionClientPool connPool = GridTestUtils.getFieldValue(commSpi, "clientPool");
+        ConcurrentMap<UUID, GridCommunicationClient[]> clients = GridTestUtils.getFieldValue(connPool, "clients");
         ConcurrentMap<?, GridNioRecoveryDescriptor> recoveryDescs = GridTestUtils.getFieldValue(commSpi, "nioSrvWrapper", "recoveryDescs");
         ConcurrentMap<?, GridNioRecoveryDescriptor> outRecDescs = GridTestUtils.getFieldValue(commSpi, "nioSrvWrapper", "outRecDescs");
         ConcurrentMap<?, GridNioRecoveryDescriptor> inRecDescs = GridTestUtils.getFieldValue(commSpi, "nioSrvWrapper", "inRecDescs");
@@ -152,10 +154,14 @@ public class TcpCommunicationSpiHalfOpenedConnectionTest extends GridCommonAbstr
             desc.release();
         }
 
+        UUID targetNodeId = targetNode.cluster().localNode().id();
+
         // Remove client to avoid calling close(), in that case server
         // will close connection too, but we want to keep the server
         // uninformed and force ping old connection.
-        GridCommunicationClient[] clients0 = clients.remove(targetNode.cluster().localNode().id());
+        GridCommunicationClient[] clients0 = clients.remove(targetNodeId);
+
+        connPool.unregisterNodeMetrics(targetNodeId);
 
         for (GridCommunicationClient commClient : clients0)
             lsnr.onDisconnected(((GridTcpNioCommunicationClient)commClient).session(), new IOException("Test exception"));
