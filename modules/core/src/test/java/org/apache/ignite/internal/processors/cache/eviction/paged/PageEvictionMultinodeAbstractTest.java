@@ -24,6 +24,7 @@ import org.apache.ignite.cache.CachePeekMode;
 import org.apache.ignite.cache.CacheWriteSynchronizationMode;
 import org.apache.ignite.configuration.CacheConfiguration;
 import org.apache.ignite.configuration.IgniteConfiguration;
+import org.apache.ignite.testframework.GridTestUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -131,12 +132,16 @@ public abstract class PageEvictionMultinodeAbstractTest extends PageEvictionAbst
                 System.out.println(">>> Entries put: " + i);
         }
 
-        int resultingSize = cache.size(CachePeekMode.PRIMARY);
+        System.out.println(">>> Resulting size: " + cache.size(CachePeekMode.PRIMARY));
 
-        System.out.println(">>> Resulting size: " + resultingSize);
-
-        // Eviction started, no OutOfMemory occurred, success.
-        assertTrue(resultingSize < ENTRIES * 10 / 11);
+        // Eviction started, no OutOfMemory occurred, success. Allow up to 5s for any async
+        // write propagation (FULL_ASYNC) or in-flight page eviction to settle — size is sampled
+        // by polling so the test isn't sensitive to the exact instant when all backups catch up.
+        assertTrue("Insufficient eviction: cache size " + cache.size(CachePeekMode.PRIMARY)
+                + " not below " + (ENTRIES * 10 / 11),
+            GridTestUtils.waitForCondition(
+                () -> cache.size(CachePeekMode.PRIMARY) < ENTRIES * 10 / 11,
+                5_000));
 
         clientGrid().destroyCache(cfg.getName());
     }
