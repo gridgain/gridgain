@@ -351,7 +351,8 @@ public class SqlQueryRegressionsTest extends IgniteCompatibilityAbstractTest {
         baseIsIgnite = !F.isEmpty(baseIsIgniteParam) ? Boolean.parseBoolean(baseIsIgniteParam) : DEFAULT_BASE_IS_IGNITE;
         targetIsIgnite = !F.isEmpty(targetIsIgniteParam) ? Boolean.parseBoolean(targetIsIgniteParam) : DEFAULT_TARGET_IS_IGNITE;
 
-        seed = DEFAULT_SEED != null ? DEFAULT_SEED : !F.isEmpty(seedParam) ? Integer.parseInt(seedParam) : ThreadLocalRandom.current().nextInt();
+        seed = DEFAULT_SEED != null ? DEFAULT_SEED
+            : !F.isEmpty(seedParam) ? Integer.parseInt(seedParam) : ThreadLocalRandom.current().nextInt();
 
         if (log.isInfoEnabled()) {
             log.info("Test was started with params:\n"

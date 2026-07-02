@@ -158,13 +158,15 @@ public class IoStatisticsManagerSelfTest extends GridCommonAbstractTest {
             assertTrue(physicalReadsCnt < ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
 
             // There should be no more than 3 page rotations per read (data page, index level 1 page and index level 2 page).
-            assertTrue(physicalReadsCnt + 3 * RECORD_COUNT > ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
+            assertTrue(physicalReadsCnt + 3 * RECORD_COUNT >
+                ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
         }
         else
             assertEquals(0, (long)ioStatMgr.physicalReads(IoStatisticsType.CACHE_GROUP, DEFAULT_CACHE_NAME, null));
 
         assertTrue(logicalReads < (long)ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
-        assertTrue(logicalReads + 3 * RECORD_COUNT > ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
+        assertTrue(logicalReads + 3 * RECORD_COUNT >
+            ioStatMgr.logicalReads(IoStatisticsType.HASH_INDEX, DEFAULT_CACHE_NAME, HASH_PK_IDX_NAME));
     }
 
     /**

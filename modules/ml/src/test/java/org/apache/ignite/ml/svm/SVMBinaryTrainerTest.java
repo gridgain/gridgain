@@ -65,7 +65,8 @@ public class SVMBinaryTrainerTest extends TrainerTest {
             .withAmountOfIterations(16)
             .withSeed(123L);
 
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.FIRST);
         SVMLinearClassificationModel originalMdl = trainer.fit(
             cacheMock, parts,
             vectorizer

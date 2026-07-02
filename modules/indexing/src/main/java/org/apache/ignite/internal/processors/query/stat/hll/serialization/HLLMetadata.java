@@ -133,6 +133,9 @@ public class HLLMetadata implements IHLLMetadata {
      */
     @Override
     public String toString() {
-        return "<HLLMetadata schemaVersion: " + this.schemaVersion + ", type: " + this.type.toString() + ", registerCountLog2: " + this.registerCountLog2 + ", registerWidth: " + this.registerWidth + ", log2ExplicitCutoff: " + this.log2ExplicitCutoff + ", explicitOff: " + this.explicitOff + ", explicitAuto: " +this.explicitAuto + ">";
+        return "<HLLMetadata schemaVersion: " + this.schemaVersion + ", type: " + this.type.toString() +
+            ", registerCountLog2: " + this.registerCountLog2 + ", registerWidth: " + this.registerWidth +
+            ", log2ExplicitCutoff: " + this.log2ExplicitCutoff + ", explicitOff: " + this.explicitOff +
+            ", explicitAuto: " +this.explicitAuto + ">";
     }
 }

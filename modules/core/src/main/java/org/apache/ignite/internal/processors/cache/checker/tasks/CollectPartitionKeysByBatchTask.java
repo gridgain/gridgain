@@ -59,7 +59,8 @@ import static org.apache.ignite.internal.processors.cache.checker.util.Consisten
  * Collects and returns a set of keys that have conflicts with {@link GridCacheVersion}.
  */
 @GridInternal
-public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>>> {
+public class CollectPartitionKeysByBatchTask extends
+    ComputeTaskAdapter<PartitionBatchRequest, ExecutionResult<T2<KeyCacheObject, Map<KeyCacheObject, Map<UUID, GridCacheVersion>>>>> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -164,7 +165,8 @@ public class CollectPartitionKeysByBatchTask extends ComputeTaskAdapter<Partitio
             // and the batch size is 50. In this case, the primary node will return [1, ..., 50] and backup will return [100, ..., 150].
             // The range of keys to re-check is [1, ..., 50, 100, ..., 150] and the next batch should start from 150
             // because 150 is the last observed key. It means that the range [51, ..., 99] will be skipped.
-            // So, the lastKey should be the minimum key of all last observed keys. This may lead to re-checking the same keys several times,
+            // So, the lastKey should be the minimum key of all last observed keys. This may lead to re-checking the same keys
+            // several times,
             // but it is better than skipping keys.
             if (lastKey == null || (lastNodeKey != null && KEY_COMPARATOR.compare(lastNodeKey, lastKey) < 0))
                 lastKey = lastNodeKey;

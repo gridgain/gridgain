@@ -115,7 +115,8 @@ public class PartitionCountersNeighborcastFuture extends GridCacheCompoundIdenti
                 if (e instanceof ClusterTopologyCheckedException)
                     logNodeLeft(peer);
                 else
-                    log.warning("Failed to send partition counters to remote node [node=" + peer + ", txId=" + tx.nearXidVersion() + ']', e);
+                    log.warning("Failed to send partition counters to remote node [node=" + peer +
+                        ", txId=" + tx.nearXidVersion() + ']', e);
 
                 miniFut.onDone();
             }

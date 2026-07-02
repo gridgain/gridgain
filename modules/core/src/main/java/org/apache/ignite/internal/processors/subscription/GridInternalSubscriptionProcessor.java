@@ -48,7 +48,8 @@ public class GridInternalSubscriptionProcessor extends GridProcessorAdapter {
     private final List<DatabaseLifecycleListener> dbListeners = new ArrayList<>();
 
     /**
-     * Listeners of distributed configuration controlled by {@link org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor}.
+     * Listeners of distributed configuration controlled by
+     * {@link org.apache.ignite.internal.processors.configuration.distributed.DistributedConfigurationProcessor}.
      */
     private List<DistributedConfigurationLifecycleListener> distributedConfigurationListeners = new ArrayList<>();
 

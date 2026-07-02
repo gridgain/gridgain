@@ -37,7 +37,8 @@ public class DeactivateCommand extends AbstractCommand<Void> {
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Deactivate cluster (deprecated. Use " + SET_STATE.toString() + " instead):", DEACTIVATE, optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Deactivate cluster (deprecated. Use " + SET_STATE.toString() + " instead):", DEACTIVATE,
+            optional(CMD_AUTO_CONFIRMATION));
     }
 
     /** {@inheritDoc} */

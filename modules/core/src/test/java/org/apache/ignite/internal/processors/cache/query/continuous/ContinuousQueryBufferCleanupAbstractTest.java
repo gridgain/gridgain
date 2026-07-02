@@ -43,13 +43,16 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
     private static final int ACK_THRESHOLD = 100;
 
     /** */
-    private static final String REMOTE_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
+    private static final String REMOTE_ROUTINE_INFO_CLASS_NAME =
+        "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$RemoteRoutineInfo";
 
     /** */
-    private static final String LOCAL_ROUTINE_INFO_CLASS_NAME = "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$LocalRoutineInfo";
+    private static final String LOCAL_ROUTINE_INFO_CLASS_NAME =
+        "org.apache.ignite.internal.processors.continuous.GridContinuousProcessor$LocalRoutineInfo";
 
     /** */
-    private static final String BATCH_CLASS_NAME = "org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryEventBuffer$Batch";
+    private static final String BATCH_CLASS_NAME =
+        "org.apache.ignite.internal.processors.cache.query.continuous.CacheContinuousQueryEventBuffer$Batch";
 
     /** {@inheritDoc} */
     @Override protected void afterTest() throws Exception {
@@ -143,7 +146,8 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
             hnd = GridTestUtils.getFieldValue(rmtRoutineInfo, Class.forName(REMOTE_ROUTINE_INFO_CLASS_NAME), "hnd");
         }
 
-        ConcurrentMap<Integer, CacheContinuousQueryEventBuffer> entryBufs = GridTestUtils.getFieldValue(hnd, CacheContinuousQueryHandler.class, "entryBufs");
+        ConcurrentMap<Integer, CacheContinuousQueryEventBuffer> entryBufs = GridTestUtils.getFieldValue(hnd,
+            CacheContinuousQueryHandler.class, "entryBufs");
 
         int notNullCnt = 0;
 
@@ -151,7 +155,8 @@ public abstract class ContinuousQueryBufferCleanupAbstractTest extends GridCommo
             AtomicReference<Object> curBatch = GridTestUtils.getFieldValue(evtBuf, CacheContinuousQueryEventBuffer.class, "curBatch");
 
             if (curBatch.get() != null) {
-                CacheContinuousQueryEntry[] entries = GridTestUtils.getFieldValue(curBatch.get(), Class.forName(BATCH_CLASS_NAME), "entries");
+                CacheContinuousQueryEntry[] entries = GridTestUtils.getFieldValue(curBatch.get(),
+                    Class.forName(BATCH_CLASS_NAME), "entries");
 
                 for (CacheContinuousQueryEntry entry : entries) {
                     if (entry != null)

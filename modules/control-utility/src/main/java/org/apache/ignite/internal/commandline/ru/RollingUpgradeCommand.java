@@ -88,9 +88,12 @@ public class RollingUpgradeCommand extends AbstractCommand<RollingUpgradeArgumen
 
     /** {@inheritDoc} */
     @Override public void printUsage(Logger logger) {
-        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.START.text(), optional(CMD_AUTO_CONFIRMATION));
-        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FINISH.text(), optional(CMD_AUTO_CONFIRMATION));
-        Command.usage(logger, "Enable force rolling upgrade mode:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FORCE.text(), optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Enable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.START.text(),
+            optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Disable rolling upgrade:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FINISH.text(),
+            optional(CMD_AUTO_CONFIRMATION));
+        Command.usage(logger, "Enable force rolling upgrade mode:", ROLLING_UPGRADE, RollingUpgradeSubCommands.FORCE.text(),
+            optional(CMD_AUTO_CONFIRMATION));
         Command.usage(logger, "Get rolling upgrade status:", ROLLING_UPGRADE, RollingUpgradeSubCommands.STATUS.text());
     }
 

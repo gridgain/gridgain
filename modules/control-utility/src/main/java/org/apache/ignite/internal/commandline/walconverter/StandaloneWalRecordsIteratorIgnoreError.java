@@ -49,7 +49,8 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
         IgniteBiPredicate<WALRecord.RecordType, WALPointer> readTypeFilter,
         FileWALPointer lowBound, FileWALPointer highBound, boolean keepBinary, int initialReadBufferSize,
         boolean strictBoundsCheck) throws IgniteCheckedException {
-        super(log, sharedCtx, ioFactory, walFiles, readTypeFilter, lowBound, highBound, keepBinary, initialReadBufferSize, strictBoundsCheck);
+        super(log, sharedCtx, ioFactory, walFiles, readTypeFilter, lowBound, highBound, keepBinary, initialReadBufferSize,
+            strictBoundsCheck);
     }
 
     /** {@inheritDoc} */
@@ -100,7 +101,8 @@ public class StandaloneWalRecordsIteratorIgnoreError extends StandaloneWalRecord
 
                     in.seek(offset + len);
 
-                    log.error("Error read record [recordType=" + recordType + ", idx=" + idx + ", offset=" + offset + ", len=" + len + "]", ignore);
+                    log.error("Error read record [recordType=" + recordType + ", idx=" + idx + ", offset=" + offset +
+                        ", len=" + len + "]", ignore);
                 }
                 catch (Exception e) {
                     log.error("Couldn't miss read error", e);

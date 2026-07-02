@@ -28,7 +28,8 @@ import org.apache.ignite.internal.visor.VisorOneNodeTask;
  */
 @GridInternal
 @GridVisorManagementTask
-public class VisorRollingUpgradeChangeModeTask extends VisorOneNodeTask<VisorRollingUpgradeChangeModeTaskArg, VisorRollingUpgradeChangeModeResult> {
+public class VisorRollingUpgradeChangeModeTask
+    extends VisorOneNodeTask<VisorRollingUpgradeChangeModeTaskArg, VisorRollingUpgradeChangeModeResult> {
     /** */
     private static final long serialVersionUID = 0L;
 
@@ -40,7 +41,8 @@ public class VisorRollingUpgradeChangeModeTask extends VisorOneNodeTask<VisorRol
     /**
      * Job that will collect baseline topology information.
      */
-    private static class VisorRollingUpgradeJob extends VisorJob<VisorRollingUpgradeChangeModeTaskArg, VisorRollingUpgradeChangeModeResult> {
+    private static class VisorRollingUpgradeJob
+        extends VisorJob<VisorRollingUpgradeChangeModeTaskArg, VisorRollingUpgradeChangeModeResult> {
         /** */
         private static final long serialVersionUID = 0L;
 

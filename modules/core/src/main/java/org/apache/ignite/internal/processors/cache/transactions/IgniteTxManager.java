@@ -642,7 +642,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
         assert transactionTimeDumpSamplesPerSecondLimit > 0
             : "transactionTimeDumpSamplesPerSecondLimit must be integer value greater than 0.";
 
-        distributedTransactionConfiguration.updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(transactionTimeDumpSamplesPerSecondLimit);
+        distributedTransactionConfiguration.updateLongTransactionTimeDumpSamplesPerSecondLimitLocal(
+            transactionTimeDumpSamplesPerSecondLimit);
     }
 
     /**
@@ -906,7 +907,8 @@ public class IgniteTxManager extends GridCacheSharedManagerAdapter {
      *
      * NOTE:
      * As we send finish request to backup nodes after transaction successfully completed on primary node
-     * it's important to ensure that all updates from primary to backup are finished or at least remote transaction has created on backup node.
+     * it's important to ensure that all updates from primary to backup are finished or at least remote transaction has
+     * created on backup node.
      *
      * @param finishLocalTxsFuture Local transactions finish future.
      * @param topVer Topology version.

@@ -108,7 +108,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
         Mockito.when(discovery.serverNodes(Mockito.any(AffinityTopologyVersion.class))).thenReturn(srvNodes);
         Mockito.when(ctx.discovery()).thenReturn(discovery);
 
-        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer, null, ctx.discovery(), Collections.emptyList(), false, updatesCheckerMock);
+        GridUpdateNotifier ntf = new GridUpdateNotifier(null, nodeVer, null, ctx.discovery(), Collections.emptyList(), false,
+            updatesCheckerMock);
 
         ntf.checkForNewVersion(log);
 
@@ -143,7 +144,8 @@ public class GridUpdateNotifierSelfTest extends GridCommonAbstractTest {
      * @throws IllegalAccessException if failed.
      */
     @Test
-    public void testInitializationWithNullPluginProviderVersion() throws IgniteCheckedException, NoSuchFieldException, IllegalAccessException {
+    public void testInitializationWithNullPluginProviderVersion() throws IgniteCheckedException, NoSuchFieldException,
+        IllegalAccessException {
         PluginProvider pp = Mockito.mock(PluginProvider.class);
         Mockito.when(pp.version()).thenReturn(null);
         Mockito.when(pp.name()).thenReturn("my-cool-name");

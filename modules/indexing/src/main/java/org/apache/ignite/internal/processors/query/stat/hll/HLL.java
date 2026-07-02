@@ -180,12 +180,14 @@ public class HLL implements Cloneable {
     public HLL(final int log2m, final int regwidth, final int expthresh, final boolean sparseon, final HLLType type) {
         this.log2m = log2m;
         if((log2m < MINIMUM_LOG2M_PARAM) || (log2m > MAXIMUM_LOG2M_PARAM)) {
-            throw new IllegalArgumentException("'log2m' must be at least " + MINIMUM_LOG2M_PARAM + " and at most " + MAXIMUM_LOG2M_PARAM + " (was: " + log2m + ")");
+            throw new IllegalArgumentException("'log2m' must be at least " + MINIMUM_LOG2M_PARAM +
+                " and at most " + MAXIMUM_LOG2M_PARAM + " (was: " + log2m + ")");
         }
 
         this.regwidth = regwidth;
         if((regwidth < MINIMUM_REGWIDTH_PARAM) || (regwidth > MAXIMUM_REGWIDTH_PARAM)) {
-            throw new IllegalArgumentException("'regwidth' must be at least " + MINIMUM_REGWIDTH_PARAM + " and at most " + MAXIMUM_REGWIDTH_PARAM + " (was: " + regwidth + ")");
+            throw new IllegalArgumentException("'regwidth' must be at least " + MINIMUM_REGWIDTH_PARAM +
+                " and at most " + MAXIMUM_REGWIDTH_PARAM + " (was: " + regwidth + ")");
         }
 
         this.m = (1 << log2m);
@@ -218,7 +220,8 @@ public class HLL implements Cloneable {
             this.explicitOff = false;
             this.explicitThreshold = (1 << (expthresh - 1));
         } else {
-            throw new IllegalArgumentException("'expthresh' must be at least " + MINIMUM_EXPTHRESH_PARAM + " and at most " + MAXIMUM_EXPTHRESH_PARAM + " (was: " + expthresh + ")");
+            throw new IllegalArgumentException("'expthresh' must be at least " + MINIMUM_EXPTHRESH_PARAM +
+                " and at most " + MAXIMUM_EXPTHRESH_PARAM + " (was: " + expthresh + ")");
         }
 
         this.shortWordLength = (regwidth + log2m);
@@ -270,15 +273,18 @@ public class HLL implements Cloneable {
      * @param type the type in the promotion hierarchy which this instance should
      *        start at. This cannot be <code>null</code>.
      */
-    /*package, for testing*/ HLL(final int log2m, final int regwidth, final int explicitThreshold, final int sparseThreshold, final HLLType type) {
+    /*package, for testing*/ HLL(final int log2m, final int regwidth, final int explicitThreshold, final int sparseThreshold,
+        final HLLType type) {
         this.log2m = log2m;
         if((log2m < MINIMUM_LOG2M_PARAM) || (log2m > MAXIMUM_LOG2M_PARAM)) {
-            throw new IllegalArgumentException("'log2m' must be at least " + MINIMUM_LOG2M_PARAM + " and at most " + MAXIMUM_LOG2M_PARAM + " (was: " + log2m + ")");
+            throw new IllegalArgumentException("'log2m' must be at least " + MINIMUM_LOG2M_PARAM +
+                " and at most " + MAXIMUM_LOG2M_PARAM + " (was: " + log2m + ")");
         }
 
         this.regwidth = regwidth;
         if((regwidth < MINIMUM_REGWIDTH_PARAM) || (regwidth > MAXIMUM_REGWIDTH_PARAM)) {
-            throw new IllegalArgumentException("'regwidth' must be at least " + MINIMUM_REGWIDTH_PARAM + " and at most " + MAXIMUM_REGWIDTH_PARAM + " (was: " + regwidth + ")");
+            throw new IllegalArgumentException("'regwidth' must be at least " + MINIMUM_REGWIDTH_PARAM +
+                " and at most " + MAXIMUM_REGWIDTH_PARAM + " (was: " + regwidth + ")");
         }
 
         this.m = (1 << log2m);
@@ -293,7 +299,8 @@ public class HLL implements Cloneable {
         this.explicitOff = false;
         this.explicitThreshold = explicitThreshold;
         if((explicitThreshold < 1) || (explicitThreshold > MAXIMUM_EXPLICIT_THRESHOLD)) {
-            throw new IllegalArgumentException("'explicitThreshold' must be at least 1 and at most " + MAXIMUM_EXPLICIT_THRESHOLD + " (was: " + explicitThreshold + ")");
+            throw new IllegalArgumentException("'explicitThreshold' must be at least 1 and at most " + MAXIMUM_EXPLICIT_THRESHOLD +
+                " (was: " + explicitThreshold + ")");
         }
 
         this.shortWordLength = (regwidth + log2m);

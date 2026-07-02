@@ -530,7 +530,8 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
                 PageSnapshot snap = (PageSnapshot)tup.get2();
 
                 //there are extra tracking pages, skip them
-                if (TrackingPageIO.VERSIONS.latest().trackingPageFor(snap.fullPageId().pageId(), pageMem.pageSize()) == snap.fullPageId().pageId()) {
+                if (TrackingPageIO.VERSIONS.latest().trackingPageFor(snap.fullPageId().pageId(), pageMem.pageSize()) ==
+                    snap.fullPageId().pageId()) {
                     tup = it.next();
 
                     assertTrue(tup.get2() instanceof PageSnapshot);
@@ -1112,7 +1113,8 @@ public class IgnitePdsCheckpointSimulationWithRealCpDisabledTest extends GridCom
     /**
      *
      */
-    private static class PartitionMetaStateRecordExcludeIterator extends GridFilteredClosableIterator<IgniteBiTuple<WALPointer, WALRecord>> {
+    private static class PartitionMetaStateRecordExcludeIterator
+        extends GridFilteredClosableIterator<IgniteBiTuple<WALPointer, WALRecord>> {
         private PartitionMetaStateRecordExcludeIterator(
             GridCloseableIterator<? extends IgniteBiTuple<WALPointer, WALRecord>> it) {
             super(it);

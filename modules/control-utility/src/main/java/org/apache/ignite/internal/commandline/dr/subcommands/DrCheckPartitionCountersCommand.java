@@ -39,7 +39,8 @@ import static org.apache.ignite.internal.commandline.dr.DrSubCommandsList.CHECK;
  * Can be executed at runtime.
  */
 public class DrCheckPartitionCountersCommand extends
-    DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult, DrCheckPartitionCountersCommand.Arguments> {
+    DrAbstractRemoteSubCommand<VisorDrCheckPartitionCountersTaskArg, VisorDrCheckPartitionCountersTaskResult,
+        DrCheckPartitionCountersCommand.Arguments> {
     /** Check first N entries parameter. */
     public static final String CHECK_FIRST_PARAM = "--check-first";
 

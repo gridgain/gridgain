@@ -792,7 +792,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
 
             // We must use BLT from the message if it's activation request, or flag force change BLT is set, or
             // clusterin-memory and new cluster state is active.
-            if (activateTransition(state.state(), msg.state()) || msg.forceChangeBaselineTopology() || ClusterState.active(msg.state()) && isInMemoryCluster())
+            if (activateTransition(state.state(), msg.state()) || msg.forceChangeBaselineTopology() ||
+                ClusterState.active(msg.state()) && isInMemoryCluster())
                 blt = msg.baselineTopology();
             else
                 blt = state.baselineTopology();
@@ -1545,7 +1546,8 @@ public class GridClusterStateProcessor extends GridProcessorAdapter implements I
         else {
             assert state != ACTIVE_READ_ONLY : "No one server node doesn't supports this feature.";
 
-            fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state), state == ACTIVE_READ_ONLY, blt, forceBlt));
+            fut = servers.compute().runAsync(new ClientChangeGlobalStateComputeRequest(ClusterState.active(state),
+                state == ACTIVE_READ_ONLY, blt, forceBlt));
         }
 
         return ((IgniteFutureImpl<Void>)fut).internalFuture();

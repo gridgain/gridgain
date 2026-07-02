@@ -1422,7 +1422,8 @@ public class CacheRemoveWithTombstonesBasicTest extends GridCommonAbstractTest {
         for (int i = 0; i < 64; i++) {
             Collection<ClusterNode> nodes = grid(0).affinity(DEFAULT_CACHE_NAME).mapKeyToPrimaryAndBackups(i);
 
-            if (nodes.contains(grid(idx0).localNode()) && nodes.contains(grid(idx1).localNode()) && nodes.iterator().next().equals(grid(idx).localNode()))
+            if (nodes.contains(grid(idx0).localNode()) && nodes.contains(grid(idx1).localNode()) &&
+                nodes.iterator().next().equals(grid(idx).localNode()))
                 parts.add(i);
         }
 

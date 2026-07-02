@@ -234,7 +234,8 @@ public class WalScannerTest {
         int grpId = 123;
 
         WALIterator mockedIter = mockWalIterator(
-            new IgniteBiTuple<>(ZERO_POINTER, new PageSnapshot(new FullPageId(expectedPageId, grpId), dummyPage(1024, expectedPageId), 1024)),
+            new IgniteBiTuple<>(ZERO_POINTER,
+                new PageSnapshot(new FullPageId(expectedPageId, grpId), dummyPage(1024, expectedPageId), 1024)),
             new IgniteBiTuple<>(ZERO_POINTER, new CheckpointRecord(new FileWALPointer(5738, 0, 0))),
             new IgniteBiTuple<>(ZERO_POINTER, new FixCountRecord(grpId, expectedPageId, 4))
         );

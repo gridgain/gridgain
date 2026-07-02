@@ -111,7 +111,8 @@ public class NativeSqlJoinQueryRangeBenchmark extends IgniteAbstractBenchmark {
                 withExpr.append("\"");
 
                 qry.querySqlFields(
-                    new SqlFieldsQuery("CREATE TABLE person (id long, orgId long, name varchar, PRIMARY KEY (id, orgId))" + withExpr), true);
+                    new SqlFieldsQuery("CREATE TABLE person (id long, orgId long, name varchar, " +
+                        "PRIMARY KEY (id, orgId))" + withExpr), true);
 
                 withExpr = new StringBuilder(" WITH \"");
 

@@ -969,7 +969,8 @@ cfg.socketSendBuffer(sockSndBuf);
             if (!F.isEmpty(cfg.networkInterfacesBlacklist()))
                 networkInterfaceFilter = new BlacklistFilter(cfg.networkInterfacesBlacklist());
 
-            IgniteBiTuple<Collection<String>, Collection<String>> addrs = U.resolveLocalAddresses(cfg.localHost(), false, networkInterfaceFilter);
+            IgniteBiTuple<Collection<String>, Collection<String>> addrs =
+                U.resolveLocalAddresses(cfg.localHost(), false, networkInterfaceFilter);
 
             if (cfg.localPort() != -1 && addrs.get1().isEmpty() && addrs.get2().isEmpty())
                 throw new IgniteCheckedException("No network addresses found (is networking enabled?).");
@@ -980,7 +981,8 @@ cfg.socketSendBuffer(sockSndBuf);
             Map<String, Object> res = new HashMap<>(5);
 
             boolean setEmptyHostNamesAttr = !getBoolean(IGNITE_TCP_COMM_SET_ATTR_HOST_NAMES, false) &&
-                (!F.isEmpty(cfg.localAddress()) && cfg.localHost().getHostAddress().equals(cfg.localAddress())) && !cfg.localHost().isAnyLocalAddress() &&
+                (!F.isEmpty(cfg.localAddress()) && cfg.localHost().getHostAddress().equals(cfg.localAddress())) &&
+                    !cfg.localHost().isAnyLocalAddress() &&
                 !cfg.localHost().isLoopbackAddress();
 
             res.put(createSpiAttributeName(ATTR_ADDRS), addrs.get1());

@@ -236,7 +236,8 @@ public class RebuildIndexWithHistoricalRebalanceTest extends GridCommonAbstractT
 
     /** */
     private LogListener finishIndexRebuildLsnr(String cacheName) {
-        LogListener lsnr = LogListener.matches(s -> s.startsWith("Finished indexes rebuilding for cache [name=" + cacheName)).times(1).build();
+        LogListener lsnr = LogListener.matches(s -> s.startsWith("Finished indexes rebuilding for cache [name=" + cacheName))
+            .times(1).build();
 
         log.registerListener(lsnr);
 

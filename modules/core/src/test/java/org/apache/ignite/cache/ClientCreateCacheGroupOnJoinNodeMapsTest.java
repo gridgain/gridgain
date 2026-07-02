@@ -40,7 +40,8 @@ public class ClientCreateCacheGroupOnJoinNodeMapsTest extends GridCommonAbstract
         cfg.setClientMode(client);
 
         if (client)
-            cfg.setCacheConfiguration(defaultCacheConfiguration().setNearConfiguration(null).setAffinity(new RendezvousAffinityFunction(false, 32)));
+            cfg.setCacheConfiguration(defaultCacheConfiguration().setNearConfiguration(null)
+                .setAffinity(new RendezvousAffinityFunction(false, 32)));
 
         return cfg;
     }

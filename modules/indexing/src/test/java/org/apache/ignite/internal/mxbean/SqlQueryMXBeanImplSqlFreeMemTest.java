@@ -87,7 +87,8 @@ public class SqlQueryMXBeanImplSqlFreeMemTest extends SqlStatisticsAbstractTest 
      */
     private void validateMemoryUsageOn(int nodeIdx, MemValidator validator) throws Exception {
         long free = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemTest" + nodeIdx, "SQL Query", "SqlQueryMXBeanImpl", "SqlFreeMemoryBytes");
-        long maxMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemTest" + nodeIdx, "SQL Query", "SqlQueryMXBeanImpl", "SqlGlobalMemoryQuotaBytes");
+        long maxMem = getValue("mxbean.SqlQueryMXBeanImplSqlFreeMemTest" + nodeIdx, "SQL Query", "SqlQueryMXBeanImpl",
+            "SqlGlobalMemoryQuotaBytes");
 
         if (free > maxMem)
             fail(String.format("Illegal state: there's more free memory (%s) than " +

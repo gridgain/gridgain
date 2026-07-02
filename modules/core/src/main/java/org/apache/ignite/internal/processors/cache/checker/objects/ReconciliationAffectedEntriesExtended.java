@@ -54,7 +54,8 @@ public class ReconciliationAffectedEntriesExtended extends ReconciliationAffecte
      * @param skippedCachesCnt Skipped caches count.
      * @param skippedEntriesCnt Skipped entries count.
      */
-    public ReconciliationAffectedEntriesExtended(Map<UUID, String> nodesIdsToConsistentIdsMap, int inconsistentKeysCnt, int skippedCachesCnt, int skippedEntriesCnt) {
+    public ReconciliationAffectedEntriesExtended(Map<UUID, String> nodesIdsToConsistentIdsMap, int inconsistentKeysCnt,
+        int skippedCachesCnt, int skippedEntriesCnt) {
         super(nodesIdsToConsistentIdsMap, null, null);
         this.inconsistentKeysCnt = inconsistentKeysCnt;
         this.skippedCachesCnt = skippedCachesCnt;

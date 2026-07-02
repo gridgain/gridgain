@@ -671,7 +671,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                                                               String taskName,
                                                               @Nullable IgniteCacheExpiryPolicy expiryPlc,
                                                               boolean keepBinary,
-                                                              @Nullable ReaderArguments readerArgs) throws IgniteCheckedException, GridCacheEntryRemovedException {
+                                                              @Nullable ReaderArguments readerArgs)
+        throws IgniteCheckedException, GridCacheEntryRemovedException {
         return (EntryGetResult)innerGet0(
             /*ver*/null,
             /*tx*/null,
@@ -2271,7 +2272,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
                     !needVal &&
                     !readFromStore &&
                     !transformOp &&
-                    !(evt && (cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED) || cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED))) &&
+                    !(evt && (cctx.events().isRecordable(EVT_CACHE_OBJECT_REMOVED) ||
+                        cctx.events().isRecordable(EVT_CACHE_OBJECT_EXPIRED))) &&
                     !cctx.queries().enabled() &&
                     cctx.config().getInterceptor() == null &&
                     !cctx.conflictNeedResolve() &&
@@ -4200,7 +4202,8 @@ public abstract class GridCacheMapEntry extends GridMetadataAwareAdapter impleme
     }
 
     /** {@inheritDoc} */
-    @Override public CacheObject updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl) throws GridCacheEntryRemovedException {
+    @Override public CacheObject updateTimeToLiveOnTtlUpdateRequest(@Nullable GridCacheVersion ver, long ttl)
+        throws GridCacheEntryRemovedException {
         assert cctx.shared().database().checkpointLockIsHeldByThread() :
             "Checkpoint lock must be held by the thread before acquiring entry lock";
 

@@ -1142,7 +1142,8 @@ public class CacheBaselineTopologyTest extends GridCommonAbstractTest {
             IgniteEx ig0 = grid(i);
 
             for (int p = 0; p < 32; p++)
-                assertEqualsCollections(ig.affinity(cacheName).mapPartitionToPrimaryAndBackups(p), ig0.affinity(cacheName).mapPartitionToPrimaryAndBackups(p));
+                assertEqualsCollections(ig.affinity(cacheName).mapPartitionToPrimaryAndBackups(p),
+                    ig0.affinity(cacheName).mapPartitionToPrimaryAndBackups(p));
         }
 
         for (Map.Entry<Integer, String> e : keyToConsId.entrySet()) {

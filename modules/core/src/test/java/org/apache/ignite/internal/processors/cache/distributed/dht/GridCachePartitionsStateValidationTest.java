@@ -179,7 +179,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
         );
 
         for (int it = 0; it < GridTestUtils.SF.applyLB(10, 4); it++) {
-            SingleMessageInterceptorCommunicationSpi spi = (SingleMessageInterceptorCommunicationSpi) ignite.configuration().getCommunicationSpi();
+            SingleMessageInterceptorCommunicationSpi spi =
+                (SingleMessageInterceptorCommunicationSpi) ignite.configuration().getCommunicationSpi();
             spi.clear();
 
             // Stop load future.
@@ -207,7 +208,8 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
                         .sorted()
                         .collect(Collectors.toList());
 
-                    try (Transaction tx = ignite.transactions().txStart(TransactionConcurrency.OPTIMISTIC, TransactionIsolation.READ_COMMITTED)) {
+                    try (Transaction tx = ignite.transactions().txStart(
+                        TransactionConcurrency.OPTIMISTIC, TransactionIsolation.READ_COMMITTED)) {
                         for (Integer key : randomKeys)
                             txCache.put(key, key);
 
@@ -246,8 +248,10 @@ public class GridCachePartitionsStateValidationTest extends GridCommonAbstractTe
                 GridDhtPartitionsStateValidator validator = new GridDhtPartitionsStateValidator(ignite.context().cache().context());
 
                 // Validate partition update counters. If counters are not consistent, exception will be thrown.
-                validator.validatePartitionsUpdateCounters(ignite.cachex(atomicCacheName).context().topology(), messagesMap, Collections.emptySet());
-                validator.validatePartitionsUpdateCounters(ignite.cachex(txCacheName).context().topology(), messagesMap, Collections.emptySet());
+                validator.validatePartitionsUpdateCounters(
+                    ignite.cachex(atomicCacheName).context().topology(), messagesMap, Collections.emptySet());
+                validator.validatePartitionsUpdateCounters(
+                    ignite.cachex(txCacheName).context().topology(), messagesMap, Collections.emptySet());
 
             } finally {
                 // Stop load and resume exchange.

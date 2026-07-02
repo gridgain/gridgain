@@ -75,7 +75,8 @@ public class KMeansTrainerTest extends TrainerTest {
     @Test
     public void testUpdateMdl() {
         KMeansTrainer trainer = createAndCheckTrainer();
-        Vectorizer<Integer, double[], Integer, Double> vectorizer = new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.LAST);
+        Vectorizer<Integer, double[], Integer, Double> vectorizer =
+            new DoubleArrayVectorizer<Integer>().labeled(Vectorizer.LabelCoordinate.LAST);
         KMeansModel originalMdl = trainer.withAmountOfClusters(1).fit(
             new LocalDatasetBuilder<>(data, parts),
             vectorizer

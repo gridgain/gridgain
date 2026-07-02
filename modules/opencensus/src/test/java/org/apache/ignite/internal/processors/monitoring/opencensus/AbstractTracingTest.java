@@ -524,7 +524,8 @@ public abstract class AbstractTracingTest extends GridCommonAbstractTest {
 
             assertTrue(
                 "Failed to wait for exporting all traces. Please check span buffer size and exporter schedule delay.",
-                GridTestUtils.waitForCondition(() -> allSpans().anyMatch(span -> span.getName().equals(lastTestSpanName)), EXPORTER_SCHEDULE_DELAY * 2));
+                GridTestUtils.waitForCondition(() -> allSpans().anyMatch(span -> span.getName().equals(lastTestSpanName)),
+                    EXPORTER_SCHEDULE_DELAY * 2));
         }
 
         /** Clears collected spans. */

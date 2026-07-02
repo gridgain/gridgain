@@ -62,7 +62,8 @@ public class ControlCenterActionStartedEvent extends EventAdapter {
      * @param subjId Security subject ID.
      * @param ccUsername Username in Control Center.
      */
-    public ControlCenterActionStartedEvent(ClusterNode node, String actionName, String actionClassName, @Nullable UUID subjId, @Nullable String ccUsername) {
+    public ControlCenterActionStartedEvent(ClusterNode node, String actionName, String actionClassName, @Nullable UUID subjId,
+        @Nullable String ccUsername) {
         super(node, null, EVT_CONTROL_CENTER_ACTION_EVT);
 
         this.actionName = actionName;

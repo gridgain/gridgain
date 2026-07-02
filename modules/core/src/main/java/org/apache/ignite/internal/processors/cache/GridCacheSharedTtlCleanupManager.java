@@ -53,7 +53,8 @@ import static org.apache.ignite.internal.processors.configuration.distributed.Di
 public class GridCacheSharedTtlCleanupManager extends GridCacheSharedManagerAdapter implements PartitionsExchangeAware {
 
     /** Documentation article about tombstone TTLs in the context of DR */
-    public static final String TOMBSTONE_TTL_DOC_URL = "https://www.gridgain.com/docs/latest/administrators-guide/data-center-replication/configuring-replication#tombstone-ttl";
+    public static final String TOMBSTONE_TTL_DOC_URL =
+        "https://www.gridgain.com/docs/latest/administrators-guide/data-center-replication/configuring-replication#tombstone-ttl";
 
     /** Ttl cleanup worker thread sleep interval, ms. */
     private final long cleanupWorkerSleepInterval =

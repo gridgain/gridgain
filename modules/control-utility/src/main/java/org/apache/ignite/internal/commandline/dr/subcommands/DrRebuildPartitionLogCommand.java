@@ -144,7 +144,8 @@ public class DrRebuildPartitionLogCommand extends AbstractCommand<DrRebuildParti
                             break;
 
                         case GROUPS_ARG:
-                            cacheGrps = CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg), REBUILD_TREES.toString());
+                            cacheGrps = CommandArgUtils.validateCachesArgument(argIter.nextCacheGroupsSet(nextArg),
+                                REBUILD_TREES.toString());
                             break;
 
                         default:

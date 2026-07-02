@@ -73,7 +73,8 @@ public class CacheClientsConcurrentStartTest extends GridCommonAbstractTest {
         IgniteConfiguration cfg = super.getConfiguration(gridName);
 
         TcpDiscoverySpi testSpi = new TcpDiscoverySpi() {
-            @Override protected void writeToSocket(Socket sock, OutputStream out, TcpDiscoveryAbstractMessage msg, long timeout) throws IOException, IgniteCheckedException {
+            @Override protected void writeToSocket(Socket sock, OutputStream out, TcpDiscoveryAbstractMessage msg,
+                long timeout) throws IOException, IgniteCheckedException {
                 if (msg instanceof TcpDiscoveryCustomEventMessage && msg.verified()) {
                     try {
                         System.out.println(Thread.currentThread().getName() + " delay custom message");
@@ -138,7 +139,8 @@ public class CacheClientsConcurrentStartTest extends GridCommonAbstractTest {
         startGrids(SRV_CNT);
 
         for (int i = 0; i < SRV_CNT; i++) {
-            ((TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi()).blockMessages(new IgniteBiPredicate<ClusterNode, Message>() {
+            ((TestRecordingCommunicationSpi)ignite(i).configuration().getCommunicationSpi()).blockMessages(
+                new IgniteBiPredicate<ClusterNode, Message>() {
                 @Override public boolean apply(ClusterNode node, Message msg) {
                     if (msg instanceof GridDhtPartitionsFullMessage) {
                         try {

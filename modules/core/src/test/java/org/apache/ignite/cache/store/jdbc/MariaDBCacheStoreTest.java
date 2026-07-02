@@ -92,7 +92,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
             stmt.executeUpdate("CREATE TABLE Person (id INT PRIMARY KEY, org_id INT, birthday DATE, name VARCHAR(50), gender VARCHAR(50))");
 
             // Reserved-word table + column name; exercises backtick escaping when sqlEscapeAll=true.
-            stmt.executeUpdate("CREATE TABLE `Person ORDER BY` (id INT PRIMARY KEY, org_id INT, birthday DATE, `name GROUP BY` VARCHAR(50), gender VARCHAR(50))");
+            stmt.executeUpdate("CREATE TABLE `Person ORDER BY` (id INT PRIMARY KEY, org_id INT, birthday DATE, " +
+                "`name GROUP BY` VARCHAR(50), gender VARCHAR(50))");
 
             // MariaDB-specific data-type fixtures (Tier 3): microsecond TIMESTAMP and high-precision DECIMAL.
             stmt.executeUpdate("CREATE TABLE TypeSample (id INT PRIMARY KEY, ts TIMESTAMP(6), amount DECIMAL(38,10))");
@@ -137,7 +138,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);
 
-        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType(CACHE_NAME, "Person"), CacheAtomicityMode.ATOMIC, false);
+        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType(CACHE_NAME, "Person"),
+            CacheAtomicityMode.ATOMIC, false);
 
         cfg.setCacheConfiguration(cc);
 
@@ -461,7 +463,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     public void testWriteAllSplitsAcrossBatches() throws Exception {
         startGrid();
 
-        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("cache-small-batch", "Person"), CacheAtomicityMode.ATOMIC, false);
+        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("cache-small-batch", "Person"),
+            CacheAtomicityMode.ATOMIC, false);
 
         ((MariaDBCacheStoreFactory) cc.getCacheStoreFactory()).setBatchSize(10);
 
@@ -513,7 +516,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     public void testTransactionalCommit() throws Exception {
         Ignite ignite = startGrid();
 
-        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("tx-commit-cache", "Person"), CacheAtomicityMode.TRANSACTIONAL, false);
+        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("tx-commit-cache", "Person"),
+            CacheAtomicityMode.TRANSACTIONAL, false);
         IgniteCache<PersonKey, Person> cache = ignite.createCache(cc);
 
         PersonKey key = new PersonKey(1);
@@ -540,7 +544,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     public void testTransactionalRollback() throws Exception {
         Ignite ignite = startGrid();
 
-        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("tx-rollback-cache", "Person"), CacheAtomicityMode.TRANSACTIONAL, false);
+        CacheConfiguration<PersonKey, Person> cc = cacheConfiguration(personJdbcType("tx-rollback-cache", "Person"),
+            CacheAtomicityMode.TRANSACTIONAL, false);
         IgniteCache<PersonKey, Person> cache = ignite.createCache(cc);
 
         PersonKey key = new PersonKey(2);
@@ -583,7 +588,8 @@ public class MariaDBCacheStoreTest extends GridCommonAbstractTest {
     public void testMariaDBSpecificDataTypes() throws Exception {
         Ignite ignite = startGrid();
 
-        CacheConfiguration<Integer, TypeSample> cc = cacheConfiguration(typeSampleJdbcType("cache-types"), CacheAtomicityMode.ATOMIC, false);
+        CacheConfiguration<Integer, TypeSample> cc = cacheConfiguration(typeSampleJdbcType("cache-types"),
+            CacheAtomicityMode.ATOMIC, false);
 
         IgniteCache<Integer, TypeSample> cache = ignite.createCache(cc);
 

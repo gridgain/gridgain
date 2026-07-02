@@ -43,7 +43,8 @@ import org.apache.ignite.ml.util.SandboxMLCache;
  * Original dataset can be downloaded from: https://archive.ics.uci.edu/ml/machine-learning-databases/housing/ .
  * Copy of dataset are stored in: modules/ml/src/main/resources/datasets/boston_housing_dataset.txt .
  * Score for regression estimation: R^2 (coefficient of determination).
- * Description of score evaluation can be found in: https://stattrek.com/statistics/dictionary.aspx?definition=coefficient_of_determination .
+ * Description of score evaluation can be found in:
+ * https://stattrek.com/statistics/dictionary.aspx?definition=coefficient_of_determination .
  */
 public class BostonHousePricesPredictionExample {
     /** Runs example. */

@@ -151,7 +151,8 @@ public abstract class AbstractCrossValidation<M extends IgniteModel<Vector, L>, 
             return locAvgScore;
         };
 
-        Random rnd = new Random(stgy.getSeed()); //TODO: common seed for shared lambdas can produce the same value on each function call? or sequent?
+        //TODO: common seed for shared lambdas can produce the same value on each function call? or sequent?
+        Random rnd = new Random(stgy.getSeed());
 
         BiFunction<Integer, Double, Double> mutator = (Integer geneIdx, Double geneValue) -> {
             Double newGeneVal;

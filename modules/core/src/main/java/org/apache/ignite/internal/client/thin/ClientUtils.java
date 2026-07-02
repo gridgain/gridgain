@@ -565,7 +565,8 @@ public final class ClientUtils {
                                     QueryIndex queryIndex = new QueryIndex(fields, type).setName(name).setInlineSize(inlineSize);
 
                                     //check if similarity function feature is supported
-                                    if (type == QueryIndexType.VECTOR && protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
+                                    if (type == QueryIndexType.VECTOR &&
+                                        protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.QUERY_INDEX_VECTOR_SIMILARITY)) {
                                         int similarityFunctionInt = reader.readInt();
                                         queryIndex.setSimilarityFunction(SimilarityFunction.fromOrdinal(similarityFunctionInt));
                                     }

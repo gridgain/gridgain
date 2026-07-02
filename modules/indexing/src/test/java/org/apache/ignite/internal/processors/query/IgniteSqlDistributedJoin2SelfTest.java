@@ -160,12 +160,14 @@ public class IgniteSqlDistributedJoin2SelfTest extends AbstractIndexingCommonTes
      */
     private void checkQueries(IgniteCache<Object, Object> cache) {
         // Join on secondary index.
-        SqlFieldsQuery qry1 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_PJ.universal_donor FROM person\n" +
+        SqlFieldsQuery qry1 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, " +
+            "blood_group_info_PJ.universal_donor FROM person\n" +
             "  LEFT JOIN medical_info ON medical_info.name = person.name \n" +
             "  LEFT JOIN blood_group_info_PJ ON blood_group_info_PJ.blood_group = medical_info.blood_group;");
 
         // Join on primary index.
-        SqlFieldsQuery qry2 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, blood_group_info_P.universal_donor FROM person\n" +
+        SqlFieldsQuery qry2 = new SqlFieldsQuery("SELECT person.id, person.name, medical_info.blood_group, " +
+            "blood_group_info_P.universal_donor FROM person\n" +
             "  LEFT JOIN medical_info ON medical_info.name = person.name \n" +
             "  LEFT JOIN blood_group_info_P ON blood_group_info_P.blood_group = medical_info.blood_group;");
 

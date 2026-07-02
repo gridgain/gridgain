@@ -138,7 +138,8 @@ public class GridAffinityProcessorMemoryLeakTest extends GridCommonAbstractTest 
 
         cCfg.setGroupName("some group");
 
-        ignite.destroyCache(cacheName); // Local cache is not really local - reference can be kept by other nodes if restart during the load happens.
+        // Local cache is not really local - reference can be kept by other nodes if restart during the load happens.
+        ignite.destroyCache(cacheName);
 
         return ignite.createCache(cCfg).withKeepBinary();
     }

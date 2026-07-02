@@ -1970,7 +1970,8 @@ public class BasicIndexTest extends AbstractIndexingCommonTest {
         // Check the warning log message
         LogListener lsnr = LogListener
             .matches("Indexed columns of a row cannot be fully inlined")
-            .andMatches("for sorted indexes on primary key and affinity field use 'PK_INLINE_SIZE' and 'AFFINITY_INDEX_INLINE_SIZE' properties for CREATE TABLE command").build();
+            .andMatches("for sorted indexes on primary key and affinity field use 'PK_INLINE_SIZE' and " +
+                "'AFFINITY_INDEX_INLINE_SIZE' properties for CREATE TABLE command").build();
 
         srvLog.registerListener(lsnr);
 

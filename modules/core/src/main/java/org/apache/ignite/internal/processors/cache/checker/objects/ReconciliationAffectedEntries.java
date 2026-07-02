@@ -48,13 +48,15 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
     protected Map<UUID, String> nodesIdsToConsistentIdsMap = new HashMap<>();
 
     /** Inconsistent keys. */
-    private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys = new HashMap<>();
+    private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, List<PartitionReconciliationDataRowMeta>>> inconsistentKeys =
+        new HashMap<>();
 
     /** Skipped caches. */
     private Set<PartitionReconciliationSkippedEntityHolder<String>> skippedCaches = new HashSet<>();
 
     /** Skipped entries. */
-    private Map<String/*Cache name*/, Map<Integer /*Partition ID*/, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
+    private Map<String/*Cache name*/,
+        Map<Integer /*Partition ID*/, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>>
         skippedEntries = new HashMap<>();
 
     /**
@@ -310,16 +312,20 @@ public class ReconciliationAffectedEntries extends IgniteDataTransferObject {
         nodesIdsToConsistentIdsMap.putAll(outer.nodesIdsToConsistentIdsMap);
 
         for (Map.Entry<String, Map<Integer, List<PartitionReconciliationDataRowMeta>>> entry : outer.inconsistentKeys.entrySet()) {
-            Map<Integer, List<PartitionReconciliationDataRowMeta>> map = inconsistentKeys.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+            Map<Integer, List<PartitionReconciliationDataRowMeta>> map =
+                inconsistentKeys.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
 
             for (Map.Entry<Integer, List<PartitionReconciliationDataRowMeta>> listEntry : entry.getValue().entrySet())
                 map.computeIfAbsent(listEntry.getKey(), k -> new ArrayList<>()).addAll(listEntry.getValue());
         }
 
-        for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> entry : outer.skippedEntries.entrySet()) {
-            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> map = skippedEntries.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
+        for (Map.Entry<String, Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>>> entry :
+            outer.skippedEntries.entrySet()) {
+            Map<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> map =
+                skippedEntries.computeIfAbsent(entry.getKey(), key -> new HashMap<>());
 
-            for (Map.Entry<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> setEntry : entry.getValue().entrySet())
+            for (Map.Entry<Integer, Set<PartitionReconciliationSkippedEntityHolder<PartitionReconciliationKeyMeta>>> setEntry :
+                entry.getValue().entrySet())
                 map.computeIfAbsent(setEntry.getKey(), k -> new HashSet<>()).addAll(setEntry.getValue());
         }
 

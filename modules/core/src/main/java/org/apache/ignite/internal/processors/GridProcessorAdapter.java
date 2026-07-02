@@ -128,7 +128,8 @@ public abstract class GridProcessorAdapter implements GridProcessor {
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node, DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
+    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node,
+        DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
         return null;
     }
 

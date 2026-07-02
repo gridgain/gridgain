@@ -17,6 +17,7 @@
 /**
  * This package contain cache-related processors & persistence implementation. <br>
  * See also
- * <a href="https://github.com/apache/ignite/tree/master/modules/core/src/main/java/org/apache/ignite/internal/processors/cache">GitHub Package Readme</a>
+ * <a href="https://github.com/apache/ignite/tree/master/modules/core/src/main/java/org/apache/ignite/internal/processors/cache">
+ * GitHub Package Readme</a>
  */
 package org.apache.ignite.internal.processors.cache;

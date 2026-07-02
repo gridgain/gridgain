@@ -44,14 +44,16 @@ public interface PersonRepositoryOtherIgniteInstance extends IgniteRepository<Pe
 
     /** */
     @Query("firstName = ?#{[1]}")
-    public List<PersonProjection> queryByFirstNameWithProjectionNamedIndexedParameter(@Param("notUsed") String notUsed, @Param("firstname") String val);
+    public List<PersonProjection> queryByFirstNameWithProjectionNamedIndexedParameter(@Param("notUsed") String notUsed,
+        @Param("firstname") String val);
 
     /** */
     @Query(textQuery = true, value = "#{#firstname}", limit = 2)
     public List<PersonProjection> textQueryByFirstNameWithProjectionNamedParameter(@Param("firstname") String val);
 
     @Query(value = "select * from (sElecT * from #{#entityName} where firstName = :firstname)", forceFieldsQuery = true)
-    public List<PersonProjection> queryByFirstNameWithProjectionNamedParameterAndTemplateDomainEntityVariable(@Param("firstname") String val);
+    public List<PersonProjection> queryByFirstNameWithProjectionNamedParameterAndTemplateDomainEntityVariable(
+        @Param("firstname") String val);
 
     @Query(value = "firstName = ?#{sampleExtension.transformParam(#firstname)}")
     public List<PersonProjection> queryByFirstNameWithProjectionNamedParameterWithSpELExtension(@Param("firstname") String val);

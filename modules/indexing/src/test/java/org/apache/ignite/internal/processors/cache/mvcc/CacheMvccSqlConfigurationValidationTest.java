@@ -101,7 +101,8 @@ public class CacheMvccSqlConfigurationValidationTest extends CacheMvccAbstractTe
 
         GridTestUtils.assertThrows(log, new Callable<Object>() {
             @Override public Object call() throws Exception {
-                try (Transaction tx = node.transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                try (Transaction tx = node.transactions().txStart(TransactionConcurrency.PESSIMISTIC,
+                    TransactionIsolation.REPEATABLE_READ)) {
                     cache.query(new SqlFieldsQuery("SELECT * FROM Person, City")).getAll();
 
                     tx.commit();

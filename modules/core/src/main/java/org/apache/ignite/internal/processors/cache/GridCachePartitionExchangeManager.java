@@ -477,7 +477,8 @@ public class GridCachePartitionExchangeManager<K, V> extends GridCacheSharedMana
 
                         if (currentExchange != null && currentExchange.addOrMergeDelayedFullMessage(node, msg)) {
                             if (log.isInfoEnabled())
-                                log.info("Delay process full message without exchange id (there is exchange in progress) [nodeId=" + node.id() + "]");
+                                log.info("Delay process full message without exchange id (there is exchange in progress) " +
+                                    "[nodeId=" + node.id() + "]");
 
                             return;
                         }

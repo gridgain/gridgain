@@ -131,7 +131,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     @Test
     public void testReadFile() {
         long reqId = 1;
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.READ_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.READ_FILE);
         message.writeString(pathToFile1);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -152,7 +153,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     @Test
     public void testReadDirectory() {
         long reqId = 2;
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.READ_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.READ_FILE);
         message.writeString("/a/b");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -165,7 +167,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     @Test
     public void testReadUnexistedFile() {
         long reqId = 3;
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.READ_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.READ_FILE);
         message.writeString("/a/b/unexisted_file");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -182,7 +185,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String to = "/a/moved_file";
         ms.putFile(from, file1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MOVE);
 
         message.writeString(from);
         message.writeString(to);
@@ -203,7 +207,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String to = "/a/moved_dir";
         ms.mkdirs(from);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MOVE);
 
         message.writeString(from);
         message.writeString(to);
@@ -222,7 +227,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String to = "/a/b/move_to";
         ms.mkdirs(from);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MOVE);
 
         message.writeString(from);
         message.writeString(to);
@@ -241,7 +247,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         ms.putFile(from, file1);
         String to = pathToFile1;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MOVE);
 
         message.writeString(from);
         message.writeString(to);
@@ -257,7 +264,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     public void testGetFileStat1() {
         long reqId = 7;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.STAT);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.STAT);
         message.writeString(pathToFile1);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -283,7 +291,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     public void testGetFileStat2() {
         long reqId = 8;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.STAT);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.STAT);
         message.writeString("/a/b");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -309,7 +318,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     public void testIsExists1() {
         long reqId = 9;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.EXISTS);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.EXISTS);
         message.writeString(pathToFile1);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -329,7 +339,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     public void testIsExists2() {
         long reqId = 10;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.EXISTS);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.EXISTS);
         message.writeString("/a/b");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -349,7 +360,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     public void testIsExists3() {
         long reqId = 11;
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.EXISTS);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.EXISTS);
         message.writeString("/a/b/unexisted_file");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -372,7 +384,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String path1 = "/a/b/to_remove_1";
         ms.putFile(path1, file1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.REMOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.REMOVE);
         message.writeString(path1);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -395,7 +408,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         ms.putFile(path1, file1);
         ms.putFile(path2, file1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.REMOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.REMOVE);
         message.writeString("/a/b/test_dir");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -410,7 +424,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
 
         ms.mkdirs("/a/b/test_dir");
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.REMOVE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.REMOVE);
         message.writeString("/a/b/test_dir");
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -430,7 +445,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         long reqId = 14;
 
         String path1 = "/a/b/test_mk_dir";
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MKDIR);
         message.writeString(path1);
         message.writeBoolean(false);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
@@ -450,7 +466,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String path = "/mk/dirs/test";
         ms.mkdirs(path);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MKDIR);
         message.writeString(path);
         message.writeBoolean(true); // only if not exists
 
@@ -467,7 +484,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         String path = "/mk/dirs/test";
         ms.mkdirs(path);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.MKDIR);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.MKDIR);
         message.writeString(path);
         message.writeBoolean(false); // only if not exists
 
@@ -493,7 +511,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         ms.putFile(file1path, file1);
         ms.putFile(file2path, file1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.LIST_FILES);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.LIST_FILES);
         message.writeString(path);
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
         ClientResponse resp = req.process(connCtx);
@@ -516,7 +535,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     @Test
     public void testListFiles2() {
         long reqId = 17;
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.LIST_FILES);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.LIST_FILES);
         message.writeString(pathToFile1);
 
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
@@ -529,7 +549,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
     @Test
     public void testListFiles3() {
         long reqId = 17;
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.LIST_FILES);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.LIST_FILES);
         message.writeString("/test/list/files/3/unexisted_file");
 
         ClientCustomQueryRequest req = new ClientCustomQueryRequest(toReader(message));
@@ -548,7 +569,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         boolean append = false;
         byte[] data = new byte[] {6, 5, 4, 3, 2, 1, 0};
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);
@@ -575,7 +597,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         boolean append = false;
         byte[] data = new byte[] {6, 5, 4, 3, 2, 1, 0};
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);
@@ -597,7 +620,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         boolean append = true;
         byte[] data = new byte[] {6, 5, 4, 3, 2, 1, 0};
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);
@@ -621,7 +645,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         byte[] data2 = new byte[] {0, 1, 2, 3, 4, 5, 6};
         ms.putFile(path, data1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);
@@ -650,7 +675,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         byte[] data2 = new byte[] {0, 1, 2, 3, 4, 5, 6};
         ms.putFile(path, data1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);
@@ -682,7 +708,8 @@ public class ModelStorateThinClientProcessorTest extends GridCommonAbstractTest 
         byte[] data2 = new byte[] {0, 1, 2, 3, 4, 5, 6};
         ms.putFile(path, data1);
 
-        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID, ModelStorateThinClientProcessor.Method.WRITE_FILE);
+        BinaryRawWriterEx message = createMessage(reqId, ModelStorateThinClientProcessor.PROCESSOR_ID,
+            ModelStorateThinClientProcessor.Method.WRITE_FILE);
         message.writeString(path);
         message.writeBoolean(create);
         message.writeBoolean(append);

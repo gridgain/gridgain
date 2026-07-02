@@ -157,8 +157,10 @@ public class CommandHandlerParsingTest {
             e.printStackTrace();
         }
 
-        assertParseArgsThrows("Value for '--check-first' property should be positive.", CACHE.text(), VALIDATE_INDEXES.text(), CHECK_FIRST.toString(), "0");
-        assertParseArgsThrows("Numeric value for '--check-through' parameter expected.", CACHE.text(), VALIDATE_INDEXES.text(), CHECK_THROUGH.toString());
+        assertParseArgsThrows("Value for '--check-first' property should be positive.", CACHE.text(), VALIDATE_INDEXES.text(),
+            CHECK_FIRST.toString(), "0");
+        assertParseArgsThrows("Numeric value for '--check-through' parameter expected.", CACHE.text(), VALIDATE_INDEXES.text(),
+            CHECK_THROUGH.toString());
     }
 
     /** */
@@ -278,8 +280,10 @@ public class CommandHandlerParsingTest {
 
             assertParseArgsThrows("Expected SSL trust store path", "--truststore");
 
-            ConnectionAndSslParameters args = parseArgs(asList("--keystore", "testKeystore", "--keystore-password", "testKeystorePassword", "--keystore-type", "testKeystoreType",
-                "--truststore", "testTruststore", "--truststore-password", "testTruststorePassword", "--truststore-type", "testTruststoreType",
+            ConnectionAndSslParameters args = parseArgs(asList("--keystore", "testKeystore", "--keystore-password",
+                "testKeystorePassword", "--keystore-type", "testKeystoreType",
+                "--truststore", "testTruststore", "--truststore-password", "testTruststorePassword", "--truststore-type",
+                "testTruststoreType",
                 "--ssl-key-algorithm", "testSSLKeyAlgorithm", "--ssl-protocol", "testSSLProtocol", cmd.text()));
 
             assertEquals("testSSLProtocol", args.sslProtocol());
@@ -654,14 +658,16 @@ public class CommandHandlerParsingTest {
             null,
             () -> parseArgs(asList("--cache", "idle_verify", "--check-crc", "--cache-filter", "ALL")),
             IllegalArgumentException.class,
-            "idle_verify with --check-crc and --cache-filter ALL or SYSTEM not allowed. You should remove --check-crc or change --cache-filter value."
+            "idle_verify with --check-crc and --cache-filter ALL or SYSTEM not allowed. You should remove --check-crc or change " +
+                "--cache-filter value."
         );
 
         GridTestUtils.assertThrows(
             null,
             () -> parseArgs(asList("--cache", "idle_verify", "--check-crc", "--cache-filter", "SYSTEM")),
             IllegalArgumentException.class,
-            "idle_verify with --check-crc and --cache-filter ALL or SYSTEM not allowed. You should remove --check-crc or change --cache-filter value."
+            "idle_verify with --check-crc and --cache-filter ALL or SYSTEM not allowed. You should remove --check-crc or change " +
+                "--cache-filter value."
         );
 
         GridTestUtils.assertThrows(
@@ -700,21 +706,24 @@ public class CommandHandlerParsingTest {
 
         GridTestUtils.assertThrows(
             null,
-            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--cache-names", "someNames")),
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames",
+                "--cache-names", "someNames")),
             IllegalArgumentException.class,
             "Either --group-names or --cache-names must be specified."
         );
 
         GridTestUtils.assertThrows(
             null,
-            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "someNames", "--cache-names", "someMoreNames")),
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--cache-names", "someNames",
+                "--cache-names", "someMoreNames")),
             IllegalArgumentException.class,
             "--cache-names arg specified twice."
         );
 
         GridTestUtils.assertThrows(
             null,
-            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames", "--group-names", "someMoreNames")),
+            () -> parseArgs(asList("--cache", "indexes_force_rebuild", "--node-id", nodeId, "--group-names", "someNames",
+                "--group-names", "someMoreNames")),
             IllegalArgumentException.class,
             "--group-names arg specified twice."
         );
@@ -913,11 +922,13 @@ public class CommandHandlerParsingTest {
      *                 <ul>
      *                     <li>
      *                         if value is missing:
-     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
      *                     </li>
      *                     <li>
      *                         if unsupported value is used:
-     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
      *                     </li>
      *                 </ul>
      *             </li>
@@ -931,11 +942,13 @@ public class CommandHandlerParsingTest {
      *                 <ul>
      *                     <li>
      *                         if value is missing:
-     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
      *                     </li>
      *                     <li>
      *                         if unsupported value is used:
-     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
      *                     </li>
      *                 </ul>
      *             </li>
@@ -958,11 +971,13 @@ public class CommandHandlerParsingTest {
      *                 <ul>
      *                     <li>
      *                         if value is missing:
-     *                          IllegalArgumentException (The scope should be specified. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
+     *                          IllegalArgumentException (The scope should be specified. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX].")
      *                     </li>
      *                     <li>
      *                         if unsupported value is used:
-     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
+     *                          IllegalArgumentException (Invalid scope 'aaa'. The following values can be used:
+     *                          [DISCOVERY, EXCHANGE, COMMUNICATION, TX])
      *                     </li>
      *                 </ul>
      *             </li>
@@ -980,7 +995,8 @@ public class CommandHandlerParsingTest {
      *                 <ul>
      *                     <li>
      *                          if value is missing:
-     *                              IllegalArgumentException (The sampling-rate should be specified. Decimal value between 0 and 1 should be used.)
+     *                              IllegalArgumentException (The sampling-rate should be specified. Decimal value between 0 and 1
+     *                              should be used.)
      *                     </li>
      *                     <li>
      *                          if unsupported value is used:
@@ -997,7 +1013,8 @@ public class CommandHandlerParsingTest {
      *                     </li>
      *                     <li>
      *                          if unsupported value is used:
-     *                              IllegalArgumentException (Invalid supported scope: aaa. The following values can be used: [DISCOVERY, EXCHANGE, COMMUNICATION, TX].)
+     *                              IllegalArgumentException (Invalid supported scope: aaa. The following values can be used:
+     *                              [DISCOVERY, EXCHANGE, COMMUNICATION, TX].)
      *                     </li>
      *                 </ul>
      *             </li>

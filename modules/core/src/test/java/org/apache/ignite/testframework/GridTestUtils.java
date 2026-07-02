@@ -170,7 +170,8 @@ public final class GridTestUtils {
     public static final long DFLT_TEST_TIMEOUT = 5 * 60 * 1000;
 
     /** yyyy-MM-dd. */
-    public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
+    public static final String LOCAL_DATE_REGEXP = "[0-9]{4}-(((0[13578]|(10|12))-(0[1-9]|[1-2][0-9]|3[0-1]))|" +
+        "(02-(0[1-9]|[1-2][0-9]))|((0[469]|11)-(0[1-9]|[1-2][0-9]|30)))";
 
     /** HH:mm:ss.SSS. */
     public static final String LOCAL_TIME_REGEXP = "(20|21|22|23|[01]\\d|\\d)((:[0-5]\\d){1,2})\\.\\d{3}";
@@ -2064,7 +2065,8 @@ public final class GridTestUtils {
      * @return {@code true} if condition was achieved, {@code false} otherwise.
      * @throws org.apache.ignite.internal.IgniteInterruptedCheckedException If interrupted.
      */
-    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval) throws IgniteInterruptedCheckedException {
+    public static boolean waitForCondition(GridAbsPredicate cond, long timeout, long checkInterval)
+        throws IgniteInterruptedCheckedException {
         long curTime = U.currentTimeMillis();
         long endTime = curTime + timeout;
 

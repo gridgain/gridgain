@@ -97,7 +97,8 @@ public class NoOpPageStoreManager implements IgnitePageStoreManager {
     }
 
     /** {@inheritDoc} */
-    @Override public PageStore write(int grpId, long pageId, ByteBuffer pageBuf, int tag, boolean calculateCrc) throws IgniteCheckedException {
+    @Override public PageStore write(int grpId, long pageId, ByteBuffer pageBuf, int tag,
+        boolean calculateCrc) throws IgniteCheckedException {
         // No-op.
 
         return null;

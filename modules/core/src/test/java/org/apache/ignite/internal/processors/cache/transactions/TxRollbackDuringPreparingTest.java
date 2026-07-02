@@ -69,7 +69,8 @@ public class TxRollbackDuringPreparingTest extends GridCommonAbstractTest {
         long txTimeout = 1_000;
 
         IgniteInternalFuture fut = GridTestUtils.runAsync(() -> {
-            Transaction tx = client.transactions().txStart(TransactionConcurrency.OPTIMISTIC, TransactionIsolation.SERIALIZABLE, txTimeout, 1);
+            Transaction tx = client.transactions().txStart(TransactionConcurrency.OPTIMISTIC,
+                TransactionIsolation.SERIALIZABLE, txTimeout, 1);
 
             cache.put(key, key);
 

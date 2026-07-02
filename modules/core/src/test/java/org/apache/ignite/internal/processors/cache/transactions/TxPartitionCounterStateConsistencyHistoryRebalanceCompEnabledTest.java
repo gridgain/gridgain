@@ -21,7 +21,8 @@ import org.apache.ignite.configuration.IgniteConfiguration;
 /**
  * Test partitions consistency in various scenarios when all rebalance is historical and compaction is enabled.
  */
-public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
+public class TxPartitionCounterStateConsistencyHistoryRebalanceCompEnabledTest
+    extends TxPartitionCounterStateConsistencyHistoryRebalanceTest {
     /** {@inheritDoc} */
     @Override protected IgniteConfiguration getConfiguration(String igniteInstanceName) throws Exception {
         IgniteConfiguration cfg = super.getConfiguration(igniteInstanceName);

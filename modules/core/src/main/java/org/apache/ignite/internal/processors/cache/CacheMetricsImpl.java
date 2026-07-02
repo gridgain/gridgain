@@ -215,7 +215,8 @@ public class CacheMetricsImpl implements CacheMetrics {
     private GridCacheWriteBehindStore store;
 
     /** Tx collisions info. */
-    private volatile Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> txKeyCollisionInfo;
+    private volatile Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry,
+        /* Collisions queue size. */ Integer>>> txKeyCollisionInfo;
 
     /** Number of keys processed during index rebuilding. */
     private final LongAdderMetric idxRebuildKeyProcessed;
@@ -983,7 +984,8 @@ public class CacheMetricsImpl implements CacheMetrics {
      *
      * @param coll Key collisions info holder.
      */
-    public void keyCollisionsInfo(Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> coll) {
+    public void keyCollisionsInfo(
+        Supplier<List<Map.Entry</* Colliding keys. */ GridCacheMapEntry, /* Collisions queue size. */ Integer>>> coll) {
         txKeyCollisionInfo = coll;
 
         if (delegate != null)

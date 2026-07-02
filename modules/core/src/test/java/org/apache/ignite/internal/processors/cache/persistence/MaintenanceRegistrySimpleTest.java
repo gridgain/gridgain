@@ -227,13 +227,15 @@ public class MaintenanceRegistrySimpleTest {
 
         // attempt to register callback with actions with non-unique names throws exception
         GridTestUtils.assertThrows(log, () ->
-                proc.registerWorkflowCallback(name0, new SimpleMaintenanceCallback(Arrays.asList(new SimpleAction(actionName0), new SimpleAction(actionName0))
+                proc.registerWorkflowCallback(name0, new SimpleMaintenanceCallback(
+                    Arrays.asList(new SimpleAction(actionName0), new SimpleAction(actionName0))
                 )),
             IgniteException.class,
             "unique names: " + actionName0 + ", " + actionName0);
 
         // Attempt to register callback with actions with unique names finishes succesfully
-        proc.registerWorkflowCallback(name1, new SimpleMaintenanceCallback(Arrays.asList(new SimpleAction(actionName0), new SimpleAction(actionName1))));
+        proc.registerWorkflowCallback(name1, new SimpleMaintenanceCallback(
+            Arrays.asList(new SimpleAction(actionName0), new SimpleAction(actionName1))));
     }
 
     /**

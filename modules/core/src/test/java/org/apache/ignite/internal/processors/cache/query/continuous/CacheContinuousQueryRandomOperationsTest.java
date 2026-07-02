@@ -585,7 +585,8 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
                 qry.setRemoteFilterFactory(noOpFilterFactory());
 
             if (qry instanceof ContinuousQuery) {
-                ((ContinuousQuery<QueryTestKey, QueryTestValue>)qry).setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
+                ((ContinuousQuery<QueryTestKey, QueryTestValue>)qry).setLocalListener(
+                    new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
                     @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
                         ? extends QueryTestValue>> events) throws CacheEntryListenerException {
                         for (CacheEntryEvent<? extends QueryTestKey, ? extends QueryTestValue> e : events)
@@ -723,7 +724,8 @@ public class CacheContinuousQueryRandomOperationsTest extends GridCommonAbstract
                 qry.setRemoteFilterFactory(noOpFilterFactory());
 
             if (qry instanceof ContinuousQuery) {
-                ((ContinuousQuery<QueryTestKey, QueryTestValue>)qry).setLocalListener(new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
+                ((ContinuousQuery<QueryTestKey, QueryTestValue>)qry).setLocalListener(
+                    new CacheEntryUpdatedListener<QueryTestKey, QueryTestValue>() {
                     @Override public void onUpdated(Iterable<CacheEntryEvent<? extends QueryTestKey,
                         ? extends QueryTestValue>> events) throws CacheEntryListenerException {
                         for (CacheEntryEvent<? extends QueryTestKey, ? extends QueryTestValue> e : events)

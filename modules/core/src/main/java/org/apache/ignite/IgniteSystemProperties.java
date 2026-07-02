@@ -755,7 +755,8 @@ public final class IgniteSystemProperties {
     public static final String IGNITE_LOG_DIR = "IGNITE_LOG_DIR";
 
     /**
-     * Environment variable to set work directory. The property {@link org.apache.ignite.configuration.IgniteConfiguration#setWorkDirectory} has higher
+     * Environment variable to set work directory. The property
+     * {@link org.apache.ignite.configuration.IgniteConfiguration#setWorkDirectory} has higher
      * priority.
      */
     @SystemProperty(value = "Work directory. The property IgniteConfiguration.setWorkDirectory has higher priority",

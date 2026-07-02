@@ -43,7 +43,8 @@ public class LogRegFromSparkExample {
     /** Run example. */
     public static void main(String[] args) throws FileNotFoundException {
         System.out.println();
-        System.out.println(">>> Logistic regression model loaded from Spark through serialization over partitioned dataset usage example started.");
+        System.out.println(">>> Logistic regression model loaded from Spark through serialization over " +
+            "partitioned dataset usage example started.");
         // Start ignite grid.
         try (Ignite ignite = Ignition.start("examples-ml/config/example-ignite.xml")) {
             System.out.println(">>> Ignite grid started.");

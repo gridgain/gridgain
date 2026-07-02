@@ -80,7 +80,8 @@ public class GridDhtLocalPartitionSyncEviction extends GridDhtLocalPartition {
     }
 
     /** {@inheritDoc} */
-    @Override protected long clearAll(BooleanSupplier stopClo, PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
+    @Override protected long clearAll(BooleanSupplier stopClo,
+        PartitionsEvictManager.PartitionEvictionTask task) throws NodeStoppingException {
         BooleanSupplier realClo = mode == 1 ? new BooleanSupplier() {
             @Override public boolean getAsBoolean() {
                 if (!delayed) {

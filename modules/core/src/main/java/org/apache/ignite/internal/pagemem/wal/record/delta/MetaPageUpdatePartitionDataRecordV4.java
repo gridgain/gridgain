@@ -60,7 +60,8 @@ public class MetaPageUpdatePartitionDataRecordV4 extends MetaPageUpdatePartition
         int encryptedPageCnt,
         long tombstonesCnt
     ) {
-        super(grpId, pageId, updateCntr, globalRmvId, partSize, cntrsPageId, state, allocatedIdxCandidate, link, encryptedPageIdx, encryptedPageCnt);
+        super(grpId, pageId, updateCntr, globalRmvId, partSize, cntrsPageId, state, allocatedIdxCandidate, link,
+            encryptedPageIdx, encryptedPageCnt);
 
         this.tombstonesCnt = tombstonesCnt;
     }

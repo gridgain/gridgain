@@ -24,7 +24,8 @@ import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.Gri
 
 /**
  * This exception represents a result of validation partitions for a cache group.
- * See {@link GridDhtPartitionsStateValidator#validatePartitionCountersAndSizes(GridDhtPartitionsExchangeFuture, GridDhtPartitionTopology, Map)}
+ * See
+ * {@link GridDhtPartitionsStateValidator#validatePartitionCountersAndSizes(GridDhtPartitionsExchangeFuture, GridDhtPartitionTopology, Map)}
  */
 public class PartitionStateValidationException extends IgniteCheckedException {
     /** */

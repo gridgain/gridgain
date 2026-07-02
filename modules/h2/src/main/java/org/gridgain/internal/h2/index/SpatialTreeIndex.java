@@ -136,7 +136,8 @@ public class SpatialTreeIndex extends BaseIndex implements SpatialIndex {
             return new SpatialKey(row.getKey());
         }
         return new SpatialKey(row.getKey(),
-                (float) env[GeometryUtils.MIN_X], (float) env[GeometryUtils.MAX_X], (float) env[GeometryUtils.MIN_Y], (float) env[GeometryUtils.MAX_Y]);
+                (float) env[GeometryUtils.MIN_X], (float) env[GeometryUtils.MAX_X],
+                (float) env[GeometryUtils.MIN_Y], (float) env[GeometryUtils.MAX_Y]);
     }
 
     @Override

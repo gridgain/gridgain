@@ -189,6 +189,7 @@ public class PartitionReconciliationRecheckAttemptsTest extends PartitionReconci
         assertEquals(15, res.partitionReconciliationResult().inconsistentKeysCount());
 
         for (Map.Entry<UUID, AtomicInteger> entry : recheckAttempts.entrySet())
-            assertEquals("Session: " + entry.getKey() + " has wrong value: " + entry.getValue().get(), 1 + attempts, entry.getValue().get());
+            assertEquals("Session: " + entry.getKey() + " has wrong value: " + entry.getValue().get(), 1 + attempts,
+                entry.getValue().get());
     }
 }

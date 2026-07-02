@@ -419,7 +419,8 @@ public class ClientListenerProcessor extends GridProcessorAdapter {
 
             SSLContext sslCtxBase = sslCtxFactory.create();
             SSLContext sslCtx = new SSLContextClientAuthWrapper(sslCtxBase, cliConnCfg.isSslClientAuth());
-            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log, ctx.metric().registry(CLIENT_CONNECTOR_METRICS));
+            GridNioSslFilter sslFilter = new GridNioSslFilter(sslCtx, true, ByteOrder.nativeOrder(), log,
+                ctx.metric().registry(CLIENT_CONNECTOR_METRICS));
 
             sslFilter.directMode(true);
 

@@ -42,7 +42,8 @@ import org.jetbrains.annotations.Nullable;
  */
 @GridInternal
 @GridVisorManagementTask
-public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg, Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer>> {
+public class IndexRebuildStatusTask extends VisorMultiNodeTask<IndexRebuildStatusTaskArg,
+    Map<UUID, Set<IndexRebuildStatusInfoContainer>>, Set<IndexRebuildStatusInfoContainer>> {
     /** */
     private static final long serialVersionUID = 0L;
 

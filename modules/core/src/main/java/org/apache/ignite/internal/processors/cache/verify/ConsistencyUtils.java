@@ -215,6 +215,7 @@ public class ConsistencyUtils {
      * @param consistentId Consistent id.
      */
     private static @Nullable IgniteEx grid(Object consistentId) {
-        return (IgniteEx) G.allGrids().stream().filter(g -> g.cluster().localNode().consistentId().equals(consistentId)).findFirst().orElse(null);
+        return (IgniteEx) G.allGrids().stream()
+            .filter(g -> g.cluster().localNode().consistentId().equals(consistentId)).findFirst().orElse(null);
     }
 }

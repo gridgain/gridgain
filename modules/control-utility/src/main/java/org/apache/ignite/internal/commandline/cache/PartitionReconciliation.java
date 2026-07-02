@@ -110,7 +110,8 @@ public class PartitionReconciliation extends AbstractCommand<PartitionReconcilia
                 " during the last partition map exchange, otherwise, all partitions will be taken into account.");
 
         paramsDesc.put(REPAIR.toString(),
-            "If present, fix all inconsistent data. Specifies which repair algorithm to use for doubtful keys. The following values can be used: "
+            "If present, fix all inconsistent data. Specifies which repair algorithm to use for doubtful keys. "
+                + "The following values can be used: "
                 + Arrays.toString(RepairAlgorithm.values()) + ". Default value is " + REPAIR.defaultValue() + '.');
 
         paramsDesc.put(PARALLELISM.toString(),

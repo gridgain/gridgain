@@ -228,7 +228,8 @@ public interface TransactionsMXBean {
             "cannot receive locks for all their keys for a long time. Set less than or equal {@code 0} to disable."
     )
     void setLongOperationsDumpTimeout(
-        @MXBeanParameter(name = "timeout", description = "Timeout threshold (in millis) for printing to log long-running transactions.") long timeout
+        @MXBeanParameter(name = "timeout",
+            description = "Timeout threshold (in millis) for printing to log long-running transactions.") long timeout
     );
 
     /**

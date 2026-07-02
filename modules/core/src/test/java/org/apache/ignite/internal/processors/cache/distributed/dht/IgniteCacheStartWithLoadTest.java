@@ -95,7 +95,8 @@ public class IgniteCacheStartWithLoadTest extends GridCommonAbstractTest {
             final int keysSpace = 10_000;
 
             while (!txLoadStop.get()) {
-                try (Transaction tx = node.transactions().txStart(TransactionConcurrency.PESSIMISTIC, TransactionIsolation.REPEATABLE_READ)) {
+                try (Transaction tx = node.transactions().txStart(TransactionConcurrency.PESSIMISTIC,
+                    TransactionIsolation.REPEATABLE_READ)) {
                     for (int it = 0; it < keys; it++) {
                         int key = rnd.nextInt(keysSpace);
                         byte[] value = new byte[2048];

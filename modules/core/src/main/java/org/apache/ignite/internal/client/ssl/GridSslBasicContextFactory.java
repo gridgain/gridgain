@@ -121,7 +121,8 @@ public class GridSslBasicContextFactory implements GridSslContextFactory {
     }
 
     /**
-     * Sets trust store type used in context initialization. If not provided, {@link org.apache.ignite.ssl.SslContextFactory#DFLT_STORE_TYPE} will
+     * Sets trust store type used in context initialization. If not provided,
+     * {@link org.apache.ignite.ssl.SslContextFactory#DFLT_STORE_TYPE} will
      * be used.
      *
      * @param trustStoreType Trust store type.
@@ -153,7 +154,8 @@ public class GridSslBasicContextFactory implements GridSslContextFactory {
     }
 
     /**
-     * Gets algorithm that will be used to create a key manager. If not specified, {@link org.apache.ignite.ssl.SslContextFactory#DFLT_KEY_ALGORITHM}
+     * Gets algorithm that will be used to create a key manager. If not specified,
+     * {@link org.apache.ignite.ssl.SslContextFactory#DFLT_KEY_ALGORITHM}
      * will be used.
      *
      * @return Key manager algorithm.

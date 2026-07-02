@@ -720,7 +720,8 @@ public class MvccUtils {
             if (!tx.isOperationAllowed(true)) {
                 tx.setRollbackOnly();
 
-                throw new TransactionMixedModeException("Operations on MVCC caches are not permitted in transactions spanning non MVCC caches.");
+                throw new TransactionMixedModeException("Operations on MVCC caches are not permitted in transactions " +
+                    "spanning non MVCC caches.");
             }
         }
 

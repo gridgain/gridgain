@@ -2589,11 +2589,13 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
 
         if (rslvr != null) {
             if (!supportsCommunicationErrorResolve(commSpi))
-                throw new IgniteCheckedException("CommunicationFailureResolver is configured, but CommunicationSpi does not support communication" +
+                throw new IgniteCheckedException("CommunicationFailureResolver is configured, but CommunicationSpi does not " +
+                    "support communication" +
                     "problem resolve: " + commSpi.getClass().getName());
 
             if (!supportsCommunicationErrorResolve(discoverySpi))
-                throw new IgniteCheckedException("CommunicationFailureResolver is configured, but DiscoverySpi does not support communication" +
+                throw new IgniteCheckedException("CommunicationFailureResolver is configured, but DiscoverySpi does not " +
+                    "support communication" +
                     "problem resolve: " + discoverySpi.getClass().getName());
         }
         else {
@@ -2957,7 +2959,8 @@ public class GridDiscoveryManager extends GridManagerAdapter<DiscoverySpi> {
          * @param topSnapshot Topology snapshot.
          */
         @SuppressWarnings("RedundantTypeArguments")
-        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache, Collection<ClusterNode> topSnapshot, @Nullable SpanContainer spanContainer) {
+        private void recordEvent(int type, long topVer, ClusterNode node, DiscoCache discoCache,
+            Collection<ClusterNode> topSnapshot, @Nullable SpanContainer spanContainer) {
             assert node != null;
 
             if (ctx.event().isRecordable(type)) {

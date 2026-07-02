@@ -128,7 +128,8 @@ public class Log4J2Logger implements IgniteLogger, LoggerNodeIdAndApplicationAwa
             }
         });
 
-        createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER, SYSTEM_OUT, ThresholdFilter.createFilter(Level.ERROR, Filter.Result.DENY, Filter.Result.ACCEPT));
+        createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER, SYSTEM_OUT,
+            ThresholdFilter.createFilter(Level.ERROR, Filter.Result.DENY, Filter.Result.ACCEPT));
         createDefaultConsoleLoggerParametrized(CONSOLE_APPENDER + "Error", SYSTEM_ERR, null);
 
         quiet = quiet0;

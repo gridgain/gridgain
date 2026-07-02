@@ -239,7 +239,8 @@ public class PartitionReconciliationProcessorTask extends ComputeTaskAdapter<Vis
                     }
 
                     if (acceptedCaches.isEmpty())
-                        return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(), "The cache '" + cacheRegexp + "' doesn't exist."));
+                        return new T2<>(null, new ExecutionResult<>(new ReconciliationAffectedEntriesExtended(),
+                            "The cache '" + cacheRegexp + "' doesn't exist."));
 
                     caches.addAll(acceptedCaches);
                 }

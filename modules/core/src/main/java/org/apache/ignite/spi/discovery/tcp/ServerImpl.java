@@ -3695,7 +3695,8 @@ class ServerImpl extends TcpDiscoveryImpl {
                                 if (log.isDebugEnabled())
                                     log.debug("Handshake response: " + res);
 
-                                // We should take previousNodeAlive flag into account only if we received the response from the correct node.
+                                // We should take previousNodeAlive flag into account only if we received the response
+                                // from the correct node.
                                 if (res.creatorNodeId().equals(next.id()) && res.previousNodeAlive() && sndState != null) {
                                     // Remote node checked connection to it's previous and got success.
                                     boolean previousNode = sndState.markLastFailedNodeAlive();
@@ -4364,7 +4365,8 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                         reconMsg.verify(getLocalNodeId());
 
-                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node, ServerImpl.this::clientSupportsDiscoveryMessage);
+                        Collection<TcpDiscoveryAbstractMessage> msgs = msgHist.messages(null, node,
+                            ServerImpl.this::clientSupportsDiscoveryMessage);
 
                         if (msgs != null) {
                             reconMsg.pendingMessages(msgs);
@@ -4731,12 +4733,12 @@ class ServerImpl extends TcpDiscoveryImpl {
 
                                     // Enables fields to be written by BinaryMarshaller in sorted order
                                     String errMsg = String.format(errTemplate, locBinarySortObjectFields, rmtBinarySortObjectFields,
-                                            U.addressesAsString(locNode), locNode.discoveryPort(), U.addressesAsString(node), node.discoveryPort(),
-                                            locNode.id(), msg.creatorNodeId());
+                                            U.addressesAsString(locNode), locNode.discoveryPort(), U.addressesAsString(node),
+                                            node.discoveryPort(), locNode.id(), msg.creatorNodeId());
 
                                     String sndMsg = String.format(errTemplate, rmtBinarySortObjectFields, locBinarySortObjectFields,
-                                            U.addressesAsString(node), node.discoveryPort(), U.addressesAsString(locNode), locNode.discoveryPort(),
-                                            node.id(), locNode.id());
+                                            U.addressesAsString(node), node.discoveryPort(), U.addressesAsString(locNode),
+                                            locNode.discoveryPort(), node.id(), locNode.id());
 
                                     nodeCheckError(node, errMsg, sndMsg);
                                 }

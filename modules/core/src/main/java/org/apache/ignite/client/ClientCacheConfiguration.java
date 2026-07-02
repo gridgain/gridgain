@@ -760,7 +760,8 @@ public final class ClientCacheConfiguration implements Serializable {
      * <p>
      *     Limitations:
      *     <ul>
-     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction} is supported.</li>
+     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction}
+     *         is supported.</li>
      *         <li>Backup filters are not supported</li>
      *     </ul>
      *
@@ -776,7 +777,8 @@ public final class ClientCacheConfiguration implements Serializable {
      * <p>
      *     Limitations:
      *     <ul>
-     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction} is supported.</li>
+     *         <li>Only {@link org.apache.ignite.cache.affinity.rendezvous.RendezvousAffinityFunction RendezvousAffinityFunction}
+     *         is supported.</li>
      *         <li>Backup filters are not supported</li>
      *     </ul>
      *

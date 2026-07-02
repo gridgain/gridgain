@@ -38,7 +38,8 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 
 /**
- * Test client connects to two nodes cluster during time more than the {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
+ * Test client connects to two nodes cluster during time more than the
+ * {@link org.apache.ignite.configuration.IgniteConfiguration#clientFailureDetectionTimeout}.
  */
 public class LongClientConnectToClusterTest extends GridCommonAbstractTest {
     /** Client instance name. */

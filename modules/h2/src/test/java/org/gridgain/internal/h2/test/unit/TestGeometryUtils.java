@@ -422,7 +422,8 @@ public class TestGeometryUtils extends TestBase {
     }
 
     private static Envelope convert(double[] envelope) {
-        return new Envelope(envelope[GeometryUtils.MIN_X], envelope[GeometryUtils.MAX_X], envelope[GeometryUtils.MIN_Y], envelope[GeometryUtils.MAX_Y]);
+        return new Envelope(envelope[GeometryUtils.MIN_X], envelope[GeometryUtils.MAX_X], envelope[GeometryUtils.MIN_Y],
+            envelope[GeometryUtils.MAX_Y]);
     }
 
     private static double[] getEnvelope(Random r) {

@@ -187,7 +187,8 @@ public class SqlParserBulkLoadSelfTest extends SqlParserAbstractSelfTest {
 
     @Test
     public void testCopyParseProperties() {
-        String sql = "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES ('warehouse'='path', 'catalog-impl'= 'impl1', 'io-impl' = 'impl2', 'UPPER' = 'CASE')";
+        String sql = "COPY FROM 'a' INTO 'b' FORMAT ICEBERG PROPERTIES " +
+            "('warehouse'='path', 'catalog-impl'= 'impl1', 'io-impl' = 'impl2', 'UPPER' = 'CASE')";
         SqlBulkLoadCommand cmd = (SqlBulkLoadCommand) new SqlParser(null, sql).nextCommand();
 
         Map<String, String> actual = cmd.properties();

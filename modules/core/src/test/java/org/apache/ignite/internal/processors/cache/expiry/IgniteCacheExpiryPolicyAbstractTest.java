@@ -1432,7 +1432,8 @@ public abstract class IgniteCacheExpiryPolicyAbstractTest extends IgniteCacheAbs
                         found = true;
 
                         if (ttl > 0)
-                            assertTrue("Unexpected expiration time, key: " + key + " expirationtime: " + e.expireTime(), e.expireTime() > 0);
+                            assertTrue("Unexpected expiration time, key: " + key + " expirationtime: " + e.expireTime(),
+                                e.expireTime() > 0);
                         else
                             assertEquals(0, e.expireTime());
                     }

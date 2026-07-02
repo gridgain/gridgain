@@ -1205,7 +1205,8 @@ public class H2TreeIndex extends H2TreeIndexBase {
     }
 
     enum KindOfTypeInfo {
-        NUMERIC(TypeInfo.TYPE_BOOLEAN, TypeInfo.TYPE_BYTE, TypeInfo.TYPE_DOUBLE, TypeInfo.TYPE_FLOAT, TypeInfo.TYPE_INT, TypeInfo.TYPE_LONG, TypeInfo.TYPE_SHORT),
+        NUMERIC(TypeInfo.TYPE_BOOLEAN, TypeInfo.TYPE_BYTE, TypeInfo.TYPE_DOUBLE, TypeInfo.TYPE_FLOAT, TypeInfo.TYPE_INT,
+            TypeInfo.TYPE_LONG, TypeInfo.TYPE_SHORT),
         DATE_TIME(TypeInfo.TYPE_DATE, TypeInfo.TYPE_TIMESTAMP),
         OTHER();
 

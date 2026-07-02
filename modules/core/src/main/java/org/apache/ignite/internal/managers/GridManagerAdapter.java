@@ -543,7 +543,8 @@ public abstract class GridManagerAdapter<T extends IgniteSpi> implements GridMan
                             if (comp.discoveryDataType() == null)
                                 continue;
 
-                            IgniteNodeValidationResult err = comp.validateNode(node, discoData.newJoinerDiscoveryData(comp.discoveryDataType().ordinal()));
+                            IgniteNodeValidationResult err =
+                                comp.validateNode(node, discoData.newJoinerDiscoveryData(comp.discoveryDataType().ordinal()));
 
                             if (err != null)
                                 return err;
@@ -723,7 +724,8 @@ public abstract class GridManagerAdapter<T extends IgniteSpi> implements GridMan
     }
 
     /** {@inheritDoc} */
-    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node, DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
+    @Nullable @Override public IgniteNodeValidationResult validateNode(ClusterNode node,
+        DiscoveryDataBag.JoiningNodeDiscoveryData discoData) {
         return null;
     }
 

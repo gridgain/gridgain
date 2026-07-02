@@ -1387,7 +1387,8 @@ public final class GridDhtColocatedLockFuture extends GridCacheCompoundIdentityF
 
         CacheOperationContext opCtx = cctx.operationContextPerCall();
 
-        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(), read, null, keys);
+        CacheInvalidStateException validateCacheE = lastFinishedFut.validateCache(cctx, opCtx != null && opCtx.recovery(),
+            read, null, keys);
 
         if (validateCacheE != null)
             onDone(validateCacheE);

@@ -204,7 +204,8 @@ public class ConnectionClientPool {
      */
     public GridCommunicationClient reserveClient(ClusterNode node, int connIdx) throws IgniteCheckedException {
         assert node != null;
-        assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) || !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
+        assert (connIdx >= 0 && connIdx < cfg.connectionsPerNode()) ||
+            !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection())) : connIdx;
 
         if (locNodeSupplier.get().isClient()) {
             if (node.isClient()) {
@@ -326,7 +327,8 @@ public class ConnectionClientPool {
                         currTimeout += clientReserveWaitTimeout;
 
                         if (log.isDebugEnabled())
-                            log.debug("Still waiting for reestablishing connection to node [nodeId=" + node.id() + ", waitingTime=" + currTimeout + "ms]");
+                            log.debug("Still waiting for reestablishing connection to node [nodeId=" + node.id() +
+                                ", waitingTime=" + currTimeout + "ms]");
 
                         if (registry != null) {
                             GridWorker wrkr = registry.worker(Thread.currentThread().getName());
@@ -694,7 +696,8 @@ public class ConnectionClientPool {
         assert connIdx == addClient.connectionIndex() : addClient;
 
         if (log.isDebugEnabled())
-            log.debug("The node client is going to create a connection [nodeId=" + node.id() + ", connIdx=" + connIdx + ", client=" + addClient + "]");
+            log.debug("The node client is going to create a connection [nodeId=" + node.id() + ", connIdx=" + connIdx +
+                ", client=" + addClient + "]");
 
         if (connIdx >= cfg.connectionsPerNode()) {
             assert !(cfg.usePairedConnections() && usePairedConnections(node, attrs.pairedConnection()));
@@ -744,7 +747,8 @@ public class ConnectionClientPool {
         for (; ; ) {
             GridCommunicationClient[] curClients = clients.get(nodeId);
 
-            if (curClients == null || rmvClient.connectionIndex() >= curClients.length || curClients[rmvClient.connectionIndex()] != rmvClient)
+            if (curClients == null || rmvClient.connectionIndex() >= curClients.length ||
+                curClients[rmvClient.connectionIndex()] != rmvClient)
                 return false;
 
             GridCommunicationClient[] newClients = Arrays.copyOf(curClients, curClients.length);

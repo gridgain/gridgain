@@ -137,32 +137,38 @@ public class IgniteClientFutureImpl<T> implements IgniteClientFuture<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public <U, V> CompletableFuture<V> thenCombine(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction) {
+    @Override public <U, V> CompletableFuture<V> thenCombine(CompletionStage<? extends U> completionStage,
+        BiFunction<? super T, ? super U, ? extends V> biFunction) {
         return fut.thenCombine(completionStage, biFunction);
     }
 
     /** {@inheritDoc} */
-    @Override public <U, V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction) {
+    @Override public <U, V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> completionStage,
+        BiFunction<? super T, ? super U, ? extends V> biFunction) {
         return fut.thenCombineAsync(completionStage, biFunction);
     }
 
     /** {@inheritDoc} */
-    @Override public <U, V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> completionStage, BiFunction<? super T, ? super U, ? extends V> biFunction, Executor executor) {
+    @Override public <U, V> CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> completionStage,
+        BiFunction<? super T, ? super U, ? extends V> biFunction, Executor executor) {
         return fut.thenCombineAsync(completionStage, biFunction, executor);
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer) {
+    @Override public <U> CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> completionStage,
+        BiConsumer<? super T, ? super U> biConsumer) {
         return fut.thenAcceptBoth(completionStage, biConsumer);
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer) {
+    @Override public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage,
+        BiConsumer<? super T, ? super U> biConsumer) {
         return fut.thenAcceptBothAsync(completionStage, biConsumer);
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage, BiConsumer<? super T, ? super U> biConsumer, Executor executor) {
+    @Override public <U> CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> completionStage,
+        BiConsumer<? super T, ? super U> biConsumer, Executor executor) {
         return fut.thenAcceptBothAsync(completionStage, biConsumer, executor);
     }
 
@@ -187,12 +193,14 @@ public class IgniteClientFutureImpl<T> implements IgniteClientFuture<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> completionStage, Function<? super T, U> function) {
+    @Override public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> completionStage,
+        Function<? super T, U> function) {
         return fut.applyToEitherAsync(completionStage, function);
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> completionStage, Function<? super T, U> function, Executor executor) {
+    @Override public <U> CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> completionStage,
+        Function<? super T, U> function, Executor executor) {
         return fut.applyToEitherAsync(completionStage, function, executor);
     }
 
@@ -207,7 +215,8 @@ public class IgniteClientFutureImpl<T> implements IgniteClientFuture<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> completionStage, Consumer<? super T> consumer, Executor executor) {
+    @Override public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> completionStage,
+        Consumer<? super T> consumer, Executor executor) {
         return fut.acceptEitherAsync(completionStage, consumer, executor);
     }
 
@@ -237,7 +246,8 @@ public class IgniteClientFutureImpl<T> implements IgniteClientFuture<T> {
     }
 
     /** {@inheritDoc} */
-    @Override public <U> CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> function, Executor executor) {
+    @Override public <U> CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> function,
+        Executor executor) {
         return fut.thenComposeAsync(function, executor);
     }
 

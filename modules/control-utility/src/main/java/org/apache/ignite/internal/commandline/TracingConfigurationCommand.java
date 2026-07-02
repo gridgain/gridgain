@@ -86,7 +86,8 @@ public class TracingConfigurationCommand extends AbstractCommand<TracingConfigur
         log.info(INDENT + CommandLogger.join(" ", UTILITY_NAME, CommandLogger.join(" ", getCommonOptions())) + " " +
             TRACING_CONFIGURATION + " [subcommand <subcommand_parameters>]");
         log.info("");
-        log.info(INDENT + "<scope> value of '" + SCOPE.argName() + "' or '" + INCLUDED_SCOPES.argName() + "' options in all subcommands can be: " +
+        log.info(INDENT + "<scope> value of '" + SCOPE.argName() + "' or '" + INCLUDED_SCOPES.argName() +
+            "' options in all subcommands can be: " +
             join("|", Scope.values()));
         log.info("");
         log.info("");

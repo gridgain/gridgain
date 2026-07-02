@@ -33,5 +33,13 @@
 
     <suppress checks="NoWhitespaceBefore" files="ConcurrentLinkedHashMap\.java"/>
 
-    <suppress checks="LineLength" files="classnames\.properties"/>
+    <suppress checks="LineLength"
+              files="ClusterTagGenerator\.java|PagesWriteSpeedBasedThrottle\.java|GridExecutorService\.java|classnames\.properties"/>
+
+    <!-- Vendored H2 resource bundles (javadoc.properties, test.properties); the h2 module is third-party-derived. -->
+    <suppress checks="LineLength" files="modules[\/\\]h2[\/\\].*\.properties"/>
+
+    <!-- Javadoc links whose href URL has no splittable whitespace, so the line cannot fit within 140 chars. -->
+    <suppress checks="LineLength"
+              files="persistence[\/\\]pagemem[\/\\]package-info\.java|stat[\/\\]hll[\/\\]HLL\.java"/>
 </suppressions>
