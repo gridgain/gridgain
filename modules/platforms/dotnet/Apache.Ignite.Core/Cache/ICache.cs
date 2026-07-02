@@ -807,13 +807,57 @@ namespace Apache.Ignite.Core.Cache
 
         /// <summary>
         /// Start continuous query execution.
+        /// <para />
+        /// The returned stream produces cache entry events until enumeration is stopped or the underlying
+        /// enumerator is disposed (which happens automatically at the end of an <c>await foreach</c> loop),
+        /// at which point the continuous query is stopped and the associated server-side resources are released.
         /// </summary>
         /// <param name="options">Continuous query options.</param>
         /// <param name="filter">Optional server-side filter.</param>
-        /// <returns>Handle to stop query execution.</returns>
+        /// <returns>Async stream of cache entry events.</returns>
         IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(
             ContinuousQueryOptions? options = null,
-            ICacheEntryFilter<TK, TV>? filter = null); // TODO: What can we do with initial query?
+            ICacheEntryFilter<TK, TV>? filter = null);
+
+        /// <summary>
+        /// Start continuous query execution with an initial <see cref="ScanQuery{TK, TV}"/>.
+        /// <para />
+        /// The initial query is executed before the continuous listener is registered, which allows to iterate
+        /// through entries that already existed at the time the continuous query was started. Its results are
+        /// exposed separately from the event stream because they have a different type
+        /// (<see cref="ICacheEntry{TK, TV}"/>) than the continuous events (<see cref="ICacheEntryEvent{TK, TV}"/>).
+        /// </summary>
+        /// <param name="initialQry">
+        /// The initial query. This query will be executed before continuous listener is registered which allows
+        /// to iterate through entries which have already existed at the time continuous query is executed.
+        /// </param>
+        /// <param name="options">Continuous query options.</param>
+        /// <param name="filter">Optional server-side filter.</param>
+        /// <returns>Handle to get the initial query cursor, the event stream, and to stop query execution.</returns>
+        IContinuousQueryHandleAsync<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>> QueryContinuousAsync(
+            ScanQuery<TK, TV> initialQry,
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null);
+
+        /// <summary>
+        /// Start continuous query execution with an initial <see cref="SqlFieldsQuery"/>.
+        /// <para />
+        /// The initial query is executed before the continuous listener is registered, which allows to iterate
+        /// through entries that already existed at the time the continuous query was started. Its results are
+        /// exposed separately from the event stream because they have a different type (field lists) than the
+        /// continuous events (<see cref="ICacheEntryEvent{TK, TV}"/>).
+        /// </summary>
+        /// <param name="initialQry">
+        /// The initial fields query. This query will be executed before continuous listener is registered which
+        /// allows to iterate through entries which have already existed at the time continuous query is executed.
+        /// </param>
+        /// <param name="options">Continuous query options.</param>
+        /// <param name="filter">Optional server-side filter.</param>
+        /// <returns>Handle to get the initial query cursor, the event stream, and to stop query execution.</returns>
+        IContinuousQueryHandleAsync<TK, TV, IFieldsQueryCursor> QueryContinuousAsync(
+            SqlFieldsQuery initialQry,
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null);
 
         /// <summary>
         /// Start continuous query execution.
