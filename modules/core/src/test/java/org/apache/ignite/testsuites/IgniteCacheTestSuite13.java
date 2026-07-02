@@ -46,6 +46,7 @@ import org.apache.ignite.internal.processors.cache.distributed.CacheRemoveWithTo
 import org.apache.ignite.internal.processors.cache.distributed.FailBackupOnAtomicOperationTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.preloader.HistoricalRebalanceRemovesConsistencyTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.ConcurrentTombstonesCleanupTest;
+import org.apache.ignite.internal.processors.cache.distributed.dht.topology.CustomNewTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstoneClearingCountersTest;
 import org.apache.ignite.internal.processors.cache.distributed.dht.topology.TombstonesManagementTest;
 import org.apache.ignite.internal.processors.cache.transactions.TransactionCommitTest;
@@ -130,6 +131,8 @@ public class IgniteCacheTestSuite13 {
         GridTestUtils.addTestIfNeeded(suite, TransactionCommitTest.class, ignoredTests);
 
         GridTestUtils.addTestIfNeeded(suite, LocalCacheWarningsTest.class, ignoredTests);
+
+        GridTestUtils.addTestIfNeeded(suite, CustomNewTest.class, ignoredTests);
 
         return suite;
     }
