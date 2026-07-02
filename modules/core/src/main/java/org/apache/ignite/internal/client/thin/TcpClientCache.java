@@ -1081,7 +1081,18 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
     }
 
     /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> registerCacheEntryListenerAsync(CacheEntryListenerConfiguration<K, V> cfg) {
+        return registerCacheEntryListenerAsync(cfg, null);
+    }
+
+    /** {@inheritDoc} */
     @Override public void registerCacheEntryListener(CacheEntryListenerConfiguration<K, V> cfg,
+        ClientDisconnectListener disconnectLsnr) {
+        ClientUtils.syncResult(registerCacheEntryListenerAsync(cfg, disconnectLsnr));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> registerCacheEntryListenerAsync(CacheEntryListenerConfiguration<K, V> cfg,
         ClientDisconnectListener disconnectLsnr) {
         A.ensure(!cfg.isSynchronous(),
             "Unsupported cfg.isSynchronous() flag value");
@@ -1105,7 +1116,7 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
                 lsnrsRegistry.deregisterCacheEntryListener(name, cfg);
             };
 
-            hnd.startListen(
+            return hnd.startListenAsync(
                 new ClientJCacheEntryListenerAdapter<>(locLsnr),
                 disconnectLsnr0,
                 cfg.getCacheEntryEventFilterFactory(),
@@ -1114,8 +1125,12 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
                 locLsnr instanceof CacheEntryExpiredListener
             );
         }
-        else
-            throw new IllegalStateException("Listener is already registered for configuration: " + cfg);
+        else {
+            Throwable err = new IllegalArgumentException("Listener is already registered for configuration: " + cfg);
+            CompletableFuture<Void> errFut = new CompletableFuture<>();
+            errFut.completeExceptionally(err);
+            return new IgniteClientFutureImpl<>(errFut);
+        }
     }
 
     /** {@inheritDoc} */
@@ -1123,6 +1138,13 @@ class TcpClientCache<K, V> implements ClientCache<K, V> {
         ClientCacheEntryListenerHandler<?, ?> hnd = lsnrsRegistry.deregisterCacheEntryListener(name, cfg);
 
         U.closeQuiet(hnd);
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> deregisterCacheEntryListenerAsync(CacheEntryListenerConfiguration<K, V> cfg) {
+        ClientCacheEntryListenerHandler<?, ?> hnd = lsnrsRegistry.deregisterCacheEntryListener(name, cfg);
+
+        return hnd != null ? hnd.closeAsync() : IgniteClientFutureImpl.completedFuture(null);
     }
 
     /** Handle scan query. */
