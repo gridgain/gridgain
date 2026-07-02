@@ -28,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -76,11 +78,25 @@ public class ClientDiscoveryContext {
     private volatile long prevTopVer = UNKNOWN_TOP_VER;
 
     /** */
-    public ClientDiscoveryContext(ClientConfiguration clientCfg) {
+    public ClientDiscoveryContext(ClientConfiguration clientCfg, ScheduledExecutorService scheduler, Runnable onReloadCallback) {
         log = NullLogger.whenNull(clientCfg.getLogger());
         addresses = clientCfg.getAddresses();
-        addrFinder = clientCfg.getAddressesFinder();
         enabled = clientCfg.isClusterDiscoveryEnabled();
+
+        @Nullable ClientAddressFinder addrFinder = clientCfg.getAddressesFinder();
+        long addrRenewalInterval = clientCfg.getBackgroundReResolveAddressesInterval();
+        if (clientCfg.getBackgroundReResolveAddressesInterval() > 0 && addrFinder instanceof DnsClientAddressFinder) {
+            this.addrFinder = new ClientAddressReloader(
+                    log,
+                    clientCfg.getAddressesFinder(),
+                    scheduler,
+                    addrRenewalInterval,
+                    onReloadCallback
+            );
+        } else {
+            this.addrFinder = clientCfg.getAddressesFinder();
+        }
+
         reset();
     }
 
@@ -310,6 +326,65 @@ public class ClientDiscoveryContext {
         private NodeInfo(int port, List<String> addrs) {
             this.port = port;
             this.addrs = addrs;
+        }
+    }
+
+    private static class ClientAddressReloader implements ClientAddressFinder, Runnable {
+        private final IgniteLogger log;
+
+        private final ClientAddressFinder finder;
+
+        private final ScheduledExecutorService scheduler;
+
+        private final long addrRenewalInterval;
+
+        private final Runnable onReloadCallback;
+
+        private final AtomicBoolean scheduledAddressReload = new AtomicBoolean(false);
+
+        private volatile Set<String> currAddrs;
+
+        public ClientAddressReloader(
+                IgniteLogger log,
+                ClientAddressFinder finder,
+                ScheduledExecutorService scheduler,
+                long addrRenewalInterval,
+                Runnable onReloadCallback
+        ) {
+            this.log = log;
+            this.finder = finder;
+            this.scheduler = scheduler;
+            this.addrRenewalInterval = addrRenewalInterval;
+            this.onReloadCallback = onReloadCallback;
+        }
+
+        @Override public String[] getAddresses() {
+            String[] ret = finder.getAddresses();
+
+            if (scheduledAddressReload.compareAndSet(false, true)) {
+                currAddrs = new HashSet<>(Arrays.asList(ret));
+                scheduler.scheduleAtFixedRate(
+                        this,
+                        addrRenewalInterval,
+                        addrRenewalInterval,
+                        TimeUnit.MILLISECONDS
+                );
+            }
+
+            return ret;
+        }
+
+        @Override public void run() {
+            Set<String> newAddrs = new HashSet<>(Arrays.asList(finder.getAddresses()));
+
+            if (!newAddrs.equals(currAddrs)) {
+                currAddrs = newAddrs;
+                try {
+                    onReloadCallback.run();
+                } catch (RuntimeException e) {
+                    log.warning("Error calling onReloadCallback", e);
+                }
+            }
         }
     }
 }

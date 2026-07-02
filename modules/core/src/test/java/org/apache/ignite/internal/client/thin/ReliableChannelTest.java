@@ -424,6 +424,8 @@ public class ReliableChannelTest {
                     5_000);
 
             assertTrue("Channel re-initialization did not happen within 5s.", reinitDone);
+
+            GridTestUtils.waitForCondition(removedHolder::isClosed, 5_000);
             assertTrue("Removed address holder should be closed.", removedHolder.isClosed());
 
             // Cache operations must still work after the reload.
