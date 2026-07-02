@@ -25,6 +25,7 @@ import org.apache.ignite.internal.commandline.metric.MetricCommand;
 import org.apache.ignite.internal.commandline.property.PropertyCommand;
 import org.apache.ignite.internal.commandline.query.KillCommand;
 import org.apache.ignite.internal.commandline.ru.RollingUpgradeCommand;
+import org.apache.ignite.internal.commandline.systemview.SystemViewCommand;
 
 /**
  * High-level commands.
@@ -89,6 +90,9 @@ public enum CommandList {
 
     /** Command for printing metric values. */
     METRIC("--metric", new MetricCommand()),
+
+    /** Command for printing system view contents. */
+    SYSTEM_VIEW("--system-view", new SystemViewCommand()),
 
     /** */
     PERSISTENCE("--persistence", new PersistenceCommand()),
