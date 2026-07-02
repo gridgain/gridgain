@@ -26,10 +26,10 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Accumulates approximate maximum value statistics.
  * Calculates maximum value in last {@code timeInterval} milliseconds.
- *
+ * <p>
  * Algorithm is based on circular array of {@code size} values, each is responsible for last corresponding time
  * subinterval of {@code timeInterval}/{@code size} milliseconds. Resulting value is the max across all subintervals.
- *
+ * <p>
  * Implementation is nonblocking and protected from values loss.
  * Maximum relative error is 1/{@code size}.
  */

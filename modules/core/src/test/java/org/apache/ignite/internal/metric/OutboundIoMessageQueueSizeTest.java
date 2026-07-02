@@ -109,7 +109,7 @@ public class OutboundIoMessageQueueSizeTest extends GridCommonAbstractTest {
         for (int i = 0; i < MSG_LIMIT * 2; i++)
             cache0.put(key, new byte[10 * 1024]);
 
-        assertTrue(metric.value() >= MSG_LIMIT);
+        assertTrue(GridTestUtils.waitForCondition(() -> metric.value() >= MSG_LIMIT, 5_000));
 
         assertTrue(logLsnr.check());
     }
@@ -146,7 +146,7 @@ public class OutboundIoMessageQueueSizeTest extends GridCommonAbstractTest {
             for (int i = 0; i <= MSG_LIMIT; i++)
                 srv0.context().discovery().sendCustomEvent(new DummyCustomDiscoveryMessage(IgniteUuid.randomUuid()));
 
-            assertTrue(metric.value() >= MSG_LIMIT);
+            assertTrue(GridTestUtils.waitForCondition(() -> metric.value() >= MSG_LIMIT, 5_000));
         }
         finally {
             latch.countDown();

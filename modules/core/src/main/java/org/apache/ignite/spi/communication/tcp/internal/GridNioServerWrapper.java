@@ -193,7 +193,7 @@ public class GridNioServerWrapper {
         IgniteSystemProperties.IGNITE_TCP_COMM_MSG_QUEUE_WARN_SIZE, 0);
 
     /** Timestamp of the last high message queue size warning. */
-    private final AtomicLong lastMsqQueueSizeWarningTs = new AtomicLong();
+    private final AtomicLong lastMsgQueueSizeWarningTs = new AtomicLong();
 
     /** NIO server. */
     private GridNioServer<Message> nioSrv;
@@ -1061,15 +1061,15 @@ public class GridNioServerWrapper {
      */
     private void checkNodeQueueSize(GridNioSession ses, int msgQueueSize) {
         if (msgQueueWarningSize > 0 && msgQueueSize > msgQueueWarningSize) {
-            long lastWarnTs = lastMsqQueueSizeWarningTs.get();
+            long lastWarnTs = lastMsgQueueSizeWarningTs.get();
 
             if (U.currentTimeMillis() > lastWarnTs + MIN_MSG_QUEUE_SIZE_WARN_FREQUENCY) {
-                if (lastMsqQueueSizeWarningTs.compareAndSet(lastWarnTs, U.currentTimeMillis())) {
+                if (lastMsgQueueSizeWarningTs.compareAndSet(lastWarnTs, U.currentTimeMillis())) {
                     ConnectionKey id = ses.meta(CONN_IDX_META);
                     if (id != null) {
-                        log.warning("Outbound message queue size for node exceeded configured " +
-                            "messageQueueWarningSize value, it may be caused by node failure or a network problems " +
-                            "[node=" + id.nodeId() + ", msqQueueSize=" + msgQueueSize + ']');
+                        log.warning("Outbound message queue size for node exceeded configured threshold, " +
+                            "it may be caused by node failure or network problems " +
+                            "[node=" + id.nodeId() + ", msgQueueSize=" + msgQueueSize + ", threshold=" + msgQueueWarningSize + ']');
                     }
                 }
             }

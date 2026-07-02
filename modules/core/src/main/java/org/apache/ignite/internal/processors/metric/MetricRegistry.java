@@ -447,30 +447,12 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
      * Calculates number of hits in last rateTimeInterval milliseconds.
      *
      * This method does nothing in case a metric with the given name already exists.
-
+     *
      * @param rateTimeInterval Rate time interval.
      * @param size Array size for underlying calculations.
      * @return {@link HitRateMetric}
      * @see HitRateMetric
      */
-    /**
-     * Creates and registers a max value metric.
-     *
-     * It accumulates approximate maximum value statistics.
-     * Calculates maximum value in last timeInterval milliseconds.
-     *
-     * This method does nothing in case a metric with the given name already exists.
-     *
-     * @param name Name.
-     * @param desc Description.
-     * @param timeInterval Time interval in milliseconds.
-     * @param size Array size for underlying calculations.
-     * @return {@link MaxValueMetric}
-     */
-    public MaxValueMetric maxValueMetric(String name, @Nullable String desc, long timeInterval, int size) {
-        return addMetric(name, new MaxValueMetric(metricName(regName, name), desc, timeInterval, size));
-    }
-
     public HitRateMetric hitRateMetric(String name, @Nullable String desc, long rateTimeInterval, int size) {
         String fullName = metricName(regName, name);
 
@@ -482,6 +464,24 @@ public class MetricRegistry implements ReadOnlyMetricRegistry {
             metric.reset(cfgRateTimeInterval, DFLT_SIZE);
 
         return metric;
+    }
+
+    /**
+     * Creates and registers a max value metric.
+     * <p>
+     * It accumulates approximate maximum value statistics.
+     * Calculates maximum value in last {@code timeInterval} milliseconds.
+     * <p>
+     * This method does nothing in case a metric with the given name already exists.
+     *
+     * @param name Name.
+     * @param desc Description.
+     * @param timeInterval Time interval in milliseconds.
+     * @param size Array size for underlying calculations.
+     * @return {@link MaxValueMetric}
+     */
+    public MaxValueMetric maxValueMetric(String name, @Nullable String desc, long timeInterval, int size) {
+        return addMetric(name, new MaxValueMetric(metricName(regName, name), desc, timeInterval, size));
     }
 
     /**
