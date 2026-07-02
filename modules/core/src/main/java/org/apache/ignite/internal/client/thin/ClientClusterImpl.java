@@ -19,8 +19,11 @@ package org.apache.ignite.internal.client.thin;
 import org.apache.ignite.client.ClientCluster;
 import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.cluster.ClusterState;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
+
+import java.util.concurrent.CompletionException;
 
 /**
  * Implementation of {@link ClientCluster}.
@@ -40,91 +43,107 @@ class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster 
 
     /** {@inheritDoc} */
     @Override public ClusterState state() {
-        try {
-            return ch.service(ClientOperation.CLUSTER_GET_STATE,
-                req -> checkClusterApiSupported(req.clientChannel().protocolCtx()),
-                res -> ClusterState.fromOrdinal(res.in().readByte())
-            );
-        }
-        catch (ClientError e) {
-            throw new ClientException(e);
-        }
+        return ClientUtils.syncResult(stateAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<ClusterState> stateAsync() {
+        return new IgniteClientFutureImpl<>(
+                ch.serviceAsync(
+                        ClientOperation.CLUSTER_GET_STATE,
+                        req -> checkClusterApiSupported(req.clientChannel().protocolCtx()),
+                        res -> ClusterState.fromOrdinal(res.in().readByte())
+                ).handle(ClientClusterImpl::errorHandler)
+        );
     }
 
     /** {@inheritDoc} */
     @Override public void state(ClusterState newState) throws ClientException {
-        try {
-            ch.service(ClientOperation.CLUSTER_CHANGE_STATE,
-                req -> {
-                    ProtocolContext protocolCtx = req.clientChannel().protocolCtx();
+        ClientUtils.syncResult(stateAsync(newState));
+    }
 
-                    checkClusterApiSupported(protocolCtx);
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Void> stateAsync(ClusterState newState) throws ClientException {
+        return new IgniteClientFutureImpl<>(
+                ch.serviceAsync(
+                        ClientOperation.CLUSTER_CHANGE_STATE,
+                        req -> {
+                            ProtocolContext protocolCtx = req.clientChannel().protocolCtx();
 
-                    if (newState.ordinal() > 1 && !protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CLUSTER_API)) {
-                        throw new ClientFeatureNotSupportedByServerException("State " + newState.name() + " is not " +
-                            "supported by the server");
-                    }
+                            checkClusterApiSupported(protocolCtx);
 
-                    req.out().writeByte((byte)newState.ordinal());
-                },
-                null
-            );
-        }
-        catch (ClientError e) {
-            throw new ClientException(e);
-        }
+                            if (newState.ordinal() > 1 && !protocolCtx.isFeatureSupported(ProtocolBitmaskFeature.CLUSTER_API)) {
+                                throw new ClientFeatureNotSupportedByServerException("State " + newState.name() + " is not " +
+                                        "supported by the server");
+                            }
+
+                            req.out().writeByte((byte)newState.ordinal());
+                        },
+                        null
+                ).handle((v, err) -> errorHandler((Void) v, err))
+        );
     }
 
     /** {@inheritDoc} */
     @Override public boolean disableWal(String cacheName) throws ClientException {
-        return changeWalState(cacheName, false);
+        return ClientUtils.syncResult(disableWalAsync(cacheName));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> disableWalAsync(String cacheName) throws ClientException {
+        return changeWalStateAsync(cacheName, false);
     }
 
     /** {@inheritDoc} */
     @Override public boolean enableWal(String cacheName) throws ClientException {
-        return changeWalState(cacheName, true);
+        return ClientUtils.syncResult(enableWalAsync(cacheName));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> enableWalAsync(String cacheName) throws ClientException {
+        return changeWalStateAsync(cacheName, true);
     }
 
     /** {@inheritDoc} */
     @Override public boolean isWalEnabled(String cacheName) {
-        try {
-            return ch.service(ClientOperation.CLUSTER_GET_WAL_STATE,
-                req -> {
-                    checkClusterApiSupported(req.clientChannel().protocolCtx());
+        return ClientUtils.syncResult(isWalEnabledAsync(cacheName));
+    }
 
-                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
-                        writer.writeString(cacheName);
-                    }
-                },
-                res -> res.in().readBoolean()
-            );
-        }
-        catch (ClientError e) {
-            throw new ClientException(e);
-        }
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> isWalEnabledAsync(String cacheName) {
+        return new IgniteClientFutureImpl<>(
+                ch.serviceAsync(
+                        ClientOperation.CLUSTER_GET_WAL_STATE,
+                        req -> {
+                            checkClusterApiSupported(req.clientChannel().protocolCtx());
+
+                            try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
+                                writer.writeString(cacheName);
+                            }
+                        },
+                        res -> res.in().readBoolean()
+                ).handle(ClientClusterImpl::errorHandler)
+        );
     }
 
     /**
      * @param cacheName Cache name.
      * @param enable {@code True} if WAL should be enabled, {@code false} if WAL should be disabled.
      */
-    private boolean changeWalState(String cacheName, boolean enable) throws ClientException {
-        try {
-            return ch.service(ClientOperation.CLUSTER_CHANGE_WAL_STATE,
-                req -> {
-                    checkClusterApiSupported(req.clientChannel().protocolCtx());
+    private IgniteClientFuture<Boolean> changeWalStateAsync(String cacheName, boolean enable) throws ClientException {
+        return new IgniteClientFutureImpl<>(
+                ch.serviceAsync(ClientOperation.CLUSTER_CHANGE_WAL_STATE,
+                        req -> {
+                            checkClusterApiSupported(req.clientChannel().protocolCtx());
 
-                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
-                        writer.writeString(cacheName);
-                        writer.writeBoolean(enable);
-                    }
-                },
-                res -> res.in().readBoolean()
-            );
-        }
-        catch (ClientError e) {
-            throw new ClientException(e);
-        }
+                            try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
+                                writer.writeString(cacheName);
+                                writer.writeBoolean(enable);
+                            }
+                        },
+                        res -> res.in().readBoolean()
+                ).handle(ClientClusterImpl::errorHandler)
+        );
     }
 
     /**
@@ -144,5 +163,18 @@ class ClientClusterImpl extends ClientClusterGroupImpl implements ClientCluster 
      */
     ClientClusterGroupImpl defaultClusterGroup() {
         return dfltClusterGrp;
+    }
+
+    private static <T> T errorHandler(T v, Throwable err) {
+        if (err != null) {
+            Throwable cause = (err instanceof CompletionException) ? err.getCause() : err;
+            if (cause instanceof ClientError) {
+                throw new ClientException(cause);
+            }
+
+            throw (RuntimeException) err;
+        }
+
+        return v;
     }
 }

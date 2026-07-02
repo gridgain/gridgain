@@ -492,6 +492,44 @@ public class CacheEntryListenersTest extends AbstractThinClientTest {
         }
     }
 
+    /** Test disconnect event for cache entry listeners registered asynchronously. */
+    @Test
+    public void testDisconnectListenersAsync() throws Exception {
+        try (IgniteClient client = startClient(0, 1, 2)) {
+            ClientCache<Object, Object> cache = client.getOrCreateCache("testDisconnectAsync");
+
+            ContinuousQueryListener<Object, Object> lsnr1 = new ContinuousQueryListener<>();
+
+            cache.query(new ContinuousQuery<>().setLocalListener(lsnr1), lsnr1);
+
+            JCacheEntryListener<Object, Object> lsnr2 = new JCacheEntryListener<>();
+
+            CacheEntryListenerConfiguration<Object, Object> lsnrCfg = new MutableCacheEntryListenerConfiguration<>(
+                () -> lsnr2, null, true, false);
+
+            cache.registerCacheEntryListenerAsync(lsnrCfg, lsnr2).get();
+
+            cache.putAsync(0, 0).get();
+
+            lsnr1.assertNextCacheEvent(EventType.CREATED, 0, 0);
+            lsnr2.assertNextCacheEvent(EventType.CREATED, 0, 0);
+
+            dropAllThinClientConnections();
+
+            // Can't detect channel failure until we send something to server.
+            cache.putAsync(1, 1).get();
+
+            assertTrue(lsnr1.isQueueEmpty());
+            assertTrue(lsnr2.isQueueEmpty());
+
+            assertTrue(waitForCondition(lsnr1::isDisconnected, TIMEOUT));
+            assertTrue(waitForCondition(lsnr2::isDisconnected, TIMEOUT));
+
+            // Should be able to register the same listener on the same cache again.
+            cache.registerCacheEntryListenerAsync(lsnrCfg).get();
+        }
+    }
+
     /** */
     @Test
     @SuppressWarnings("ThrowableNotThrown")
@@ -524,8 +562,45 @@ public class CacheEntryListenersTest extends AbstractThinClientTest {
 
             cache3.deregisterCacheEntryListener(lsnrCfg);
 
-            // Can register the listener after deregisteration.
+            // Can register the listener after deregistration.
             cache2.registerCacheEntryListener(lsnrCfg);
+        }
+    }
+
+    /** */
+    @Test
+    @SuppressWarnings("ThrowableNotThrown")
+    public void testRegisterDeregisterListenerAsync() throws Exception {
+        try (IgniteClient client = startClient(0, 1, 2)) {
+            String cacheName = "registerListenerAsync";
+
+            ClientCache<Integer, Integer> cache0 = client.getOrCreateCache(cacheName);
+
+            CacheEntryListenerConfiguration<Integer, Integer> lsnrCfg = new MutableCacheEntryListenerConfiguration<>(
+                JCacheEntryListener::new,
+                null,
+                true,
+                false
+            );
+
+            cache0.registerCacheEntryListenerAsync(lsnrCfg).get();
+
+            ClientCache<Integer, Integer> cache1 = client.getOrCreateCache(cacheName + '2');
+
+            // Can register the same listener on another cache.
+            cache1.registerCacheEntryListenerAsync(lsnrCfg).get();
+
+            ClientCache<Integer, Integer> cache2 = client.cache(cacheName);
+
+            // Can't register the same listener on the same cache.
+            assertThrowsWithCause(() -> cache2.registerCacheEntryListenerAsync(lsnrCfg).get(), IllegalStateException.class);
+
+            ClientCache<Integer, Integer> cache3 = client.cache(cacheName);
+
+            cache3.deregisterCacheEntryListenerAsync(lsnrCfg).get();
+
+            // Can register the listener after deregistration.
+            cache2.registerCacheEntryListenerAsync(lsnrCfg).get();
         }
     }
 
@@ -593,6 +668,35 @@ public class CacheEntryListenersTest extends AbstractThinClientTest {
         }
     }
 
+    /** Checks that {@code registerCacheEntryListenerAsync} rejects unsupported parameters synchronously, same as the sync version. */
+    @Test
+    @SuppressWarnings("ThrowableNotThrown")
+    public void testListenersUnsupportedParametersAsync() throws Exception {
+        try (IgniteClient client = startClient(0, 1, 2)) {
+            ClientCache<Integer, Integer> cache = client.getOrCreateCache("testUnsupportedParamsAsync");
+
+            // Check null listener factory.
+            CacheEntryListenerConfiguration<Integer, Integer> lsnrCfg1 = new MutableCacheEntryListenerConfiguration<>(
+                null,
+                null,
+                true,
+                false
+            );
+
+            assertThrowsWithCause(() -> cache.registerCacheEntryListenerAsync(lsnrCfg1), NullPointerException.class);
+
+            // Check synchronous flag.
+            CacheEntryListenerConfiguration<Integer, Integer> lsnrCfg2 = new MutableCacheEntryListenerConfiguration<>(
+                JCacheEntryListener::new,
+                null,
+                true,
+                true
+            );
+
+            assertThrowsWithCause(() -> cache.registerCacheEntryListenerAsync(lsnrCfg2), IllegalArgumentException.class);
+        }
+    }
+
     /** */
     @Test
     public void testListenersClose() throws Exception {
@@ -620,6 +724,39 @@ public class CacheEntryListenersTest extends AbstractThinClientTest {
 
             for (int i = 0; i < 100; i++)
                 cache.put(i, i);
+
+            assertTrue(lsnr1.isQueueEmpty());
+            assertTrue(lsnr2.isQueueEmpty());
+        }
+    }
+
+    /** */
+    @Test
+    public void testListenersCloseAsync() throws Exception {
+        try (IgniteClient client = startClient(0, 1, 2)) {
+            ClientCache<Integer, Integer> cache = client.getOrCreateCache("testListenersCloseAsync");
+
+            ContinuousQueryListener<Integer, Integer> lsnr1 = new ContinuousQueryListener<>();
+
+            QueryCursor<?> qry = cache.query(new ContinuousQuery<Integer, Integer>().setLocalListener(lsnr1));
+
+            JCacheEntryListener<Integer, Integer> lsnr2 = new JCacheEntryListener<>();
+
+            CacheEntryListenerConfiguration<Integer, Integer> lsnrCfg = new MutableCacheEntryListenerConfiguration<>(
+                () -> lsnr2, null, true, false);
+
+            cache.registerCacheEntryListenerAsync(lsnrCfg).get();
+
+            cache.putAsync(0, 0).get();
+
+            lsnr1.assertNextCacheEvent(EventType.CREATED, 0, 0);
+            lsnr2.assertNextCacheEvent(EventType.CREATED, 0, 0);
+
+            qry.close();
+            cache.deregisterCacheEntryListenerAsync(lsnrCfg).get();
+
+            for (int i = 0; i < 100; i++)
+                cache.putAsync(i, i).get();
 
             assertTrue(lsnr1.isQueueEmpty());
             assertTrue(lsnr2.isQueueEmpty());

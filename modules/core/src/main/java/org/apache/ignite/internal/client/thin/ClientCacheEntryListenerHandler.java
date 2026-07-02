@@ -19,6 +19,10 @@ package org.apache.ignite.internal.client.thin;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.cache.Cache;
@@ -30,6 +34,7 @@ import javax.cache.event.EventType;
 import org.apache.ignite.cache.query.ContinuousQuery;
 import org.apache.ignite.client.ClientDisconnectListener;
 import org.apache.ignite.client.ClientException;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.binary.GridBinaryMarshaller;
 import org.apache.ignite.internal.binary.streams.BinaryByteBufferInputStream;
 import org.apache.ignite.internal.binary.streams.BinaryInputStream;
@@ -59,17 +64,17 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
     /** */
     private final ClientUtils utils;
 
+    private final CompletableFuture<T2<ClientChannel, Long>> clientChFut = new CompletableFuture<>();
+
+    private final IgniteClientFuture<Void> closeFut = new IgniteClientFutureImpl<>(new CompletableFuture<>());
+
+    private final AtomicInteger state = new AtomicInteger(0);
+
     /** */
     private volatile CacheEntryUpdatedListener<K, V> locLsnr;
 
     /** */
     private volatile ClientDisconnectListener disconnectLsnr;
-
-    /** */
-    private volatile ClientChannel clientCh;
-
-    /** */
-    private volatile Long rsrcId;
 
     /** */
     ClientCacheEntryListenerHandler(
@@ -87,7 +92,23 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
     /**
      * Send request to the server and start
      */
-    public synchronized void startListen(
+    public void startListen(
+        CacheEntryUpdatedListener<K, V> locLsnr,
+        ClientDisconnectListener disconnectLsnr,
+        Factory<? extends CacheEntryEventFilter<? super K, ? super V>> rmtFilterFactory,
+        int pageSize,
+        long timeInterval,
+        boolean includeExpired
+    ) {
+        ClientUtils.syncResult(
+                startListenAsync(locLsnr, disconnectLsnr, rmtFilterFactory, pageSize, timeInterval, includeExpired)
+        );
+   }
+
+    /**
+     * Send request to the server and start listening asynchronously.
+     */
+    public IgniteClientFuture<Void> startListenAsync(
         CacheEntryUpdatedListener<K, V> locLsnr,
         ClientDisconnectListener disconnectLsnr,
         Factory<? extends CacheEntryEventFilter<? super K, ? super V>> rmtFilterFactory,
@@ -96,14 +117,36 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
         boolean includeExpired
     ) {
         assert locLsnr != null;
+        if (state.compareAndSet(0, 1)) {
+                this.locLsnr = locLsnr;
+                this.disconnectLsnr = disconnectLsnr;
 
-        if (clientCh != null)
-            throw new IllegalStateException("Listener was already started");
+                Consumer<PayloadOutputChannel> qryWriter = queryWriter(pageSize, timeInterval, includeExpired, rmtFilterFactory);
+                Function<PayloadInputChannel, T2<ClientChannel, Long>> qryReader = queryReader();
 
-        this.locLsnr = locLsnr;
-        this.disconnectLsnr = disconnectLsnr;
+                ch.serviceAsync(ClientOperation.QUERY_CONTINUOUS, qryWriter, qryReader)
+                        .whenComplete((params, err) -> {
+                            if (err != null) {
+                                Throwable cause = (err instanceof CompletionException) ? err.getCause() : err;
+                                Throwable publicErr = (cause instanceof ClientError) ? new ClientException(cause) : cause;
+                                clientChFut.completeExceptionally(publicErr);
+                            } else {
+                                clientChFut.complete(params);
+                            }
+                        });
+        }
 
-        Consumer<PayloadOutputChannel> qryWriter = payloadCh -> {
+        return new IgniteClientFutureImpl<>(clientChFut.thenAccept(params -> {}));
+    }
+
+    /** */
+    private Consumer<PayloadOutputChannel> queryWriter(
+        int pageSize,
+        long timeInterval,
+        boolean includeExpired,
+        Factory<? extends CacheEntryEventFilter<? super K, ? super V>> rmtFilterFactory
+    ) {
+        return payloadCh -> {
             BinaryOutputStream out = payloadCh.out();
 
             out.writeInt(ClientUtils.cacheId(jCacheAdapter.getName()));
@@ -119,8 +162,11 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
                 out.writeByte(JAVA_PLATFORM);
             }
         };
+    }
 
-        Function<PayloadInputChannel, T2<ClientChannel, Long>> qryReader = payloadCh -> {
+    /** */
+    private Function<PayloadInputChannel, T2<ClientChannel, Long>> queryReader() {
+        return payloadCh -> {
             ClientChannel ch = payloadCh.clientChannel();
             Long rsrcId = payloadCh.in().readLong();
 
@@ -128,16 +174,6 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
 
             return new T2<>(ch, rsrcId);
         };
-
-        try {
-            T2<ClientChannel, Long> params = ch.service(ClientOperation.QUERY_CONTINUOUS, qryWriter, qryReader);
-
-            clientCh = params.get1();
-            rsrcId = params.get2();
-        }
-        catch (ClientError e) {
-            throw new ClientException(e);
-        }
     }
 
     /** {@inheritDoc} */
@@ -178,21 +214,68 @@ public class ClientCacheEntryListenerHandler<K, V> implements NotificationListen
     }
 
     /** {@inheritDoc} */
-    @Override public synchronized void close() {
-        ClientChannel clientCh = this.clientCh;
+    @Override public void close() {
+        ClientUtils.syncResult(closeAsync());
+    }
 
-        if (clientCh != null && !clientCh.closed()) {
-            clientCh.removeNotificationListener(CONTINUOUS_QUERY_EVENT, rsrcId);
-
-            clientCh.service(ClientOperation.RESOURCE_CLOSE, ch -> ch.out().writeLong(rsrcId), null);
+    /**
+     * Stop listening asynchronously.
+     */
+    public IgniteClientFuture<Void> closeAsync() {
+        // Seems a bit silly but maintains compatibility with the previous version.
+        if (state.get() == 0) {
+            return IgniteClientFutureImpl.completedFuture(null);
         }
+
+        if (state.compareAndSet(1, 2)) {
+            clientChFut.thenCompose(p -> {
+                        ClientChannel clientCh = p.get1();
+                        Long rsrcId = p.get2();
+
+                        if (clientCh.closed()) {
+                            return IgniteClientFutureImpl.completedFuture(null);
+                        }
+
+                        clientCh.removeNotificationListener(CONTINUOUS_QUERY_EVENT, rsrcId);
+
+                        return clientCh.serviceAsync(
+                                ClientOperation.RESOURCE_CLOSE,
+                                ch -> ch.out().writeLong(rsrcId),
+                                null
+                        );
+                    })
+                    .whenComplete((v, err) -> {
+                        CompletableFuture<Void> cp = closeFut.toCompletableFuture();
+                        if (err != null) {
+                            cp.completeExceptionally(err);
+                        } else {
+                            cp.complete(null);
+                        }
+                    });
+        }
+
+        return closeFut;
+    }
+
+    static <T> IgniteClientFuture<T> grabReference(AtomicReference<IgniteClientFuture<T>> ref) {
+        IgniteClientFuture<T> fut = ref.get();
+        if (fut == null) {
+            IgniteClientFuture<T> newFut = new IgniteClientFutureImpl<>(new CompletableFuture<>());
+            if (ref.compareAndSet(null, newFut)) {
+                fut = newFut;
+            } else {
+                fut = ref.get();
+            }
+        }
+
+        return fut;
     }
 
     /**
      * Client channel.
      */
     public ClientChannel clientChannel() {
-        return clientCh;
+        return ClientUtils.syncResult(clientChFut.thenApply(T2::get1));
     }
 
     /** */

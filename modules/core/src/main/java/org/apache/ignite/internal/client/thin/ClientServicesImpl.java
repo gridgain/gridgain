@@ -29,6 +29,7 @@ import org.apache.ignite.client.ClientException;
 import org.apache.ignite.client.ClientFeatureNotSupportedByServerException;
 import org.apache.ignite.client.ClientServiceDescriptor;
 import org.apache.ignite.client.ClientServices;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.binary.BinaryRawWriterEx;
 import org.apache.ignite.internal.binary.BinaryReaderExImpl;
 import org.apache.ignite.internal.processors.service.ServiceCallContextImpl;
@@ -100,46 +101,60 @@ class ClientServicesImpl implements ClientServices {
 
     /** {@inheritDoc} */
     @Override public Collection<ClientServiceDescriptor> serviceDescriptors() {
-        return ch.service(ClientOperation.SERVICE_GET_DESCRIPTORS,
-            req -> checkGetServiceDescriptorsSupported(req.clientChannel().protocolCtx()),
-            res -> {
-                try (BinaryReaderExImpl reader = utils.createBinaryReader(res.in())) {
-                    int sz = res.in().readInt();
+        return ClientUtils.syncResult(serviceDescriptorsAsync());
+    }
 
-                    Collection<ClientServiceDescriptor> svcs = new ArrayList<>(sz);
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Collection<ClientServiceDescriptor>> serviceDescriptorsAsync() {
+        return new IgniteClientFutureImpl<>(
+            ch.serviceAsync(ClientOperation.SERVICE_GET_DESCRIPTORS,
+                req -> checkGetServiceDescriptorsSupported(req.clientChannel().protocolCtx()),
+                res -> {
+                    try (BinaryReaderExImpl reader = utils.createBinaryReader(res.in())) {
+                        int sz = res.in().readInt();
 
-                    for (int i = 0; i < sz; i++)
-                        svcs.add(readServiceDescriptor(reader));
+                        Collection<ClientServiceDescriptor> svcs = new ArrayList<>(sz);
 
-                    return svcs;
+                        for (int i = 0; i < sz; i++)
+                            svcs.add(readServiceDescriptor(reader));
+
+                        return svcs;
+                    }
+                    catch (IOException e) {
+                        throw new ClientError(e);
+                    }
                 }
-                catch (IOException e) {
-                    throw new ClientError(e);
-                }
-            }
+            )
         );
     }
 
     /** {@inheritDoc} */
     @Override public ClientServiceDescriptor serviceDescriptor(String name) {
+        return ClientUtils.syncResult(serviceDescriptorAsync(name));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<ClientServiceDescriptor> serviceDescriptorAsync(String name) {
         A.notNullOrEmpty(name, "name");
 
-        return ch.service(ClientOperation.SERVICE_GET_DESCRIPTOR,
-            req -> {
-                checkGetServiceDescriptorsSupported(req.clientChannel().protocolCtx());
+        return new IgniteClientFutureImpl<>(
+            ch.serviceAsync(ClientOperation.SERVICE_GET_DESCRIPTOR,
+                req -> {
+                    checkGetServiceDescriptorsSupported(req.clientChannel().protocolCtx());
 
-                try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
-                    writer.writeString(name);
+                    try (BinaryRawWriterEx writer = utils.createBinaryWriter(req.out())) {
+                        writer.writeString(name);
+                    }
+                },
+                res -> {
+                    try (BinaryReaderExImpl reader = utils.createBinaryReader(res.in())) {
+                        return readServiceDescriptor(reader);
+                    }
+                    catch (IOException e) {
+                        throw new ClientError(e);
+                    }
                 }
-            },
-            res -> {
-                try (BinaryReaderExImpl reader = utils.createBinaryReader(res.in())) {
-                    return readServiceDescriptor(reader);
-                }
-                catch (IOException e) {
-                    throw new ClientError(e);
-                }
-            }
+            )
         );
     }
 

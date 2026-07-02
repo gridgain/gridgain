@@ -930,6 +930,23 @@ public interface ClientCache<K, V> {
     public void registerCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration);
 
     /**
+     * Registers a {@link CacheEntryListener} asynchronously. The supplied {@link CacheEntryListenerConfiguration} is
+     * used to instantiate a listener and apply it to those events specified in the configuration.
+     * <p>
+     * NOTE: There is no failover in case of client channel failure, this event should be handled on the user's side.
+     * Use {@link #registerCacheEntryListenerAsync(CacheEntryListenerConfiguration, ClientDisconnectListener)} method
+     * to get notified about client disconnected event via {@link ClientDisconnectListener} interface if you need it.
+     *
+     * @param cacheEntryListenerConfiguration a factory and related configuration for creating the listener.
+     * @return a Future representing pending completion of the operation.
+     * @throws IllegalArgumentException if the same CacheEntryListenerConfiguration is used more than once or
+     *          if some properties are unsupported by thin client.
+     * @see CacheEntryListener
+     */
+    public IgniteClientFuture<Void> registerCacheEntryListenerAsync(
+        CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration);
+
+    /**
      * Registers a {@link CacheEntryListener}. The supplied {@link CacheEntryListenerConfiguration} is used to
      * instantiate a listener and apply it to those events specified in the configuration.
      * <p>
@@ -946,10 +963,39 @@ public interface ClientCache<K, V> {
         ClientDisconnectListener disconnectListener);
 
     /**
+     * Registers a {@link CacheEntryListener} asynchronously. The supplied {@link CacheEntryListenerConfiguration} is
+     * used to instantiate a listener and apply it to those events specified in the configuration.
+     * <p>
+     * NOTE: There is no failover in case of client channel failure, this event should be handled on the user's side.
+     * Use {@code disconnectListener} to handle this.
+     *
+     * @param cacheEntryListenerConfiguration a factory and related configuration for creating the listener.
+     * @param disconnectListener Listener of client disconnected event.
+     * @return a Future representing pending completion of the operation.
+     * @throws IllegalArgumentException if the same CacheEntryListenerConfiguration is used more than once or
+     *          if some properties are unsupported by thin client.
+     * @see CacheEntryListener
+     */
+    public IgniteClientFuture<Void> registerCacheEntryListenerAsync(
+        CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration,
+        ClientDisconnectListener disconnectListener);
+
+    /**
      * Deregisters a listener, using the {@link CacheEntryListenerConfiguration} that was used to register it.
      *
      * @param cacheEntryListenerConfiguration the factory and related configuration that was used to create the
      *         listener.
      */
     public void deregisterCacheEntryListener(CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration);
+
+    /**
+     * Deregisters a listener asynchronously, using the {@link CacheEntryListenerConfiguration} that was used to
+     * register it.
+     *
+     * @param cacheEntryListenerConfiguration the factory and related configuration that was used to create the
+     *         listener.
+     * @return a Future representing pending completion of the operation.
+     */
+    public IgniteClientFuture<Void> deregisterCacheEntryListenerAsync(
+        CacheEntryListenerConfiguration<K, V> cacheEntryListenerConfiguration);
 }

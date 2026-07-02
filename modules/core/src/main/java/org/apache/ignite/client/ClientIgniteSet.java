@@ -40,20 +40,71 @@ public interface ClientIgniteSet<T> extends Set<T>, Closeable {
     /** {@inheritDoc} */
     @Override boolean add(T o);
 
+    /**
+     * Adds the specified element to this set asynchronously.
+     *
+     * @param o Element.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         did not already contain the specified element, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> addAsync(T o);
+
     /** {@inheritDoc} */
     @Override boolean addAll(Collection<? extends T> c);
+
+    /**
+     * Adds all the elements in the specified collection to this set asynchronously.
+     *
+     * @param c Collection.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         changed as a result of the call, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> addAllAsync(Collection<? extends T> c);
 
     /** {@inheritDoc} */
     @Override void clear();
 
+    /**
+     * Removes all the elements from this set asynchronously.
+     *
+     * @return a Future representing pending completion of the operation.
+     */
+    IgniteClientFuture<Void> clearAsync();
+
     /** {@inheritDoc} */
     @Override boolean contains(Object o);
+
+    /**
+     * Checks whether this set contains the specified element asynchronously.
+     *
+     * @param o Element.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         contains the specified element, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> containsAsync(Object o);
 
     /** {@inheritDoc} */
     @Override boolean containsAll(Collection<?> c);
 
+    /**
+     * Checks whether this set contains all the elements in the specified collection asynchronously.
+     *
+     * @param c Collection.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         contains all the elements in the specified collection, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> containsAllAsync(Collection<?> c);
+
     /** {@inheritDoc} */
     @Override boolean isEmpty();
+
+    /**
+     * Checks whether this set is empty asynchronously.
+     *
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         contains no elements, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> isEmptyAsync();
 
     /**
      * Returns an iterator over the elements in this collection.
@@ -72,14 +123,49 @@ public interface ClientIgniteSet<T> extends Set<T>, Closeable {
     /** {@inheritDoc} */
     @Override boolean remove(Object o);
 
+    /**
+     * Removes the specified element from this set asynchronously.
+     *
+     * @param o Element.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         contained the specified element, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> removeAsync(Object o);
+
     /** {@inheritDoc} */
     @Override boolean removeAll(Collection<?> c);
+
+    /**
+     * Removes all the elements in the specified collection from this set asynchronously.
+     *
+     * @param c Collection.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         changed as a result of the call, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> removeAllAsync(Collection<?> c);
 
     /** {@inheritDoc} */
     @Override boolean retainAll(Collection<?> c);
 
+    /**
+     * Retains only the elements in this set that are contained in the specified collection asynchronously.
+     *
+     * @param c Collection.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if this set
+     *         changed as a result of the call, {@code false} otherwise.
+     */
+    IgniteClientFuture<Boolean> retainAllAsync(Collection<?> c);
+
     /** {@inheritDoc} */
     @Override int size();
+
+    /**
+     * Returns the number of elements in this set asynchronously.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the number of elements
+     *         in this set.
+     */
+    IgniteClientFuture<Integer> sizeAsync();
 
     /** {@inheritDoc} */
     @Override Object[] toArray();

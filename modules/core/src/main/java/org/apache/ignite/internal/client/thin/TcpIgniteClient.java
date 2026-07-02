@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -436,25 +437,50 @@ public class TcpIgniteClient implements IgniteClient {
         return atomicLong(name, null, initVal, create);
     }
 
+    @Override public IgniteClientFuture<ClientAtomicLong> atomicLongAsync(String name, long initVal, boolean create) {
+        return atomicLongAsync(name, null, initVal, create);
+    }
+
     /** {@inheritDoc} */
     @Override public ClientAtomicLong atomicLong(String name, ClientAtomicConfiguration cfg, long initVal, boolean create) {
+        return ClientUtils.syncResult(atomicLongAsync(name, cfg, initVal, create));
+    }
+
+    @Override public IgniteClientFuture<ClientAtomicLong> atomicLongAsync(String name, ClientAtomicConfiguration cfg, long initVal, boolean create) {
         GridArgumentCheck.notNull(name, "name");
 
+        IgniteClientFuture<?> fut;
         if (create) {
-            ch.service(ClientOperation.ATOMIC_LONG_CREATE, out -> {
-                writeString(name, out.out());
-                out.out().writeLong(initVal);
-                writeClientAtomicConfiguration(cfg, out);
-            }, null);
+            fut = ch.serviceAsync(
+                    ClientOperation.ATOMIC_LONG_CREATE,
+                    out -> {
+                        writeString(name, out.out());
+                        out.out().writeLong(initVal);
+                        writeClientAtomicConfiguration(cfg, out);
+                    },
+                    null
+            );
+        } else {
+            fut = IgniteClientFutureImpl.completedFuture(null);
         }
 
-        ClientAtomicLong res = new ClientAtomicLongImpl(name, cfg != null ? cfg.getGroupName() : null, ch);
+        return new IgniteClientFutureImpl<>(
+                fut.thenCompose(ignore -> {
+                    ClientAtomicLong res = new ClientAtomicLongImpl(name, cfg != null ? cfg.getGroupName() : null, ch);
+                    if (create) {
+                        return CompletableFuture.completedFuture(res);
+                    } else {
+                        return res.removedAsync().thenApply(removed -> {
+                            if (removed) {
+                                // If the atomic long was removed, we need to return null to match IgniteKernal behavior.
+                                return null;
+                            }
 
-        // Return null when specified atomic long does not exist to match IgniteKernal behavior.
-        if (!create && res.removed())
-            return null;
-
-        return res;
+                            return res;
+                        });
+                    }
+                })
+        );
     }
 
     /** {@inheritDoc} */
@@ -486,8 +512,40 @@ public class TcpIgniteClient implements IgniteClient {
     }
 
     /** {@inheritDoc} */
+    @Override public <T> IgniteClientFuture<ClientIgniteSet<T>> setAsync(String name, @Nullable ClientCollectionConfiguration cfg) {
+        GridArgumentCheck.notNull(name, "name");
+
+        return ch.serviceAsync(ClientOperation.OP_SET_GET_OR_CREATE, out -> {
+            writeString(name, out.out());
+
+            if (cfg != null) {
+                out.out().writeBoolean(true);
+                out.out().writeByte((byte)cfg.getAtomicityMode().ordinal());
+                out.out().writeByte((byte)cfg.getCacheMode().ordinal());
+                out.out().writeInt(cfg.getBackups());
+                writeString(cfg.getGroupName(), out.out());
+                out.out().writeBoolean(cfg.isColocated());
+            }
+            else
+                out.out().writeBoolean(false);
+        }, in -> {
+            if (!in.in().readBoolean())
+                return null;
+
+            boolean colocated = in.in().readBoolean();
+            int cacheId = in.in().readInt();
+
+            return new ClientIgniteSetImpl<>(ch, serDes, name, colocated, cacheId);
+        });
+    }
+
+    /** {@inheritDoc} */
     @Override public ClientAtomicSequence atomicSequence(String name, long initVal, boolean create) throws IgniteException {
         return atomicSequence(name, null, initVal, create);
+    }
+
+    @Override public IgniteClientFuture<ClientAtomicSequence> atomicSequenceAsync(String name, long initVal, boolean create) throws IgniteException {
+        return atomicSequenceAsync(name, null, initVal, create);
     }
 
     /** {@inheritDoc} */
@@ -520,6 +578,64 @@ public class TcpIgniteClient implements IgniteClient {
 
             throw e;
         }
+    }
+
+    @Override public IgniteClientFuture<ClientAtomicSequence> atomicSequenceAsync(String name, ClientAtomicConfiguration cfg, long initVal, boolean create) {
+        GridArgumentCheck.notNull(name, "name");
+
+        @Nullable String groupName;
+        int batchSize;
+        if (cfg != null) {
+            groupName = cfg.getGroupName();
+            batchSize = cfg.getAtomicSequenceReserveSize();
+        } else {
+            groupName = null;
+            batchSize = DFLT_ATOMIC_SEQUENCE_RESERVE_SIZE;
+        }
+        int cacheId = ClientUtils.atomicsCacheId(name, groupName);
+
+        IgniteClientFuture<?> fut;
+        if (create) {
+            fut = ch.serviceAsync(ClientOperation.ATOMIC_SEQUENCE_CREATE, out -> {
+                writeString(name, out.out());
+                out.out().writeLong(initVal);
+                writeClientAtomicConfiguration(cfg, out);
+            }, null);
+        } else {
+            fut = IgniteClientFutureImpl.completedFuture(null);
+        }
+
+        return new IgniteClientFutureImpl<>(
+                fut.thenCompose(ignored -> {
+                    return ch.affinityServiceAsync(
+                            cacheId,
+                            name,
+                            ClientOperation.ATOMIC_SEQUENCE_VALUE_GET,
+                            out -> AbstractClientAtomic.writeName(out, name, groupName),
+                            in -> in.in().readLong()
+                    );
+                })
+                .thenApply(v -> (ClientAtomicSequence) new ClientAtomicSequenceImpl(name, groupName, batchSize, ch, v))
+                .handle((v, err) -> {
+                    if (err != null) {
+                        // Unwrap CompletionException
+                        Throwable actual = err instanceof CompletionException ? err.getCause() : err;
+                        if (actual instanceof ClientException) {
+                            Throwable cause = actual.getCause();
+
+                            if (cause instanceof ClientServerError &&
+                                    ((ClientServerError) cause).getCode() == ClientStatus.RESOURCE_DOES_NOT_EXIST) {
+                                // Return null when specified sequence does not exist to match IgniteKernal behavior.
+                                return null;
+                            }
+                        }
+
+                        throw (RuntimeException) err;
+                    }
+
+                    return v;
+                })
+        );
     }
 
     /**

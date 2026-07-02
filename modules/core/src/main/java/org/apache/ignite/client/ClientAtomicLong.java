@@ -75,6 +75,15 @@ public interface ClientAtomicLong extends Closeable {
     public long get() throws IgniteException;
 
     /**
+     * Gets current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the current value of atomic long.
+     */
+    public IgniteClientFuture<Long> getAsync();
+
+    /**
      * Increments and gets current value of atomic long.
      *
      * @return Value.
@@ -82,11 +91,29 @@ public interface ClientAtomicLong extends Closeable {
     public long incrementAndGet() throws IgniteException;
 
     /**
+     * Increments and gets current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> incrementAndGetAsync();
+
+    /**
      * Gets and increments current value of atomic long.
      *
      * @return Value.
      */
     public long getAndIncrement() throws IgniteException;
+
+    /**
+     * Gets and increments current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> getAndIncrementAsync();
 
     /**
      * Adds {@code l} and gets current value of atomic long.
@@ -97,12 +124,32 @@ public interface ClientAtomicLong extends Closeable {
     public long addAndGet(long l) throws IgniteException;
 
     /**
+     * Adds {@code l} and gets current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @param l Number which will be added.
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> addAndGetAsync(long l);
+
+    /**
      * Gets current value of atomic long and adds {@code l}.
      *
      * @param l Number which will be added.
      * @return Value.
      */
     public long getAndAdd(long l) throws IgniteException;
+
+    /**
+     * Gets current value of atomic long and adds {@code l} asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @param l Number which will be added.
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> getAndAddAsync(long l);
 
     /**
      * Decrements and gets current value of atomic long.
@@ -112,11 +159,29 @@ public interface ClientAtomicLong extends Closeable {
     public long decrementAndGet() throws IgniteException;
 
     /**
+     * Decrements and gets current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> decrementAndGetAsync();
+
+    /**
      * Gets and decrements current value of atomic long.
      *
      * @return Value.
      */
     public long getAndDecrement() throws IgniteException;
+
+    /**
+     * Gets and decrements current value of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> getAndDecrementAsync();
 
     /**
      * Gets current value of atomic long and sets new value {@code l} of atomic long.
@@ -125,6 +190,16 @@ public interface ClientAtomicLong extends Closeable {
      * @return Value.
      */
     public long getAndSet(long l) throws IgniteException;
+
+    /**
+     * Gets current value of atomic long and sets new value {@code l} of atomic long asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @param l New value of atomic long.
+     * @return a Future representing pending completion of the operation, which wraps the value.
+     */
+    public IgniteClientFuture<Long> getAndSetAsync(long l);
 
     /**
      * Atomically compares current value to the expected value, and if they are equal, sets current value
@@ -137,11 +212,32 @@ public interface ClientAtomicLong extends Closeable {
     public boolean compareAndSet(long expVal, long newVal) throws IgniteException;
 
     /**
+     * Atomically compares current value to the expected value, and if they are equal, sets current value
+     * to new value, asynchronously.
+     * <p>
+     * May be completed exceptionally with {@link IgniteException} if the operation fails.
+     *
+     * @param expVal Expected atomic long's value.
+     * @param newVal New atomic long's value to set if current value equal to expected value.
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if comparison
+     *         succeeded, {@code false} otherwise.
+     */
+    public IgniteClientFuture<Boolean> compareAndSetAsync(long expVal, long newVal);
+
+    /**
      * Gets status of atomic.
      *
      * @return {@code true} if atomic was removed from cache, {@code false} in other case.
      */
     public boolean removed();
+
+    /**
+     * Gets status of atomic asynchronously.
+     *
+     * @return a Future representing pending completion of the operation, which wraps {@code true} if atomic was
+     *         removed from cache, {@code false} in other case.
+     */
+    public IgniteClientFuture<Boolean> removedAsync();
 
     /**
      * Removes this atomic long.

@@ -18,8 +18,11 @@ package org.apache.ignite.internal.client.thin;
 
 import org.apache.ignite.IgniteException;
 import org.apache.ignite.client.ClientAtomicLong;
+import org.apache.ignite.client.IgniteClientFuture;
 import org.apache.ignite.internal.util.typedef.internal.S;
 import org.jetbrains.annotations.Nullable;
+
+import static org.apache.ignite.internal.client.thin.ClientUtils.syncResult;
 
 /**
  * Client atomic long.
@@ -43,22 +46,43 @@ class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicL
 
     /** {@inheritDoc} */
     @Override public long get() throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET, this::writeName, in -> in.in().readLong());
+        return syncResult(getAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAsync() throws IgniteException {
+        return ch.affinityServiceAsync(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET, this::writeName, in -> in.in().readLong());
     }
 
     /** {@inheritDoc} */
     @Override public long incrementAndGet() throws IgniteException {
-        return addAndGet(1);
+        return syncResult(incrementAndGetAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> incrementAndGetAsync() throws IgniteException {
+        return addAndGetAsync(1);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndIncrement() throws IgniteException {
-        return incrementAndGet() - 1;
+        return syncResult(getAndIncrementAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndIncrementAsync() throws IgniteException {
+        // Same implementation as the sync version.
+        return new IgniteClientFutureImpl<>(incrementAndGetAsync().thenApply(v -> v - 1));
     }
 
     /** {@inheritDoc} */
     @Override public long addAndGet(long l) throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_ADD_AND_GET, out -> {
+        return syncResult(addAndGetAsync(l));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> addAndGetAsync(long l) throws IgniteException {
+        return ch.affinityServiceAsync(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_ADD_AND_GET, out -> {
             writeName(out);
             out.out().writeLong(l);
         }, in -> in.in().readLong());
@@ -66,22 +90,42 @@ class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicL
 
     /** {@inheritDoc} */
     @Override public long getAndAdd(long l) throws IgniteException {
-        return addAndGet(l) - l;
+        return syncResult(getAndAddAsync(l));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndAddAsync(long l) throws IgniteException {
+        return new IgniteClientFutureImpl<>(addAndGetAsync(l).thenApply(v -> v - l));
     }
 
     /** {@inheritDoc} */
     @Override public long decrementAndGet() throws IgniteException {
-        return addAndGet(-1);
+        return syncResult(decrementAndGetAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> decrementAndGetAsync() throws IgniteException {
+        return addAndGetAsync(-1);
     }
 
     /** {@inheritDoc} */
     @Override public long getAndDecrement() throws IgniteException {
-        return decrementAndGet() + 1;
+        return syncResult(getAndDecrementAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndDecrementAsync() throws IgniteException {
+        return new IgniteClientFutureImpl<>(decrementAndGetAsync().thenApply(v -> v + 1));
     }
 
     /** {@inheritDoc} */
     @Override public long getAndSet(long l) throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET_AND_SET, out -> {
+        return syncResult(getAndSetAsync(l));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Long> getAndSetAsync(long l) throws IgniteException {
+        return ch.affinityServiceAsync(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_GET_AND_SET, out -> {
             writeName(out);
             out.out().writeLong(l);
         }, in -> in.in().readLong());
@@ -89,7 +133,12 @@ class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicL
 
     /** {@inheritDoc} */
     @Override public boolean compareAndSet(long expVal, long newVal) throws IgniteException {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_COMPARE_AND_SET, out -> {
+        return syncResult(compareAndSetAsync(expVal, newVal));
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> compareAndSetAsync(long expVal, long newVal) throws IgniteException {
+        return ch.affinityServiceAsync(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_VALUE_COMPARE_AND_SET, out -> {
             writeName(out);
             out.out().writeLong(expVal);
             out.out().writeLong(newVal);
@@ -98,8 +147,18 @@ class ClientAtomicLongImpl extends AbstractClientAtomic implements ClientAtomicL
 
     /** {@inheritDoc} */
     @Override public boolean removed() {
-        return ch.affinityService(cacheId, affinityKey(), ClientOperation.ATOMIC_LONG_EXISTS, this::writeName,
-                in -> !in.in().readBoolean());
+        return syncResult(removedAsync());
+    }
+
+    /** {@inheritDoc} */
+    @Override public IgniteClientFuture<Boolean> removedAsync() {
+        return ch.affinityServiceAsync(
+                cacheId,
+                affinityKey(),
+                ClientOperation.ATOMIC_LONG_EXISTS,
+                this::writeName,
+                in -> !in.in().readBoolean()
+        );
     }
 
     /** {@inheritDoc} */
