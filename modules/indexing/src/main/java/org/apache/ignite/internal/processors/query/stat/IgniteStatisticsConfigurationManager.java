@@ -398,7 +398,7 @@ public class IgniteStatisticsConfigurationManager {
      */
     public void updateStatistics(StatisticsObjectConfiguration... targets) {
         if (log.isDebugEnabled())
-            log.debug("Update statistics [targets=" + targets + ']');
+            log.debug("Update statistics [targets=" + Arrays.toString(targets) + ']');
 
         for (StatisticsObjectConfiguration target : targets) {
 
