@@ -29,6 +29,7 @@ import org.junit.Test;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_AUTO_ADJUST_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE;
 import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_DISTRIBUTED_META_STORAGE_FEATURE;
+import static org.apache.ignite.internal.SupportFeaturesUtils.IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE;
 
 /**
  * Tests for OpenCensus based {@link TracingConfigurationManager#get(TracingConfigurationCoordinates)}.
@@ -50,6 +51,7 @@ public class OpenCensusTracingConfigurationSetTest extends AbstractTracingTest {
     @SystemPropertiesList({
         @WithSystemProperty(key = IGNITE_DISTRIBUTED_META_STORAGE_FEATURE, value = "false"),
         @WithSystemProperty(key = IGNITE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
+        @WithSystemProperty(key = IGNITE_SEPARATE_BASELINE_AUTO_ADJUST_FEATURE, value = "false"),
         @WithSystemProperty(key = IGNITE_BASELINE_FOR_IN_MEMORY_CACHES_FEATURE, value = "false")
     })
     public void testThatIgniteExceptionIsThrownIfMetastorageIsDisabled() {
