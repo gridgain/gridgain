@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#if NET8_0_OR_GREATER
 namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 {
     using System;
@@ -137,4 +136,3 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
         }
     }
 }
-#endif

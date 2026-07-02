@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#if NET8_0_OR_GREATER
 namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
 {
     using System;
@@ -33,24 +32,13 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
     /// <typeparam name="TK">Key type.</typeparam>
     /// <typeparam name="TV">Value type.</typeparam>
     /// <typeparam name="TInitial">Initial query cursor type.</typeparam>
-    internal sealed class ContinuousQueryAsyncHandle<TK, TV, TInitial>
+    internal sealed class ContinuousQueryAsyncHandle<TK, TV, TInitial>(
+        IDisposable handle,
+        Channel<ICacheEntryEvent<TK, TV>> channel,
+        Func<TInitial> initialCursor)
         : IContinuousQueryHandleAsync<TK, TV, TInitial>
     {
-        private readonly IDisposable _handle;
-        private readonly Channel<ICacheEntryEvent<TK, TV>> _channel;
-        private readonly Func<TInitial> _initialCursor;
-
         private int _eventsRequested;
-
-        public ContinuousQueryAsyncHandle(
-            IDisposable handle,
-            Channel<ICacheEntryEvent<TK, TV>> channel,
-            Func<TInitial> initialCursor)
-        {
-            _handle = handle;
-            _channel = channel;
-            _initialCursor = initialCursor;
-        }
 
         /** <inheritdoc /> */
         public IAsyncEnumerable<ICacheEntryEvent<TK, TV>> GetEvents()
@@ -60,26 +48,21 @@ namespace Apache.Ignite.Core.Impl.Cache.Query.Continuous
                 throw new InvalidOperationException("GetEvents can be called only once.");
             }
 
-            return ContinuousQueryAsync.ReadEvents(_channel.Reader);
+            return ContinuousQueryAsync.ReadEvents(channel.Reader);
         }
 
         /** <inheritdoc /> */
-        public TInitial GetInitialQueryCursor()
-        {
-            // Delegates to the underlying handle, which enforces the "only once" semantics.
-            return _initialCursor();
-        }
+        public TInitial GetInitialQueryCursor() => initialCursor();
 
         /** <inheritdoc /> */
         public ValueTask DisposeAsync()
         {
-            _handle.Dispose();
+            handle.Dispose();
 
             // Unblock a pending GetEvents() enumeration: the reader drains buffered events, then stops.
-            _channel.Writer.TryComplete();
+            channel.Writer.TryComplete();
 
             return default;
         }
     }
 }
-#endif

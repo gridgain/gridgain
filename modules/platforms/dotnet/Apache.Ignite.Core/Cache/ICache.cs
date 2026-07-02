@@ -20,11 +20,8 @@ namespace Apache.Ignite.Core.Cache
     using System.Collections;
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
-    using System.Threading.Tasks;
-#if NET8_0_OR_GREATER
     using System.Threading;
-    using Apache.Ignite.Core.Impl.Cache.Query.Continuous;
-#endif
+    using System.Threading.Tasks;
     using Apache.Ignite.Core.Cache.Configuration;
     using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Expiry;
@@ -809,7 +806,6 @@ namespace Apache.Ignite.Core.Cache
         /// <returns>Handle to stop query execution.</returns>
         IContinuousQueryHandle QueryContinuous(ContinuousQuery<TK, TV> qry);
 
-#if NET8_0_OR_GREATER
         /// <summary>
         /// Start continuous query execution.
         /// <para />
@@ -824,32 +820,10 @@ namespace Apache.Ignite.Core.Cache
         /// <param name="filter">Optional server-side filter.</param>
         /// <param name="cancellationToken">Cancellation token that stops the query and ends the stream.</param>
         /// <returns>Async stream of cache entry events.</returns>
-        async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(
+        IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(
             ContinuousQueryOptions? options = null,
             ICacheEntryFilter<TK, TV>? filter = null,
-            [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
-        {
-            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
-            var handle = QueryContinuous(ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter));
-
-            try
-            {
-                var reader = channel.Reader;
-
-                while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
-                {
-                    while (reader.TryRead(out var evt))
-                    {
-                        yield return evt;
-                    }
-                }
-            }
-            finally
-            {
-                // Stops the continuous query and releases server-side resources.
-                handle.Dispose();
-            }
-        }
+            CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Start continuous query execution with an initial <see cref="ScanQuery{TK, TV}"/>.
@@ -869,15 +843,7 @@ namespace Apache.Ignite.Core.Cache
         IContinuousQueryHandleAsync<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>> QueryContinuousAsync(
             ScanQuery<TK, TV> initialQry,
             ContinuousQueryOptions? options = null,
-            ICacheEntryFilter<TK, TV>? filter = null)
-        {
-            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
-            var handle = QueryContinuous(
-                ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter), initialQry);
-
-            return new ContinuousQueryAsyncHandle<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>>(
-                handle, channel, handle.GetInitialQueryCursor);
-        }
+            ICacheEntryFilter<TK, TV>? filter = null);
 
         /// <summary>
         /// Start continuous query execution with an initial <see cref="SqlFieldsQuery"/>.
@@ -897,16 +863,7 @@ namespace Apache.Ignite.Core.Cache
         IContinuousQueryHandleAsync<TK, TV, IFieldsQueryCursor> QueryContinuousAsync(
             SqlFieldsQuery initialQry,
             ContinuousQueryOptions? options = null,
-            ICacheEntryFilter<TK, TV>? filter = null)
-        {
-            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
-            var handle = QueryContinuous(
-                ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter), initialQry);
-
-            return new ContinuousQueryAsyncHandle<TK, TV, IFieldsQueryCursor>(
-                handle, channel, handle.GetInitialQueryCursor);
-        }
-#endif
+            ICacheEntryFilter<TK, TV>? filter = null);
 
         /// <summary>
         /// Start continuous query execution.

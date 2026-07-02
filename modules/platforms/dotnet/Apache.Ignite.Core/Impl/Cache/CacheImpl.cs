@@ -22,10 +22,13 @@ namespace Apache.Ignite.Core.Impl.Cache
     using System.Diagnostics.CodeAnalysis;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
     using System.Threading.Tasks;
     using Apache.Ignite.Core.Binary;
     using Apache.Ignite.Core.Cache;
     using Apache.Ignite.Core.Cache.Configuration;
+    using Apache.Ignite.Core.Cache.Event;
     using Apache.Ignite.Core.Cache.Expiry;
     using Apache.Ignite.Core.Cache.Query;
     using Apache.Ignite.Core.Cache.Query.Continuous;
@@ -1694,6 +1697,66 @@ namespace Apache.Ignite.Core.Impl.Cache
 
             return new ContinuousQueryHandleImpl<TK, TV>(qry, Marshaller, _flagKeepBinary,
                 writeAction => DoOutOpObject((int) CacheOp.QryContinuous, writeAction)!, initialQry);
+        }
+
+        /** <inheritdoc /> */
+        public async IAsyncEnumerable<ICacheEntryEvent<TK, TV>> QueryContinuousAsync(
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
+            var handle = QueryContinuous(ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter));
+
+            try
+            {
+                var reader = channel.Reader;
+
+                while (await reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+                {
+                    while (reader.TryRead(out var evt))
+                    {
+                        yield return evt;
+                    }
+                }
+            }
+            finally
+            {
+                // Stops the continuous query and releases server-side resources.
+                handle.Dispose();
+            }
+        }
+
+        /** <inheritdoc /> */
+        public IContinuousQueryHandleAsync<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>> QueryContinuousAsync(
+            ScanQuery<TK, TV> initialQry,
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null)
+        {
+            IgniteArgumentCheck.NotNull(initialQry, "initialQry");
+
+            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
+            var handle = QueryContinuous(
+                ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter), initialQry);
+
+            return new ContinuousQueryAsyncHandle<TK, TV, IQueryCursor<ICacheEntry<TK, TV>>>(
+                handle, channel, handle.GetInitialQueryCursor);
+        }
+
+        /** <inheritdoc /> */
+        public IContinuousQueryHandleAsync<TK, TV, IFieldsQueryCursor> QueryContinuousAsync(
+            SqlFieldsQuery initialQry,
+            ContinuousQueryOptions? options = null,
+            ICacheEntryFilter<TK, TV>? filter = null)
+        {
+            IgniteArgumentCheck.NotNull(initialQry, "initialQry");
+
+            var channel = ContinuousQueryAsync.CreateChannel<TK, TV>();
+            var handle = QueryContinuous(
+                ContinuousQueryAsync.CreateQuery(channel.Writer, options, filter), initialQry);
+
+            return new ContinuousQueryAsyncHandle<TK, TV, IFieldsQueryCursor>(
+                handle, channel, handle.GetInitialQueryCursor);
         }
 
         #endregion
